@@ -251,6 +251,7 @@ const resourceExportRange = ref('')
 const isExportingResources = ref(false)
 const isOneClickNightmareRunning = ref(false)
 const pillowCount = ref(0)
+const maxLevel = ref(0)
 const displayRoomId = ref(0)
 const displayTeamId = ref(0)
 const displayNightmareLevel = ref(0)
@@ -486,6 +487,71 @@ const parseDateString = (dateStr) => {
   const month = parseInt(dateStr.substring(4, 6)) - 1 // 月份从0开始
   const day = parseInt(dateStr.substring(6, 8))
   return new Date(year, month, day)
+}
+
+// 检查本周是否已经打过十殿（用于批量十殿执行前检查）
+const hasPlayedThisWeek = (tokenId) => {
+  const gameTokens = toRaw(tokenStore.gameTokens)
+  const token = gameTokens.find(t => t.id === tokenId)
+  if (!token || !token.gameData) return false
+  const gameData = token.gameData
+  const nightmareData = gameData?.nightmareData
+  if (!nightmareData) return false
+  
+  let weekAward = null
+  
+  // 优先从nightMareData.weekAward获取（注意大小写）
+  const nightMareData = nightmareData.nightMareData || nightmareData.nightmareData
+  if (nightMareData && nightMareData.weekAward) {
+    weekAward = nightMareData.weekAward
+  } else if (nightmareData.weekAward) {
+    // 兼容旧格式：直接从nightmareData.weekAward获取
+    weekAward = nightmareData.weekAward
+  }
+  
+  if (!weekAward || typeof weekAward !== 'object') {
+    return false
+  }
+  
+  // 获取当前日期（YYYYMMDD格式）
+  const currentDate = new Date()
+  const currentYear = currentDate.getFullYear()
+  const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0')
+  const currentDay = String(currentDate.getDate()).padStart(2, '0')
+  const currentDateStr = `${currentYear}${currentMonth}${currentDay}`
+  
+  // 获取当前周的周一日期
+  const currentWeekStart = new Date(currentDate)
+  const day = currentWeekStart.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  currentWeekStart.setDate(currentWeekStart.getDate() + diff)
+  currentWeekStart.setHours(0, 0, 0, 0)
+  
+  // 获取当前周的周日日期
+  const currentWeekEnd = new Date(currentWeekStart)
+  currentWeekEnd.setDate(currentWeekEnd.getDate() + 6)
+  currentWeekEnd.setHours(23, 59, 59, 999)
+  
+  // 检查weekAward中是否有本周的日期
+  const dateKeys = Object.keys(weekAward)
+  for (const dateKey of dateKeys) {
+    const dateData = weekAward[dateKey]
+    if (!dateData || dateData.maxLevel === undefined || dateData.maxLevel === null) {
+      continue
+    }
+    
+    // 解析日期
+    const date = parseDateString(dateKey)
+    if (!date) continue
+    
+    // 检查是否在本周范围内
+    if (date >= currentWeekStart && date <= currentWeekEnd) {
+      // 本周已打过
+      return true
+    }
+  }
+  
+  return false
 }
 
 // 获取十殿层数（根据最新逻辑：读取weekAward最后一个日期的maxLevel，判断当前日期和最后日期是否在同一周）
@@ -1481,6 +1547,20 @@ const batchNightmare = async () => {
           // 连接Token
           await connectTokenByClick(token, 5)
           
+          // 执行 nightmare_getroleinfo 获取最新数据
+          try {
+            await tokenStore.sendNightmareGetRoleInfo(token.id, {})
+            await waitCommandDelay()
+          } catch (error) {
+            console.warn(`${token.name} 获取十殿信息失败:`, error)
+          }
+          
+          // 检查本周是否已打过十殿
+          if (hasPlayedThisWeek(token.id)) {
+            message.warning(`${token.name} 本周已打过十殿，跳过`)
+            continue
+          }
+          
           // 获取十殿枕头数量
           const pillowCount = await getPillowCountForToken(token)
           if (pillowCount === 0) {
@@ -1541,6 +1621,20 @@ const batchNightmare = async () => {
           
           // 连接Token
           await connectTokenByClick(token, 5)
+          
+          // 执行 nightmare_getroleinfo 获取最新数据
+          try {
+            await tokenStore.sendNightmareGetRoleInfo(token.id, {})
+            await waitCommandDelay()
+          } catch (error) {
+            console.warn(`${token.name} 获取十殿信息失败:`, error)
+          }
+          
+          // 检查本周是否已打过十殿
+          if (hasPlayedThisWeek(token.id)) {
+            message.warning(`${token.name} 本周已打过十殿，跳过`)
+            continue
+          }
           
           // 获取十殿枕头数量
           const pillowCount = await getPillowCountForToken(token)
@@ -3512,10 +3606,82 @@ const getPillowCount = async () => {
       // 通知父组件更新十殿枕头数量
       emit('update-pillow-count', props.selectedTokenId, 0)
     }
+    
+    // 获取roleId用于nightmare_getroleinfo
+    const roleId = roleInfo?.role?.roleId
+    if (roleId) {
+      // 执行nightmare_getroleinfo获取十殿信息
+      const nightmareInfo = await tokenStore.sendNightmareGetRoleInfo(token.id, { roleId: parseInt(roleId) })
+      
+      if (nightmareInfo) {
+        // 从weekAward中获取本周的maxLevel
+        let weekAward = null
+        
+        // 优先从nightMareData.weekAward获取（注意大小写）
+        const nightMareData = nightmareInfo.nightMareData || nightmareInfo.nightmareData
+        if (nightMareData && nightMareData.weekAward) {
+          weekAward = nightMareData.weekAward
+        } else if (nightmareInfo.weekAward) {
+          // 兼容旧格式：直接从nightmareInfo.weekAward获取
+          weekAward = nightmareInfo.weekAward
+        }
+        
+        if (weekAward && typeof weekAward === 'object') {
+          // 获取当前日期
+          const currentDate = new Date()
+          const currentYear = currentDate.getFullYear()
+          const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0')
+          const currentDay = String(currentDate.getDate()).padStart(2, '0')
+          
+          // 获取当前周的周一日期
+          const currentWeekStart = new Date(currentDate)
+          const day = currentWeekStart.getDay()
+          const diff = day === 0 ? -6 : 1 - day
+          currentWeekStart.setDate(currentWeekStart.getDate() + diff)
+          currentWeekStart.setHours(0, 0, 0, 0)
+          
+          // 获取当前周的周日日期
+          const currentWeekEnd = new Date(currentWeekStart)
+          currentWeekEnd.setDate(currentWeekEnd.getDate() + 6)
+          currentWeekEnd.setHours(23, 59, 59, 999)
+          
+          // 检查weekAward中是否有本周的日期
+          const dateKeys = Object.keys(weekAward)
+          let weekMaxLevel = 0
+          
+          for (const dateKey of dateKeys) {
+            const dateData = weekAward[dateKey]
+            if (!dateData || dateData.maxLevel === undefined || dateData.maxLevel === null) {
+              continue
+            }
+          
+            // 解析日期
+            const date = parseDateString(dateKey)
+            if (!date) continue
+          
+            // 检查是否在本周范围内
+            if (date >= currentWeekStart && date <= currentWeekEnd) {
+              weekMaxLevel = dateData.maxLevel
+              break
+            }
+          }
+          
+          maxLevel.value = weekMaxLevel
+          message.success(`本周最高层数: ${weekMaxLevel}`)
+        } else {
+          maxLevel.value = 0
+        }
+      } else {
+        maxLevel.value = 0
+      }
+    } else {
+      maxLevel.value = 0
+    }
   } catch (error) {
     console.error('获取十殿枕头数量失败:', error)
     message.error(`获取十殿枕头数量失败: ${error.message || '未知错误'}`)
     pillowCount.value = 0
+    maxLevel.value = 0
     // 通知父组件更新十殿枕头数量
     emit('update-pillow-count', props.selectedTokenId, 0)
   }

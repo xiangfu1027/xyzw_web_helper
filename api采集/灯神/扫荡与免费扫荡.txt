@@ -1,0 +1,282 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/16 22:20:00
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789568327423.bin-8905%E6%9C%8D-0-439956452-%E7%9B%B8%E7%AC%A605-0.bin&fromManager=true&windowId=game-window-1789568355594
+记录数量: 10
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+
+
+记录 #3:
+----------------------------------------
+时间: 2026/9/16 22:19:57
+服务: GenieService
+方法: sweep
+参数: [{"genieId":4,"sweepCnt":2}]
+结果:
+{
+  "_raw": {
+    "seq": 98,
+    "ack": 78,
+    "time": 1789568399826,
+    "resp": 79,
+    "cmd": "syncrewardresp",
+    "body": {
+      "role": {
+        "items": {
+          "1021": {
+            "quantity": 444
+          },
+          "1022": {
+            "quantity": 184695
+          },
+          "3201": {
+            "quantity": 522
+          }
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 1022,
+          "value": 300,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 3201,
+          "value": 2,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 1022,
+          "value": 300,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 3201,
+          "value": 2,
+          "ext": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 34
+}
+异步: 是
+调用ID: call_1789568397074_78yemcoa3
+
+记录 #4:
+----------------------------------------
+时间: 2026/9/16 22:19:54
+服务: GenieService
+方法: buySweep
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 97,
+    "ack": 77,
+    "time": 1789568397039,
+    "resp": 78,
+    "cmd": "syncrewardresp",
+    "body": {
+      "role": {
+        "items": {
+          "1021": {
+            "quantity": 446
+          }
+        },
+        "statistics": {
+          "genie:sweep:buy": 3
+        },
+        "statisticsTime": {
+          "genie:sweep:buy": 1789568397
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 1021,
+          "value": 1,
+          "ext": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 28
+}
+异步: 是
+调用ID: call_1789568394288_v3uok1vdm
+
+记录 #5:
+----------------------------------------
+时间: 2026/9/16 22:19:54
+服务: DiscountService
+方法: getDiscountInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 96,
+    "ack": 76,
+    "time": 1789568396844,
+    "resp": 77,
+    "cmd": "discount_getdiscountinforesp",
+    "body": {
+      "discountList": [
+        {
+          "discountId": 1,
+          "expireTime": 0,
+          "discountState": 2,
+          "version": 0
+        },
+        {
+          "discountId": 2,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 3,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 4,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 5,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 19
+}
+异步: 是
+调用ID: call_1789568394102_0mf38mbf3
+
+记录 #6:
+----------------------------------------
+时间: 2026/9/16 22:19:52
+服务: GenieService
+方法: buySweep
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 94,
+    "ack": 0,
+    "time": 1789568395304,
+    "resp": 75,
+    "cmd": "syncrewardresp",
+    "body": {
+      "role": {
+        "items": {
+          "1021": {
+            "quantity": 444
+          }
+        },
+        "statistics": {
+          "genie:sweep:buy": 1
+        },
+        "statisticsTime": {
+          "genie:sweep:buy": 1789568395
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 1021,
+          "value": 1,
+          "ext": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 28
+}
+异步: 是
+调用ID: call_1789568392553_mncm4wb94
+
+
+
+记录 #10:
+----------------------------------------
+时间: 2026/9/16 22:19:31
+服务: GenieService
+方法: sweep
+参数: [{"genieId":4,"sweepCnt":1}]
+结果:
+{
+  "_raw": {
+    "seq": 90,
+    "ack": 0,
+    "time": 1789568374033,
+    "resp": 71,
+    "cmd": "syncrewardresp",
+    "body": {
+      "role": {
+        "items": {
+          "1022": {
+            "quantity": 184095
+          },
+          "3201": {
+            "quantity": 518
+          }
+        },
+        "statisticsTime": {
+          "genie:daily:free:4": 1789568374
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 1022,
+          "value": 300,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 3201,
+          "value": 2,
+          "ext": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 27
+}
+异步: 是
+调用ID: call_1789568371283_zazhszdwg
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

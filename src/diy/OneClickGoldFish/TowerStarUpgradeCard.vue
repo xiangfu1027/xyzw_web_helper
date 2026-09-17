@@ -87,6 +87,12 @@
               :disabled="tokenStore.gameTokens.length === 0 || isBatchTowerRunning" 
               @button-click="handleBatchTower" 
             />
+            <CustomizedCard 
+              mode="button" 
+              :name="isExportingTower ? '导出爬塔中...' : '导出爬塔'" 
+              :disabled="tokenStore.gameTokens.length === 0 || isExportingTower" 
+              @button-click="handleExportTower" 
+            />
           </CustomizedCard>
         </div>
       </div>
@@ -94,7 +100,7 @@
       <!-- 操作日志 -->
       <OperationLogCard 
         page="fish-helper" 
-        :filter-operations="['开始爬塔', '停止爬塔', '刷新信息', '领取奖励', '英雄升星', '图鉴升星', '领取图鉴奖励', '批量执行', '批量升星图鉴', '批量爬塔']"
+        :filter-operations="['开始爬塔', '停止爬塔', '刷新信息', '领取奖励', '英雄升星', '图鉴升星', '领取图鉴奖励', '批量执行', '批量升星图鉴', '批量爬塔', '导出爬塔']"
       />
     </template>
   </MyCard>
@@ -128,6 +134,7 @@ const props = defineProps({
 const isRunning = ref(false)
 const isBatchRunning = ref(false)
 const isBatchTowerRunning = ref(false)
+const isExportingTower = ref(false)
 const batchTokens = ref('')
 
 // 爬塔相关状态
@@ -860,7 +867,7 @@ const handleBatchTokensInput = (value) => {
   batchTokens.value = value
 }
 
-// 连接Token（模拟点击token昵称，最多重试5次）
+// 连接Token（使用直接创建连接方式，避免selectToken触发其他连接）
 const connectTokenWithRetry = async (token, tokenIndex) => {
   let status = tokenStore.getWebSocketStatus(token.id)
   
@@ -874,11 +881,18 @@ const connectTokenWithRetry = async (token, tokenIndex) => {
   const maxRetries = 5
   
   while (status !== 'connected' && retryCount < maxRetries) {
-    // 模拟点击token昵称（选择并连接token）
-    tokenStore.selectToken(token.id, true)
+    // 获取最新的token信息
+    const latestToken = tokenStore.gameTokens.find(t => t.id === token.id)
+    if (!latestToken) {
+      message.warning(`序号 ${tokenIndex} ${token.name || token.id} Token不存在`)
+      return false
+    }
     
-    // 等待1秒
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // 直接创建WebSocket连接，不使用selectToken
+    tokenStore.createWebSocketConnection(token.id, latestToken.token, latestToken.wsUrl)
+    
+    // 等待连接建立
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
     // 检查连接状态
     status = tokenStore.getWebSocketStatus(token.id)
@@ -886,6 +900,9 @@ const connectTokenWithRetry = async (token, tokenIndex) => {
     
     if (status !== 'connected' && retryCount < maxRetries) {
       message.info(`序号 ${tokenIndex} 连接尝试 ${retryCount}/${maxRetries}...`)
+      // 关闭失败的连接
+      tokenStore.closeWebSocketConnection(token.id)
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
   }
   
@@ -1322,6 +1339,27 @@ const handleBatchTower = async () => {
       message: `【批量】开始批量爬塔操作（${rangeText}），共${sortedTargetTokens.length}个Token`
     })
     
+    // 关闭所有其他连接，确保每次只连接一个token
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '爬塔升星',
+      operation: '批量爬塔',
+      status: 'info',
+      message: `【批量】关闭所有其他连接，准备批量爬塔...`
+    })
+    
+    // 获取所有已连接的token并关闭
+    const allTokens = tokenStore.gameTokens
+    for (const t of allTokens) {
+      const status = tokenStore.getWebSocketStatus(t.id)
+      if (status === 'connected' || status === 'connecting') {
+        tokenStore.closeWebSocketConnection(t.id)
+      }
+    }
+    
+    // 等待所有连接关闭
+    await new Promise(resolve => setTimeout(resolve, 500))
+    
     for (let i = 0; i < sortedTargetTokens.length; i++) {
       // 检查是否被停止
       if (!isBatchTowerRunning.value) {
@@ -1569,6 +1607,182 @@ const handleBatchTower = async () => {
   }
 }
 
+// 导出爬塔层数
+const handleExportTower = async () => {
+  // 按token昵称排序的token列表（与页面显示顺序一致）
+  const sortedTokensList = [...tokenStore.gameTokens].sort((a, b) => {
+    const nameA = (a.name || '未命名').toLowerCase()
+    const nameB = (b.name || '未命名').toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+  
+  if (sortedTokensList.length === 0) {
+    message.warning('没有可用的Token')
+    return
+  }
+  
+  // 解析执行范围（如果为空则执行全部）
+  const tokenIndices = parseTokenRange(batchTokens.value)
+  let targetTokens = []
+  
+  if (tokenIndices === null || tokenIndices.length === 0) {
+    // 留空执行全部
+    targetTokens = sortedTokensList
+  } else {
+    // 根据执行范围获取目标token
+    targetTokens = tokenIndices
+      .map(index => {
+        const arrayIndex = index - 1
+        const token = sortedTokensList[arrayIndex]
+        return token ? { token, index } : null
+      })
+      .filter(item => item !== null)
+      .sort((a, b) => a.index - b.index)
+      .map(item => item.token)
+  }
+  
+  if (targetTokens.length === 0) {
+    message.warning('执行范围内没有有效的Token')
+    return
+  }
+  
+  isExportingTower.value = true
+  const rangeText = tokenIndices === null || tokenIndices.length === 0 ? '全部' : `范围${tokenIndices.join(',')}`
+  message.info(`开始导出爬塔层数（${rangeText}），共${targetTokens.length}个Token...`)
+  
+  // 添加操作日志
+  logStore.addLog({
+    page: 'fish-helper',
+    cardType: '爬塔升星',
+    operation: '导出爬塔',
+    status: 'info',
+    message: `【批量】开始导出爬塔层数（${rangeText}），共${targetTokens.length}个Token`
+  })
+  
+  try {
+    const results = []
+    
+    for (let i = 0; i < targetTokens.length; i++) {
+      const token = targetTokens[i]
+      const tokenIndex = sortedTokensList.findIndex(t => t.id === token.id) + 1
+      
+      try {
+        // 连接Token
+        message.info(`[${i + 1}/${targetTokens.length}] 正在连接 ${token.name || token.id}...`)
+        tokenStore.selectToken(token.id, true)
+        
+        // 等待连接，最多重试5次
+        let retryCount = 0
+        const maxRetries = 5
+        let status = tokenStore.getWebSocketStatus(token.id)
+        
+        while (status !== 'connected' && retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          status = tokenStore.getWebSocketStatus(token.id)
+          retryCount++
+          
+          if (status !== 'connected' && retryCount < maxRetries) {
+            tokenStore.selectToken(token.id, true)
+          }
+        }
+        
+        if (status !== 'connected') {
+          results.push({
+            nickname: token.name || token.id,
+            towerFloor: '连接失败',
+            energy: '连接失败'
+          })
+          continue
+        }
+        
+        // 获取角色信息（包含爬塔数据）
+        const roleInfo = await tokenStore.sendMessageWithPromise(token.id, 'role_getroleinfo', {}, 10000)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        if (!roleInfo || !roleInfo.role || !roleInfo.role.tower) {
+          results.push({
+            nickname: token.name || token.id,
+            towerFloor: '获取失败',
+            energy: '获取失败'
+          })
+          continue
+        }
+        
+        // 提取爬塔信息
+        const tower = roleInfo.role.tower
+        const towerId = tower.id || 0
+        const energy = tower.energy || 0
+        const towerFloor = Math.floor(towerId / 10)
+        const towerLayer = towerId % 10
+        
+        results.push({
+          nickname: token.name || token.id,
+          towerFloor: `${towerFloor}-${towerLayer}`,
+          energy: String(energy)
+        })
+        
+        logStore.addLog({
+          page: 'fish-helper',
+          cardType: '爬塔升星',
+          operation: '导出爬塔',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'info',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]当前层数：${towerFloor}-${towerLayer}，鱼干数：${energy}`
+        })
+        
+        await new Promise(resolve => setTimeout(resolve, 500))
+      } catch (error) {
+        console.error(`导出Token ${token.name || token.id} 爬塔层数失败:`, error)
+        results.push({
+          nickname: token.name || token.id,
+          towerFloor: '获取失败',
+          energy: '获取失败'
+        })
+      }
+    }
+    
+    // 生成CSV文件
+    const header = '昵称,爬塔层数,鱼干数\n'
+    const content = results.map(r =>
+      `${r.nickname},${r.towerFloor},${r.energy}`
+    ).join('\n')
+    
+    const fullContent = header + content
+    const blob = new Blob(['\ufeff' + fullContent], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const date = new Date().toISOString().split('T')[0]
+    link.download = `爬塔层数_${date}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+    
+    message.success('爬塔层数导出完成')
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '爬塔升星',
+      operation: '导出爬塔',
+      status: 'success',
+      message: `【批量】爬塔层数导出完成，共${results.length}个Token`
+    })
+  } catch (error) {
+    console.error('导出爬塔层数失败:', error)
+    message.error(`导出爬塔层数失败: ${error.message || '未知错误'}`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '爬塔升星',
+      operation: '导出爬塔',
+      status: 'error',
+      message: `【批量】导出爬塔层数失败: ${error.message || '未知错误'}`
+    })
+  } finally {
+    isExportingTower.value = false
+  }
+}
+
 // 为单个 token 执行爬塔操作（新逻辑）
 const startTowerClimbForToken = async (token) => {
   const tokenIndex = getTokenIndex(token)
@@ -1582,8 +1796,42 @@ const startTowerClimbForToken = async (token) => {
       return false
     }
     
-    // 步骤 1：使用 role_getroleinfo 获取当前层数和鱼干数
-    const roleInfo = await tokenStore.sendMessageWithPromise(token.id, 'role_getroleinfo', {}, 10000)
+    // 步骤 1：使用 role_getroleinfo 获取当前层数和鱼干数（增加重试机制）
+    let roleInfo = null
+    const maxRetries = 3
+    let retryCount = 0
+    
+    while (retryCount < maxRetries && !roleInfo) {
+      try {
+        roleInfo = await tokenStore.sendMessageWithPromise(token.id, 'role_getroleinfo', {}, 10000)
+      } catch (error) {
+        retryCount++
+        const errorMsg = error.message || ''
+        
+        if (errorMsg.includes('超时') || errorMsg.includes('timeout')) {
+          console.warn(`[爬塔] Token: ${token.name || token.id} 获取角色信息超时，重试 ${retryCount}/${maxRetries}`)
+          
+          if (retryCount < maxRetries) {
+            // 等待 1 秒后重试
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            
+            // 重新建立连接
+            const currentStatus = tokenStore.getWebSocketStatus(token.id)
+            if (currentStatus !== 'connected') {
+              console.log(`[爬塔] Token: ${token.name || token.id} 连接已断开，重新建立连接`)
+              await tokenStore.connectTokenWithRetry(token.id)
+              // 等待连接稳定
+              await new Promise(resolve => setTimeout(resolve, 1000))
+            }
+          } else {
+            throw new Error(`获取角色信息失败：请求超时（已重试 ${maxRetries} 次）`)
+          }
+        } else {
+          throw error
+        }
+      }
+    }
+    
     if (!roleInfo || !roleInfo.role) {
       throw new Error('角色信息不存在')
     }

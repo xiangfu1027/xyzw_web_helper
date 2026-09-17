@@ -49,6 +49,8 @@
         <ShiDianTeamIdCard 
           :selected-token-id="selectedTokenId"
           @update-pillow-count="handleUpdatePillowCount"
+          @update-max-level="handleUpdateMaxLevel"
+          @clear-pillow-count="handleClearPillowCount"
           @join-token="handleJoinTokenFromTeamIdCard"
           @auto-join-shidian="autoJoinShiDian($event)"
           @clear-nightmare-labels="handleClearNightmareLabels"
@@ -182,6 +184,12 @@
                   style="flex: 1;"
                 />
                 <CustomizedCard
+                  mode="name-count"
+                  name="最高层数"
+                  :count="tokenMaxLevel[token?.id] || 0"
+                  style="flex: 1;"
+                />
+                <CustomizedCard
                   mode="button"
                   name="加入十殿"
                   :loading="connectingTokens.has(token?.id)"
@@ -275,6 +283,7 @@ const nightmareTeamOptions = [
 // 每个 token 的下拉框选择值
 const tokenNightmareTeam = ref({}) // tokenId -> nightmareTeam (1-5)
 const tokenPillowCount = ref({}) // tokenId -> pillowCount (十殿枕头数量，保存到 localStorage)
+const tokenMaxLevel = ref({}) // tokenId -> maxLevel (本周最高层数，保存到 localStorage)
 const pillowCount = ref(0) // 十殿枕头数量
 
 // 导出相关每个 token 的信息显示状态（加入十殿后显示）
@@ -1072,6 +1081,66 @@ const autoJoinShiDian = async (executionRange = '') => {
           
           // 等待初始化
           await new Promise(resolve => setTimeout(resolve, 500))
+          
+          // 执行 nightmare_getroleinfo 获取十殿信息
+          try {
+            await tokenStore.sendMessageWithPromise(token.id, 'nightmare_getroleinfo', {}, 5000)
+            await new Promise(resolve => setTimeout(resolve, 800))
+          } catch (error) {
+            console.warn(`Token ${token.name} 获取十殿信息失败:`, error)
+          }
+          
+          // 检查本周是否已打过十殿
+          const tokenData = tokenStore.gameTokens.find(t => t.id === token.id)
+          const nightmareData = tokenData?.gameData?.nightmareData
+          const nightMareData = nightmareData?.nightMareData || nightmareData?.nightmareData
+          const weekAward = nightMareData?.weekAward || nightmareData?.weekAward
+          
+          if (weekAward && typeof weekAward === 'object') {
+            // 获取当前周的周一日期
+            const currentDate = new Date()
+            const currentWeekStart = new Date(currentDate)
+            const day = currentWeekStart.getDay()
+            const diff = day === 0 ? -6 : 1 - day
+            currentWeekStart.setDate(currentWeekStart.getDate() + diff)
+            currentWeekStart.setHours(0, 0, 0, 0)
+            
+            // 获取当前周的周日日期
+            const currentWeekEnd = new Date(currentWeekStart)
+            currentWeekEnd.setDate(currentWeekEnd.getDate() + 6)
+            currentWeekEnd.setHours(23, 59, 59, 999)
+            
+            // 检查weekAward中是否有本周的日期
+            const dateKeys = Object.keys(weekAward)
+            let hasPlayedThisWeek = false
+            
+            for (const dateKey of dateKeys) {
+              const dateData = weekAward[dateKey]
+              if (!dateData || dateData.maxLevel === undefined || dateData.maxLevel === null) {
+                continue
+              }
+              
+              // 解析日期 (YYYYMMDD格式)
+              if (dateKey.length === 8) {
+                const year = parseInt(dateKey.substring(0, 4))
+                const month = parseInt(dateKey.substring(4, 6)) - 1
+                const dayNum = parseInt(dateKey.substring(6, 8))
+                const date = new Date(year, month, dayNum)
+                
+                // 检查是否在本周范围内
+                if (date >= currentWeekStart && date <= currentWeekEnd) {
+                  hasPlayedThisWeek = true
+                  break
+                }
+              }
+            }
+            
+            if (hasPlayedThisWeek) {
+              console.log(`Token ${token.name} 本周已打过十殿，跳过`)
+              await connectionPool.release(token.id, true)
+              continue
+            }
+          }
           
           // 获取枕头数量
           const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
@@ -1898,6 +1967,14 @@ const handleUpdatePillowCount = async (tokenId, pillowCount) => {
   tokenPillowCount.value[tokenId] = pillowCount
   await saveDropdownSettings()
   console.log(`Token ${tokenId} 十殿枕头数量已更新为: ${pillowCount}`)
+}
+
+// 处理本周最高层数更新事件
+const handleUpdateMaxLevel = async (tokenId, maxLevel) => {
+  // 更新tokenMaxLevel并保存到本地存储
+  tokenMaxLevel.value[tokenId] = maxLevel
+  await saveDropdownSettings()
+  console.log(`Token ${tokenId} 本周最高层数已更新为: ${maxLevel}`)
 }
 
 // 处理清空十殿标签事件

@@ -1,6 +1,7 @@
 import { HERO_DICT, STAR_DICT } from "@/utils/HeroList";
 import { PEACH_TASKS } from "@/utils/PeachTaskIds";
 import { XyzwLegionWarWebSocketClient } from '@/utils/xyzwLegionWarWebSocket.js';
+import ConnectionPoolManager from '@/utils/connectionPoolManager.js';
 
 /**
  * 开箱、钓鱼、招募类任务
@@ -45,18 +46,21 @@ export function createTasksItem(deps) {
   /**
    * 批量英雄升星（单个Token）
    * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchHeroUpgradeForToken = async (tokenId, skipConnect = false) => {
+  const batchHeroUpgradeForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始英雄升星`,
         type: "info",
@@ -99,7 +103,7 @@ export function createTasksItem(deps) {
         }
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 共${upgradableHeroes.length}个武将可升星`,
         type: "info",
@@ -125,7 +129,7 @@ export function createTasksItem(deps) {
             const ok = res && (res.code === 0 || res.success === true || res.result === 0);
 
             if (ok) {
-              addLog({
+              logWithPrefix({
                 time: new Date().toLocaleTimeString(),
                 message: `${token.name} ${HERO_DICT[heroId]?.name || heroId} 升星成功 (第${i}次)`,
                 type: "success",
@@ -140,7 +144,7 @@ export function createTasksItem(deps) {
         }
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 英雄升星完成`,
         type: "success",
@@ -148,7 +152,7 @@ export function createTasksItem(deps) {
 
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `英雄升星失败: ${error.message}`,
         type: "error",
@@ -294,18 +298,21 @@ export function createTasksItem(deps) {
   /**
    * 批量图鉴升星（单个Token）
    * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchBookUpgradeForToken = async (tokenId, skipConnect = false) => {
+  const batchBookUpgradeForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始图鉴升星`,
         type: "info",
@@ -328,7 +335,7 @@ export function createTasksItem(deps) {
             const ok = res && (res.code === 0 || res.success === true || res.result === 0);
 
             if (ok) {
-              addLog({
+              logWithPrefix({
                 time: new Date().toLocaleTimeString(),
                 message: `${token.name} 英雄ID:${heroId} 图鉴升星成功 (第${i}次)`,
                 type: "success",
@@ -346,7 +353,7 @@ export function createTasksItem(deps) {
         }
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 图鉴升星完成`,
         type: "success",
@@ -354,7 +361,7 @@ export function createTasksItem(deps) {
 
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `图鉴升星失败: ${error.message}`,
         type: "error",
@@ -457,16 +464,20 @@ export function createTasksItem(deps) {
   /**
    * 批量领取图鉴奖励（单个Token）
    */
-  const batchClaimStarRewardsForToken = async (tokenId, skipConnect = false) => {
+  const batchClaimStarRewardsForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始领取图鉴奖励`,
         type: "info",
@@ -479,15 +490,15 @@ export function createTasksItem(deps) {
         {},
         5000
       );
-      
+
       if (starRewardRes?.result === 0) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 图鉴星星奖励领取成功`,
           type: "success",
         });
       } else {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 图鉴星星奖励领取失败: ${starRewardRes?.hint || "未知错误"}`,
           type: "warning",
@@ -501,22 +512,22 @@ export function createTasksItem(deps) {
         {},
         5000
       );
-      
+
       if (achievementRewardRes?.result === 0) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 图鉴成就奖励领取成功`,
           type: "success",
         });
       } else {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 图鉴成就奖励领取失败: ${achievementRewardRes?.hint || "未知错误"}`,
           type: "warning",
         });
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 图鉴奖励领取完成`,
         type: "success",
@@ -524,7 +535,7 @@ export function createTasksItem(deps) {
 
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `图鉴奖励领取失败: ${error.message}`,
         type: "error",
@@ -899,15 +910,19 @@ export function createTasksItem(deps) {
   /**
    * 一键灯神扫荡（单个Token）
    */
-  const batchGenieSweepForToken = async (tokenId, skipConnect = false) => {
+  const batchGenieSweepForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    if (!skipConnect) {
-      await ensureConnection(tokenId);
-    }
-    
-    addLog({
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    logWithPrefix({
       time: new Date().toLocaleTimeString(),
       message: `${token.name} 开始灯神扫荡`,
       type: "info",
@@ -923,7 +938,7 @@ export function createTasksItem(deps) {
           5000
         );
       } catch (error) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} genie_buysweep ${i + 1}/3 失败: ${error.message}`,
           type: "warning",
@@ -931,9 +946,33 @@ export function createTasksItem(deps) {
       }
       await new Promise(resolve => setTimeout(resolve, 500));
     }
+
+    // 获取角色信息，检查灯神免费扫荡是否可用
+    const roleInfo = tokenStore.gameData?.roleInfo?.role;
+    const statisticsTime = roleInfo?.statisticsTime ?? {};
     
-    // 灯神扫荡 - 循环执行4次，每次使用不同的genieId（1-4）
+    // 辅助函数：检查今天是否可用
+    const isTodayAvailable = (lastClaimTime) => {
+      if (!lastClaimTime) return true;
+      const lastDate = new Date(lastClaimTime * 1000);
+      const today = new Date();
+      return lastDate.toDateString() !== today.toDateString();
+    };
+
+    // 灯神扫荡 - 循环执行4次，每次使用不同的genieId（1-4），检查是否可用
+    const kingdoms = ["魏国", "蜀国", "吴国", "群雄"];
     for (let genieId = 1; genieId <= 4; genieId++) {
+      const isAvailable = isTodayAvailable(statisticsTime[`genie:daily:free:${genieId}`]);
+      
+      if (!isAvailable) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} ${kingdoms[genieId - 1]}灯神今日已扫荡，跳过`,
+          type: "info",
+        });
+        continue;
+      }
+
       try {
         await tokenStore.sendMessageWithPromise(
           tokenId,
@@ -941,8 +980,13 @@ export function createTasksItem(deps) {
           { genieId: genieId, sweepCnt: 1 },
           5000
         );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} ${kingdoms[genieId - 1]}灯神扫荡成功`,
+          type: "success",
+        });
       } catch (error) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} genie_sweep 灯神${genieId} 失败: ${error.message}`,
           type: "warning",
@@ -950,8 +994,8 @@ export function createTasksItem(deps) {
       }
       await new Promise(resolve => setTimeout(resolve, 500));
     }
-    
-    addLog({
+
+    logWithPrefix({
       time: new Date().toLocaleTimeString(),
       message: `${token.name} 灯神扫荡完成`,
       type: "success",
@@ -1097,8 +1141,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -1110,7 +1165,17 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         try {
           await tokenStore.sendPresetteamSaveTeam(
@@ -1147,12 +1212,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -1169,8 +1234,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -1182,7 +1258,17 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         try {
           await tokenStore.sendMessageWithPromise(
@@ -1235,12 +1321,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -1259,8 +1345,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -1272,7 +1369,17 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         for (let i = 0; i < 3; i++) {
           await tokenStore.sendMessageWithPromise(
@@ -1298,12 +1405,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -2012,18 +2119,21 @@ export function createTasksItem(deps) {
   /**
    * 俱乐部BOSS - ForToken版本
    * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchLegionBossForToken = async (tokenId, skipConnect = false) => {
+  const batchLegionBossForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始俱乐部BOSS`,
         type: "info",
@@ -2050,13 +2160,13 @@ export function createTasksItem(deps) {
         5000
       );
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 俱乐部BOSS完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 俱乐部BOSS失败: ${error.message}`,
         type: "error",
@@ -2067,19 +2177,22 @@ export function createTasksItem(deps) {
 
   /**
    * 每日免费礼包 - ForToken版本
-   * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchFreeGiftForToken = async (tokenId, skipConnect = false) => {
+  const batchFreeGiftForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始每日免费礼包`,
         type: "info",
@@ -2092,13 +2205,13 @@ export function createTasksItem(deps) {
           {},
           5000
         );
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 签到成功`,
           type: "success",
         });
       } catch (signinError) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 签到跳过: ${signinError.message}`,
           type: "warning",
@@ -2114,26 +2227,26 @@ export function createTasksItem(deps) {
           { discountId: 1 },
           5000
         );
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 免费礼包领取成功`,
           type: "success",
         });
       } catch (discountError) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 免费礼包领取失败: ${discountError.message}`,
           type: "warning",
         });
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 每日免费礼包完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 每日免费礼包异常: ${error.message}`,
         type: "error",
@@ -2145,20 +2258,23 @@ export function createTasksItem(deps) {
   /**
    * 每日咸王 - ForToken版本
    * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchDailyBossForToken = async (tokenId, skipConnect = false) => {
+  const batchDailyBossForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
 
     const todayBossId = getTodayBossId();
 
     try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始每日咸王（BOSS ID: ${todayBossId}）`,
         type: "info",
@@ -2174,13 +2290,13 @@ export function createTasksItem(deps) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 咸王挑战完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 咸王挑战失败: ${error.message}`,
         type: "error",
@@ -2202,8 +2318,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -2215,7 +2342,17 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         for (let i = 0; i < 3; i++) {
           await tokenStore.sendMessageWithPromise(
@@ -2241,12 +2378,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -2255,19 +2392,21 @@ export function createTasksItem(deps) {
 
   /**
    * 一键免费钓鱼⭐（单个Token）
-   * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchFreeFishingForToken = async (tokenId, skipConnect = false) => {
+  const batchFreeFishingForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始免费钓鱼`,
         type: "info",
@@ -2283,13 +2422,13 @@ export function createTasksItem(deps) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 免费钓鱼完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 免费钓鱼失败: ${error.message}`,
         type: "error",
@@ -2311,8 +2450,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -2324,11 +2474,36 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
-        // 执行1次购买宠物蛋
-        await tokenStore.sendLegionStoreBuyGoods(tokenId, { id: 205 });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // 执行4次购买宠物蛋
+        for (let i = 0; i < 4; i++) {
+          try {
+            await tokenStore.sendLegionStoreBuyGoods(tokenId, { id: 205 });
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (buyError) {
+            const errorMsg = buyError?.message || buyError || '';
+            if (errorMsg.includes('2300370') || errorMsg.includes('俱乐部商品购买数量超出上限')) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 第 ${i + 1}/4 次购买失败: ${errorMsg}，停止剩余购买`,
+                type: "warning",
+              });
+              break;
+            }
+            throw buyError;
+          }
+        }
 
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -2344,12 +2519,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -2359,34 +2534,53 @@ export function createTasksItem(deps) {
   /**
    * 一键宠物蛋⭐（单个Token）
    * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchPetEggForToken = async (tokenId, skipConnect = false) => {
+  const batchPetEggForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始宠物蛋`,
         type: "info",
       });
 
-      // 执行1次购买宠物蛋
-      await tokenStore.sendLegionStoreBuyGoods(tokenId, { id: 205 });
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // 执行4次购买宠物蛋
+      for (let i = 0; i < 4; i++) {
+        try {
+          await tokenStore.sendLegionStoreBuyGoods(tokenId, { id: 205 });
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (buyError) {
+          const errorMsg = buyError?.message || buyError || '';
+          if (errorMsg.includes('2300370') || errorMsg.includes('俱乐部商品购买数量超出上限')) {
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 第 ${i + 1}/4 次购买失败: ${errorMsg}，停止剩余购买`,
+              type: "warning",
+            });
+            break;
+          }
+          throw buyError;
+        }
+      }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 宠物蛋完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 宠物蛋失败: ${error.message}`,
         type: "error",
@@ -2408,8 +2602,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -2421,7 +2626,17 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         // 执行1次扭蛋
         await tokenStore.sendGachaDrawReward(tokenId, {});
@@ -2466,12 +2681,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -2481,18 +2696,21 @@ export function createTasksItem(deps) {
   /**
    * 一键扭蛋⭐（单个Token）
    * @param {string} tokenId - Token ID
-   * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
    */
-  const batchGachaForToken = async (tokenId, skipConnect = false) => {
+  const batchGachaForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始扭蛋`,
         type: "info",
@@ -2510,7 +2728,7 @@ export function createTasksItem(deps) {
           for (const [stageId, claimed] of Object.entries(claimedMap)) {
             if (!claimed) {
               await tokenStore.sendGachaClaimStageReward(tokenId, { stageId: parseInt(stageId) });
-              addLog({
+              logWithPrefix({
                 time: new Date().toLocaleTimeString(),
                 message: `${token.name} 领取扭蛋阶段奖励 stageId=${stageId}`,
                 type: "success",
@@ -2520,20 +2738,20 @@ export function createTasksItem(deps) {
           }
         }
       } catch (stageErr) {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 领取扭蛋阶段奖励失败: ${stageErr.message}`,
           type: "warning",
         });
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 扭蛋完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 扭蛋失败: ${error.message}`,
         type: "error",
@@ -2555,8 +2773,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -2568,7 +2797,18 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+
         await tokenStore.sendClubSignup(tokenId, {});
         await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -2586,12 +2826,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -2601,16 +2841,20 @@ export function createTasksItem(deps) {
   /**
    * 篝火营地报名（单个Token）
    */
-  const batchCampSignupForToken = async (tokenId, skipConnect = false) => {
+  const batchCampSignupForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始篝火营地报名`,
         type: "info",
@@ -2619,13 +2863,13 @@ export function createTasksItem(deps) {
       await tokenStore.sendClubSignup(tokenId, {});
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 篝火营地报名完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 篝火营地报名失败: ${error.message}`,
         type: "error",
@@ -2647,8 +2891,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -2660,12 +2915,22 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
-        // 切换阵容2（出错也继续）
+        // 步骤1：presetteam_saveteam 切换阵容2
         try {
           await tokenStore.sendPresetteamSaveTeam(tokenId, { teamId: 2 });
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 800));
         } catch (e) {
           addLog({
             time: new Date().toLocaleTimeString(),
@@ -2674,21 +2939,11 @@ export function createTasksItem(deps) {
           });
         }
 
-        // 获取当前战力
-        const roleInfo = await tokenStore.sendMessageWithPromise(tokenId, 'role_getroleinfo', {});
-        const myPower = roleInfo?.role?.power || roleInfo?.power || 0;
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 获取俱乐部信息
-        await tokenStore.sendLegionGetInfo(tokenId, {});
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // 获取篝火营地信息
+        // 步骤2：club_getinfo 获取篝火营地信息
         const clubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
         const oppoMap = clubInfo?.club?.oppoMap;
         if (!oppoMap) throw new Error('未获取到篝火营地对手信息');
 
-        // 根据星期几获取对手
         const dayOfWeek = new Date().getDay();
         const dayToOppo = { 2: '2', 3: '3', 4: '4' };
         const oppoKey = dayToOppo[dayOfWeek];
@@ -2697,37 +2952,27 @@ export function createTasksItem(deps) {
         const oppoData = oppoMap[oppoKey];
         if (!oppoData) throw new Error(`未找到星期${dayOfWeek}对应的对手`);
 
-        const legionId = oppoData.legionId;
         const defenders = oppoData.defenders || {};
         const defenderList = [];
 
-        // 获取每个对手的战力
+        // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前10个），并存入缓存
         for (const [nodeId, def] of Object.entries(defenders)) {
-          try {
-            const teamInfo = await tokenStore.sendClubGetTargetTeam(tokenId, { targetId: def.roleId });
-            const power = teamInfo?.roleBattleTeam?.role?.power || 0;
+          if (def.challengeCnt < 5) {
             defenderList.push({
               nodeId: parseInt(nodeId),
-              targetId: def.roleId,
+              roleId: def.roleId,
               challengeCnt: def.challengeCnt || 0,
               failCnt: def.failCnt || 0,
-              power: power,
               name: def.name || ''
-            });
-            await new Promise(resolve => setTimeout(resolve, 500));
-          } catch (e) {
-            addLog({
-              time: new Date().toLocaleTimeString(),
-              message: `${token.name} 获取对手${def.roleId}战力失败，跳过`,
-              type: "warning",
             });
           }
         }
 
-        // 按战力从大到小排序
-        defenderList.sort((a, b) => b.power - a.power);
+        // 按 failCnt 升序排序，取前10个
+        defenderList.sort((a, b) => a.failCnt - b.failCnt);
+        const defenderCache = defenderList.slice(0, 10);
 
-        // 获取当前阵容
+        // 步骤4：fight_startlevel 获取当前阵容
         const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
         const battleData = fightResult?.battleData?.leftTeam;
         if (!battleData) throw new Error('未获取到战斗数据');
@@ -2741,71 +2986,27 @@ export function createTasksItem(deps) {
             battleTeam[pos] = team[pos].id;
           }
         }
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-        // 筛选对手
-        const filterTargets = () => {
-          const group1 = defenderList
-            .filter(d => d.challengeCnt < 5 && d.power < myPower * 1.5)
-            .sort((a, b) => a.failCnt - b.failCnt)
-            .slice(0, 2);
-          
-          const group2 = defenderList
-            .filter(d => d.challengeCnt < 5 && d.power < myPower * 1.3)
-            .sort((a, b) => a.failCnt - b.failCnt)
-            .slice(0, 7);
-          
-          const combined = [...group1];
-          for (const d of group2) {
-            if (!combined.find(c => c.nodeId === d.nodeId)) {
-              combined.push(d);
-            }
-          }
-          return combined.slice(0, 7);
-        };
-
-        let targets = filterTargets();
+        // 步骤5：循环挑战（最多10次），累计失败7次执行空投，清空缓存
         let challengeCount = 0;
-        const maxChallenges = 7;
-        let challengeError = false;
+        const maxChallenges = 10;
+        let failCount = 0;
+        const maxFailCount = 7;
+        let challengeLimitReached = false;
 
-        // 循环挑战
-        while (challengeCount < maxChallenges && !challengeError) {
-          if (targets.length === 0) {
-            // 重新获取 club_getinfo 更新缓存
-            try {
-              const clubInfo2 = await tokenStore.sendClubGetInfo(tokenId, {});
-              const oppoMap2 = clubInfo2?.club?.oppoMap;
-              if (oppoMap2) {
-                const oppoData2 = oppoMap2[oppoKey];
-                if (oppoData2) {
-                  const defenders2 = oppoData2.defenders || {};
-                  for (const [nodeId, def] of Object.entries(defenders2)) {
-                    const defInList = defenderList.find(d => d.targetId === def.roleId);
-                    if (defInList) {
-                      defInList.challengeCnt = def.challengeCnt || 0;
-                      defInList.failCnt = def.failCnt || 0;
-                    }
-                  }
-                }
-              }
-            } catch (e) {
-              addLog({
-                time: new Date().toLocaleTimeString(),
-                message: `${token.name} 重新获取 club_getinfo 失败`,
-                type: "warning",
-              });
-            }
-
-            targets = filterTargets();
-            if (targets.length === 0) break;
+        while (challengeCount < maxChallenges && defenderCache.length > 0) {
+          const target = defenderCache[0];
+          const defenderWithNodeId = defenderList.find(d => d.roleId === target.roleId);
+          if (!defenderWithNodeId) {
+            defenderCache.shift();
+            continue;
           }
 
-          const target = targets[0];
           try {
             const attackResult = await tokenStore.sendClubAttack(tokenId, {
-              nodeId: target.nodeId,
-              targetId: target.targetId,
+              nodeId: defenderWithNodeId.nodeId,
+              targetId: target.roleId,
               challengeCnt: target.challengeCnt,
               failCnt: target.failCnt,
               useItem: false,
@@ -2820,26 +3021,41 @@ export function createTasksItem(deps) {
             const resultStr = JSON.stringify(attackResult || {});
             
             if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
+              challengeLimitReached = true;
               break;
             }
 
-            target.challengeCnt++;
-            await new Promise(resolve => setTimeout(resolve, 500));
+            if (resultStr.includes('failCnt')) {
+              failCount++;
+              if (failCount >= maxFailCount) {
+                defenderCache.shift();
+                break;
+              }
+            }
+
+            defenderCache.shift();
+            await new Promise(resolve => setTimeout(resolve, 800));
           } catch (e) {
-            challengeError = true;
+            const errorMsg = e.message || String(e);
+            if (errorMsg.includes('13000090') || errorMsg.includes('今日成功挑战次数已用完') || errorMsg.includes('请明日再来')) {
+              challengeLimitReached = true;
+              break;
+            }
             addLog({
               time: new Date().toLocaleTimeString(),
-              message: `${token.name} 挑战${target.name}异常: ${e.message}`,
-              type: "error",
+              message: `${token.name} 挑战${target.name}异常: ${errorMsg}，继续挑战下一个`,
+              type: "warning",
             });
-            break;
+            defenderCache.shift();
+            continue;
           }
-
-          targets = filterTargets();
         }
 
-        // 执行3次空投战斗
-        if (!challengeError) {
+        // 清空缓存
+        defenderCache.length = 0;
+
+        // 步骤6：执行空投战斗3次（如果未达到挑战上限）
+        if (!challengeLimitReached) {
           for (let fightCount = 1; fightCount <= 3; fightCount++) {
             try {
               await tokenStore.sendClubAttackMonster(tokenId, {
@@ -2850,7 +3066,7 @@ export function createTasksItem(deps) {
                   battleTeam: battleTeam
                 }
               });
-              await new Promise(resolve => setTimeout(resolve, 500));
+              await new Promise(resolve => setTimeout(resolve, 800));
             } catch (e) {
               break;
             }
@@ -2871,12 +3087,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -2886,39 +3102,34 @@ export function createTasksItem(deps) {
   /**
    * 篝火营地战斗（单个Token，战力模式）
    */
-  const batchCampFightForToken = async (tokenId, skipConnect = false) => {
+  const batchCampFightForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始篝火营地战斗`,
         type: "info",
       });
 
-      // 切换阵容2
+      // 步骤1：presetteam_saveteam 切换阵容2
       try {
         await tokenStore.sendPresetteamSaveTeam(tokenId, { teamId: 2 });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 800));
       } catch (e) {
         // 继续执行
       }
 
-      // 获取当前战力
-      const roleInfo = await tokenStore.sendMessageWithPromise(tokenId, 'role_getroleinfo', {});
-      const myPower = roleInfo?.role?.power || roleInfo?.power || 0;
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // 获取俱乐部信息
-      await tokenStore.sendLegionGetInfo(tokenId, {});
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // 获取篝火营地信息
+      // 步骤2：club_getinfo 获取篝火营地信息，筛选对手并存入缓存
       const clubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
       const oppoMap = clubInfo?.club?.oppoMap;
       if (!oppoMap) throw new Error('未获取到篝火营地对手信息');
@@ -2931,30 +3142,27 @@ export function createTasksItem(deps) {
       const oppoData = oppoMap[oppoKey];
       if (!oppoData) throw new Error(`未找到星期${dayOfWeek}对应的对手`);
 
-      const legionId = oppoData.legionId;
       const defenders = oppoData.defenders || {};
       const defenderList = [];
 
+      // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前10个），存入缓存
       for (const [nodeId, def] of Object.entries(defenders)) {
-        try {
-          const teamInfo = await tokenStore.sendClubGetTargetTeam(tokenId, { targetId: def.roleId });
-          const power = teamInfo?.roleBattleTeam?.role?.power || 0;
+        if (def.challengeCnt < 5) {
           defenderList.push({
             nodeId: parseInt(nodeId),
-            targetId: def.roleId,
+            roleId: def.roleId,
             challengeCnt: def.challengeCnt || 0,
             failCnt: def.failCnt || 0,
-            power: power,
             name: def.name || ''
           });
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (e) {
-          // 跳过
         }
       }
 
-      defenderList.sort((a, b) => b.power - a.power);
+      // 按 failCnt 升序排序，取前10个
+      defenderList.sort((a, b) => a.failCnt - b.failCnt);
+      const defenderCache = defenderList.slice(0, 10);
 
+      // 步骤4：fight_startlevel 获取当前阵容
       const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
       const battleData = fightResult?.battleData?.leftTeam;
       if (!battleData) throw new Error('未获取到战斗数据');
@@ -2968,64 +3176,22 @@ export function createTasksItem(deps) {
           battleTeam[pos] = team[pos].id;
         }
       }
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 800));
 
-      const filterTargets = () => {
-        const group1 = defenderList
-          .filter(d => d.challengeCnt < 5 && d.power < myPower * 1.5)
-          .sort((a, b) => a.failCnt - b.failCnt)
-          .slice(0, 2);
-        
-        const group2 = defenderList
-          .filter(d => d.challengeCnt < 5 && d.power < myPower * 1.3)
-          .sort((a, b) => a.failCnt - b.failCnt)
-          .slice(0, 7);
-        
-        const combined = [...group1];
-        for (const d of group2) {
-          if (!combined.find(c => c.nodeId === d.nodeId)) {
-            combined.push(d);
-          }
-        }
-        return combined.slice(0, 7);
-      };
-
-      let targets = filterTargets();
+      // 步骤5：循环挑战（最多10次），累计失败7次执行空投，清空缓存
       let challengeCount = 0;
-      const maxChallenges = 7;
+      const maxChallenges = 10;
+      let failCount = 0;
+      const maxFailCount = 7;
       let challengeError = false;
+      let challengeLimitReached = false;
 
-      while (challengeCount < maxChallenges && !challengeError) {
-        if (targets.length === 0) {
-          try {
-            const clubInfo2 = await tokenStore.sendClubGetInfo(tokenId, {});
-            const oppoMap2 = clubInfo2?.club?.oppoMap;
-            if (oppoMap2) {
-              const oppoData2 = oppoMap2[oppoKey];
-              if (oppoData2) {
-                const defenders2 = oppoData2.defenders || {};
-                for (const [nodeId, def] of Object.entries(defenders2)) {
-                  const defInList = defenderList.find(d => d.targetId === def.roleId);
-                  if (defInList) {
-                    defInList.challengeCnt = def.challengeCnt || 0;
-                    defInList.failCnt = def.failCnt || 0;
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            // 继续
-          }
-
-          targets = filterTargets();
-          if (targets.length === 0) break;
-        }
-
-        const target = targets[0];
+      while (challengeCount < maxChallenges && defenderCache.length > 0 && !challengeError) {
+        const target = defenderCache[0];
         try {
           const attackResult = await tokenStore.sendClubAttack(tokenId, {
             nodeId: target.nodeId,
-            targetId: target.targetId,
+            targetId: target.roleId,
             challengeCnt: target.challengeCnt,
             failCnt: target.failCnt,
             useItem: false,
@@ -3040,20 +3206,31 @@ export function createTasksItem(deps) {
           const resultStr = JSON.stringify(attackResult || {});
           
           if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
+            challengeLimitReached = true;
             break;
           }
 
-          target.challengeCnt++;
-          await new Promise(resolve => setTimeout(resolve, 500));
+          if (resultStr.includes('failCnt')) {
+            failCount++;
+            if (failCount >= maxFailCount) {
+              defenderCache.shift();
+              break;
+            }
+          }
+
+          defenderCache.shift();
+          await new Promise(resolve => setTimeout(resolve, 800));
         } catch (e) {
           challengeError = true;
           break;
         }
-
-        targets = filterTargets();
       }
 
-      if (!challengeError) {
+      // 清空缓存
+      defenderCache.length = 0;
+
+      // 步骤6：执行空投战斗3次（如果未达到挑战上限）
+      if (!challengeError && !challengeLimitReached) {
         for (let fightCount = 1; fightCount <= 3; fightCount++) {
           try {
             await tokenStore.sendClubAttackMonster(tokenId, {
@@ -3064,7 +3241,7 @@ export function createTasksItem(deps) {
                 battleTeam: battleTeam
               }
             });
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 800));
           } catch (e) {
             break;
           }
@@ -3099,8 +3276,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -3112,7 +3300,18 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+
         await tokenStore.sendLegionSignup(tokenId, {});
         await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -3130,12 +3329,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -3145,16 +3344,20 @@ export function createTasksItem(deps) {
   /**
    * 盐场报名（单个Token）
    */
-  const batchSaltSignupForToken = async (tokenId, skipConnect = false) => {
+  const batchSaltSignupForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始盐场报名`,
         type: "info",
@@ -3163,13 +3366,13 @@ export function createTasksItem(deps) {
       await tokenStore.sendLegionSignup(tokenId, {});
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 盐场报名完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 盐场报名失败: ${error.message}`,
         type: "error",
@@ -3191,8 +3394,19 @@ export function createTasksItem(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
@@ -3204,7 +3418,17 @@ export function createTasksItem(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         // 获取战斗数据
         const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
@@ -3305,12 +3529,12 @@ export function createTasksItem(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -3320,16 +3544,20 @@ export function createTasksItem(deps) {
   /**
    * 盐场布阵（单个Token）
    */
-  const batchSaltFormationForToken = async (tokenId, skipConnect = false) => {
+  const batchSaltFormationForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      if (!skipConnect) {
-        await ensureConnection(tokenId);
-      }
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始盐场布阵`,
         type: "info",
@@ -3419,13 +3647,13 @@ export function createTasksItem(deps) {
         }
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 盐场布阵完成`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 盐场布阵失败: ${error.message}`,
         type: "error",
@@ -3434,12 +3662,747 @@ export function createTasksItem(deps) {
     }
   };
 
+  /**
+   * 批量开箱⭐（单个Token）
+   * @param {string} tokenId - Token ID
+   */
+  const batchOpenBoxForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      const boxType = helperSettings.boxType;
+      const totalCount = helperSettings.count;
+      const batches = Math.floor(totalCount / 10);
+      const remainder = totalCount % 10;
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开始开箱 (${boxNames[boxType]} x${totalCount})`,
+        type: "info",
+      });
+
+      for (let i = 0; i < batches; i++) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "item_openbox",
+          { itemId: boxType, number: 10 },
+          5000,
+        );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 开箱进度: ${(i + 1) * 10}/${totalCount}`,
+          type: "info",
+        });
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+      }
+
+      if (remainder > 0) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "item_openbox",
+          { itemId: boxType, number: remainder },
+          5000,
+        );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 开箱进度: ${totalCount}/${totalCount}`,
+          type: "info",
+        });
+      }
+
+      await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "item_batchclaimboxpointreward",
+      );
+      await new Promise((r) => setTimeout(r, delayConfig.action));
+      await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开箱完成`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开箱失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 按积分开箱⭐（单个Token）
+   * @param {string} tokenId - Token ID
+   */
+  const batchOpenBoxByPointsForToken = async (tokenId) => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    try {
+      const targetPoints = helperSettings.targetPoints;
+
+      const boxPriority = [
+        { id: 2001, name: "木质宝箱", points: 1, reserve: 200 },
+        { id: 2002, name: "青铜宝箱", points: 10, reserve: 0 },
+        { id: 2003, name: "黄金宝箱", points: 20, reserve: 0 },
+        { id: 2004, name: "铂金宝箱", points: 50, reserve: 0 },
+      ];
+
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开始按积分开箱 (目标: ${targetPoints})`,
+        type: "info",
+      });
+
+      const roleInfoRes = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "role_getroleinfo",
+        {},
+        5000,
+      );
+      const role = roleInfoRes?.role || roleInfoRes?.data?.role || {};
+      const items = role.items || {};
+
+      const boxInventory = {};
+      let totalAvailablePoints = 0;
+
+      for (const box of boxPriority) {
+        const count = items[box.id]?.quantity || 0;
+        boxInventory[box.id] = count;
+        totalAvailablePoints += count * box.points;
+      }
+
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 箱子库存: 木质=${boxInventory[2001]}, 青铜=${boxInventory[2002]}, 黄金=${boxInventory[2003]}, 铂金=${boxInventory[2004]}`,
+        type: "info",
+      });
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 可获得总积分: ${totalAvailablePoints}`,
+        type: "info",
+      });
+
+      if (totalAvailablePoints < targetPoints) {
+        throw new Error(`积分不足! 需要 ${targetPoints}, 可获得 ${totalAvailablePoints}`);
+      }
+
+      const boxToOpen = {};
+      let remainingPoints = targetPoints;
+
+      const woodenAvailable = boxInventory[2001] - 200;
+      if (woodenAvailable >= 10) {
+        const woodenPoints = woodenAvailable * 1;
+        const pointsNeeded = Math.min(woodenPoints, remainingPoints);
+        let woodenToOpen = Math.min(pointsNeeded, woodenAvailable);
+        woodenToOpen = Math.floor(woodenToOpen / 10) * 10;
+        if (woodenToOpen === 0 && woodenAvailable >= 10 && pointsNeeded > 0) {
+          woodenToOpen = 10;
+        }
+
+        if (woodenToOpen >= 10) {
+          boxToOpen[2001] = woodenToOpen;
+          remainingPoints -= woodenToOpen * 1;
+        }
+      }
+
+      if (remainingPoints > 0) {
+        const bronzeAvailable = Math.floor(boxInventory[2002] / 10) * 10;
+        const goldAvailable = Math.floor(boxInventory[2003] / 10) * 10;
+        const platinumAvailable = Math.floor(boxInventory[2004] / 10) * 10;
+        const woodenTotal = Math.floor(boxInventory[2001] / 10) * 10;
+
+        let bestResult = null;
+        let minWaste = Infinity;
+
+        for (let bronze = 0; bronze <= bronzeAvailable; bronze += 10) {
+          const bronzePoints = bronze * 10;
+          if (bronzePoints > remainingPoints) break;
+
+          for (let gold = 0; gold <= goldAvailable; gold += 10) {
+            const goldPoints = gold * 20;
+            if (bronzePoints + goldPoints > remainingPoints) break;
+
+            const afterBronzeGold = remainingPoints - bronzePoints - goldPoints;
+
+            for (let platinum = 0; platinum <= platinumAvailable; platinum += 10) {
+              const platinumPoints = platinum * 50;
+              if (platinumPoints > afterBronzeGold) break;
+
+              const afterPlatinum = afterBronzeGold - platinumPoints;
+
+              let wooden = 0;
+              if (afterPlatinum > 0) {
+                wooden = Math.ceil(afterPlatinum / 10) * 10;
+                if (wooden > woodenTotal || wooden > 100) continue;
+              }
+
+              const totalPoints = bronzePoints + goldPoints + platinumPoints + wooden;
+              const waste = totalPoints - targetPoints;
+
+              if (waste >= 0 && waste < minWaste) {
+                minWaste = waste;
+                bestResult = { bronze, gold, platinum, wooden, totalPoints };
+                if (waste === 0) break;
+              }
+            }
+            if (minWaste === 0) break;
+          }
+          if (minWaste === 0) break;
+        }
+
+        if (bestResult) {
+          if (bestResult.bronze > 0) boxToOpen[2002] = bestResult.bronze;
+          if (bestResult.gold > 0) boxToOpen[2003] = bestResult.gold;
+          if (bestResult.platinum > 0) boxToOpen[2004] = bestResult.platinum;
+          if (bestResult.wooden > 0) {
+            boxToOpen[2001] = (boxToOpen[2001] || 0) + bestResult.wooden;
+          }
+          remainingPoints = 0;
+        }
+      }
+
+      for (const box of boxPriority) {
+        const count = boxToOpen[box.id] || 0;
+        if (count <= 0) continue;
+
+        const batches = Math.floor(count / 10);
+        const remainder = count % 10;
+
+        for (let i = 0; i < batches; i++) {
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "item_openbox",
+            { itemId: box.id, number: 10 },
+            5000,
+          );
+          await new Promise((r) => setTimeout(r, delayConfig.action));
+        }
+
+        if (remainder > 0) {
+          await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "item_openbox",
+            { itemId: box.id, number: remainder },
+            5000,
+          );
+        }
+      }
+
+      await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 按积分开箱完成`,
+        type: "success",
+      });
+    } catch (error) {
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 按积分开箱失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 领取宝箱积分⭐（单个Token）
+   */
+  const batchClaimBoxPointRewardForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开始领取宝箱积分`,
+        type: "info",
+      });
+
+      await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "item_batchclaimboxpointreward",
+        {},
+        5000,
+      );
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 宝箱积分领取成功`,
+        type: "success",
+      });
+
+      await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 领取宝箱积分失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 批量钓鱼⭐（单个Token）
+   * @param {string} tokenId - Token ID
+   */
+  const batchFishForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      const fishType = helperSettings.fishType;
+      const totalCount = helperSettings.count;
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开始钓鱼 (${fishNames[fishType]} x${totalCount})`,
+        type: "info",
+      });
+
+      // 检查鱼竿数量
+      let role = tokenStore.gameData?.roleInfo?.role;
+      if (!role) {
+        try {
+          const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
+          role = roleInfo?.role;
+        } catch {}
+      }
+      const rodId = fishType === 1 ? 1011 : 1012;
+      const rodCount = role?.items?.[rodId]?.quantity || 0;
+
+      let availableCount = totalCount;
+      if (rodCount < totalCount) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 库存不足 (${rodCount} < ${totalCount})，将仅消耗现有库存`,
+          type: "warning",
+        });
+        availableCount = rodCount;
+      }
+
+      if (availableCount <= 0) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 没有可用的鱼竿，停止任务`,
+          type: "warning",
+        });
+        return;
+      }
+
+      const batches = Math.floor(availableCount / 10);
+      const remainder = availableCount % 10;
+
+      for (let i = 0; i < batches; i++) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "artifact_lottery",
+          { type: fishType, lotteryNumber: 10, newFree: true },
+          5000,
+        );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 钓鱼进度: ${(i + 1) * 10}/${availableCount}`,
+          type: "info",
+        });
+
+        // 每5轮（50次）后，重新校验鱼竿数量
+        if ((i + 1) % 5 === 0 && i < batches - 1) {
+          try {
+            const roleRes = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "role_getroleinfo",
+              {},
+              5000,
+            );
+            const currentRole = roleRes?.role || roleRes?.data?.role;
+            if (currentRole) {
+              const currentRodCount = currentRole.items?.[rodId]?.quantity || 0;
+              if (currentRodCount < 10) {
+                logWithPrefix({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 同步后发现鱼竿不足 (${currentRodCount} < 10)，停止后续批量任务`,
+                  type: "warning",
+                });
+                break;
+              }
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+      }
+
+      if (remainder > 0) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "artifact_lottery",
+          { type: fishType, lotteryNumber: remainder, newFree: true },
+          5000,
+        );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 钓鱼进度: ${availableCount}/${availableCount}`,
+          type: "info",
+        });
+      }
+
+      // 自动领取鱼竿累计奖励
+      try {
+        const roleRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "role_getroleinfo",
+          {},
+          5000,
+        );
+        const currentRole = roleRes?.role || roleRes?.data?.role;
+        if (currentRole) {
+          const points = currentRole.statistics?.["artifact:point"] || 0;
+          const exchangeCount = Math.floor(points / 20);
+
+          if (exchangeCount > 0) {
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 检测到鱼竿累计使用 ${points}，开始领取 ${exchangeCount} 次累计奖励`,
+              type: "info",
+            });
+
+            for (let k = 0; k < exchangeCount; k++) {
+              try {
+                await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "artifact_exchange",
+                  {},
+                  3000
+                );
+                await new Promise((r) => setTimeout(r, 500));
+              } catch (err) {
+                logWithPrefix({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 领取累计奖励失败 (第${k + 1}次): ${err.message}`,
+                  type: "warning",
+                });
+                break;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 检查累计奖励失败: ${e.message}`,
+          type: "warning",
+        });
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 钓鱼完成`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 钓鱼失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 批量招募⭐（单个Token）
+   * @param {string} tokenId - Token ID
+   */
+  const batchRecruitForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      const totalCount = helperSettings.count;
+      const batches = Math.floor(totalCount / 10);
+      const remainder = totalCount % 10;
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开始招募 (数量: ${totalCount})`,
+        type: "info",
+      });
+
+      for (let i = 0; i < batches; i++) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "hero_recruit",
+          { recruitType: 1, recruitNumber: 10 },
+          5000,
+        );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 招募进度: ${(i + 1) * 10}/${totalCount}`,
+          type: "info",
+        });
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+      }
+
+      if (remainder > 0) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "hero_recruit",
+          { recruitType: 1, recruitNumber: remainder },
+          5000,
+        );
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 招募进度: ${totalCount}/${totalCount}`,
+          type: "info",
+        });
+      }
+
+      await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 招募完成`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 招募失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 领取蟠桃园任务⭐（单个Token）
+   */
+  const batchClaimPeachTasksForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 开始领取蟠桃园任务奖励`,
+        type: "info",
+      });
+
+      const res = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "legion_getpayloadtask",
+        {},
+        5000
+      );
+
+      const payloadTask = res?.payloadTask || res?.data?.payloadTask;
+
+      if (payloadTask && payloadTask.taskMap) {
+        const taskMap = payloadTask.taskMap;
+        const tasks = [];
+        Object.values(taskMap).forEach((item) => {
+          const availableTasks = PEACH_TASKS.filter(
+            (t) =>
+              t.type === item.typ &&
+              item.progress >= t.target &&
+              item.claimedProgress < t.target,
+          );
+          tasks.push(...availableTasks);
+        });
+
+        let claimedCount = 0;
+
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 获取到 ${tasks.length} 个任务奖励`,
+          type: "info",
+        });
+
+        for (const task of tasks) {
+          try {
+            const claimRes = await tokenStore.sendMessageWithPromise(
+              tokenId,
+              "legion_claimpayloadtask",
+              { taskId: task.id },
+              5000
+            );
+            const ok = claimRes && claimRes.payloadTask;
+            if (ok) {
+              claimedCount++;
+              logWithPrefix({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 领取${task.desc}任务奖励成功`,
+                type: "success",
+              });
+            }
+          } catch (err) {
+            // ignore
+          }
+          await new Promise((r) => setTimeout(r, delayConfig.action));
+        }
+
+        // Check and claim point rewards
+        try {
+          const progressMapres = await tokenStore.sendMessageWithPromise(
+            tokenId,
+            "legion_getpayloadtask",
+            {},
+            5000
+          );
+
+          if (progressMapres && progressMapres.payloadTask) {
+            const legionPoint = progressMapres.payloadTask.legionPoint || 0;
+            const selfPoint = progressMapres.payloadTask.selfPoint || 0;
+            const progressMap = progressMapres.payloadTask.progressMap || {};
+            const taskGroupprogressMap = progressMap[1] || progressMap["1"] || 0;
+            const selfPointprogressMap = progressMap[2] || progressMap["2"] || 0;
+
+            // Club Rewards
+            if (legionPoint > taskGroupprogressMap && taskGroupprogressMap < 25) {
+              try {
+                await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "legion_claimpayloadtaskprogress",
+                  { taskGroup: 1 },
+                  5000
+                );
+                logWithPrefix({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 领取俱乐部任务奖励 (当前积分: ${legionPoint})`,
+                  type: "success",
+                });
+                await new Promise((r) => setTimeout(r, 1000));
+              } catch (e) {
+                logWithPrefix({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 领取俱乐部任务奖励失败: ${e.message}`,
+                  type: "error",
+                });
+              }
+            }
+
+            // Personal Rewards
+            if (selfPoint > selfPointprogressMap && selfPointprogressMap < 25) {
+              try {
+                await tokenStore.sendMessageWithPromise(
+                  tokenId,
+                  "legion_claimpayloadtaskprogress",
+                  { taskGroup: 2 },
+                  5000
+                );
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 领取个人任务奖励 (当前积分: ${selfPoint})`,
+                  type: "success",
+                });
+                await new Promise((r) => setTimeout(r, 1000));
+              } catch (e) {
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 领取个人任务奖励失败: ${e.message}`,
+                  type: "error",
+                });
+              }
+            }
+          }
+        } catch (err) {
+          console.error("领取蟠桃园积分奖励异常:", err);
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 领取积分奖励异常: ${err.message}`,
+            type: "error",
+          });
+        }
+
+        if (claimedCount === 0) {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 没有可领取的任务奖励`,
+            type: "info",
+          });
+        }
+      } else {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 未获取到任务奖励列表`,
+          type: "warning",
+        });
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 蟠桃园任务奖励领取完成`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 领取蟠桃园任务奖励失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
   return {
     batchOpenBox,
+    batchOpenBoxForToken,
     batchOpenBoxByPoints,
+    batchOpenBoxByPointsForToken,
     batchClaimBoxPointReward,
+    batchClaimBoxPointRewardForToken,
     batchFish,
+    batchFishForToken,
     batchRecruit,
+    batchRecruitForToken,
     batchHeroUpgrade,
     batchHeroUpgradeForToken,
     batchBookUpgrade,
@@ -3447,6 +4410,7 @@ export function createTasksItem(deps) {
     batchClaimStarRewards,
     batchClaimStarRewardsForToken,
     batchClaimPeachTasks,
+    batchClaimPeachTasksForToken,
     batchGenieSweep,
     batchGenieSweepForToken,
     batchLegionBoss,

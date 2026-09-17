@@ -114,7 +114,7 @@
       <OperationLogCard 
         page="shidian" 
         card-type="俱乐部管理"
-        :filter-operations="['批量赠送功法', '导出功法详情', '导出俱乐部信息', '刷新图鉴信息', '激活功法图鉴', '批量功法图鉴', '加入俱乐部', '批量招募周', '批量开启功法挂机', '批量收集特权', '一键接受礼物', '批量宠物蛋', '批量宠物图鉴', '一键送功法', '一键领取', '批量功法挂机', '批量收集功法', '接受礼物', '批量接受礼物', '图鉴', '获取残卷数量', '篝火营地报名', '篝火营地上阵', '获取俱乐部团长']"
+        :filter-operations="['批量赠送功法', '导出功法详情', '导出俱乐部信息', '刷新图鉴信息', '激活功法图鉴', '批量功法图鉴', '加入俱乐部', '批量招募周', '批量开启功法挂机', '批量收集特权', '一键接受礼物', '批量宠物蛋', '批量宠物图鉴', '一键送功法', '一键领取', '批量功法挂机', '批量收集功法', '接受礼物', '批量接受礼物', '图鉴', '批量图鉴', '获取残卷数量', '篝火营地报名', '篝火营地上阵', '篝火营地战斗', '获取俱乐部团长', '功法挂机']"
       />
     </template>
   </MyCard>
@@ -135,7 +135,7 @@ const tokenStore = useTokenStore()
 const message = useMessage()
 
 // 注入执行间隔
-const commandDelay = inject('commandDelay', ref(600))
+const commandDelay = inject('commandDelay', ref(800))
 
 // 辅助函数：等待执行间隔
 const waitCommandDelay = () => new Promise(resolve => setTimeout(resolve, commandDelay.value))
@@ -546,15 +546,15 @@ const handleBatchPetEgg = async () => {
               status: 'warning',
               message: `第 ${i + 1}/4 次购买失败: ${errorMsg}`
             })
-            // 如果是"物品不存在"错误，跳过其余次数
-            if (errorMsg.includes('物品不存在')) {
-              message.warning(`[序号${tokenIndex}] ${token.name || token.id} 物品不存在，跳过其余次数`)
+            // 如果是"物品不存在"或"购买数量超出上限"错误，跳过其余次数
+            if (errorMsg.includes('物品不存在') || errorMsg.includes('2300370') || errorMsg.includes('俱乐部商品购买数量超出上限')) {
+              message.warning(`[序号${tokenIndex}] ${token.name || token.id} ${errorMsg}，跳过其余次数`)
               logOperation('shidian', '批量宠物蛋', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
                 tokenName: token.name,
                 status: 'warning',
-                message: '物品不存在，跳过其余次数'
+                message: `${errorMsg}，跳过其余次数`
               })
               break
             }
@@ -1013,9 +1013,6 @@ const handleCampBattle = async () => {
     return
   }
   
-  // 从 localStorage 读取持久化缓存
-  let defenderPowerCache = getDefenderPowerCache()
-  
   try {
     isCampBattleRunning.value = true
     const fightTypeText = campFightType.value === 'monster' ? '空投' : '战力'
@@ -1025,6 +1022,20 @@ const handleCampBattle = async () => {
       status: 'info',
       message: `开始篝火营地战斗（${fightTypeText}）...`
     })
+
+    // 关闭所有其他连接，确保每次只连接一个token
+    logOperation('shidian', '篝火营地战斗', {
+      cardType: '俱乐部管理',
+      status: 'info',
+      message: '关闭所有其他连接，确保每次只连接一个token...'
+    })
+    // 只关闭已存在的WebSocket连接
+    for (const token of sortedTokens.value) {
+      if (tokenStore.getWebSocketStatus(token.id) === 'connected') {
+        tokenStore.closeWebSocketConnection(token.id)
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 500))
 
     const tokenIndices = connectionPool.parseTokenRange(legionTokens.value)
     const targetTokens = connectionPool.getTargetTokens(sortedTokens.value, tokenIndices)
@@ -1070,32 +1081,119 @@ const handleCampBattle = async () => {
           continue
         }
 
-        // 1. 执行fight_startlevel获取战斗数据
-        const fightResult = await tokenStore.sendFightStartLevel(token.id, {})
-        const battleData = fightResult?.battleData?.leftTeam
-        
-        if (!battleData) {
-          throw new Error('未获取到战斗数据')
+        // 步骤1：presetteam_saveteam切换阵容2（出错也继续）
+        try {
+          await tokenStore.sendPresetteamSaveTeam(token.id, { teamId: 2 })
+          logOperation('shidian', '篝火营地战斗', {
+            cardType: '俱乐部管理',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'info',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]步骤1：已切换到阵容2`
+          })
+        } catch (e) {
+          logOperation('shidian', '篝火营地战斗', {
+            cardType: '俱乐部管理',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'warning',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]步骤1：切换阵容2失败，继续执行`
+          })
         }
 
-        // 2. 从battleData提取参数
+        // 步骤2：club_getinfo获取篝火营地信息
+        const clubInfo = await tokenStore.sendClubGetInfo(token.id, {})
+        const oppoMap = clubInfo?.club?.oppoMap
+        if (!oppoMap) throw new Error('未获取到篝火营地对手信息')
+
+        const dayOfWeek = new Date().getDay()
+        const dayToOppo = { 2: '2', 3: '3', 4: '4' }
+        const oppoKey = dayToOppo[dayOfWeek]
+        if (!oppoKey) throw new Error(`今天星期${dayOfWeek}，篝火营地战力模式只在周2、周3、周4开放`)
+        const oppoData = oppoMap[oppoKey]
+        if (!oppoData) throw new Error(`未找到星期${dayOfWeek}对应的对手(oppoKey=${oppoKey})`)
+
+        logOperation('shidian', '篝火营地战斗', {
+          cardType: '俱乐部管理',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'info',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]步骤2：对手俱乐部: ${oppoData.name}，星期${dayOfWeek}→oppoKey=${oppoKey}`
+        })
+
+        // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前7个），并存入缓存
+        const defenders = oppoData.defenders || {}
+        const defenderList = []
+        for (const [nodeId, def] of Object.entries(defenders)) {
+          defenderList.push({
+            nodeId: parseInt(nodeId),
+            roleId: def.roleId,
+            challengeCnt: def.challengeCnt || 0,
+            failCnt: def.failCnt || 0,
+            name: def.name || ''
+          })
+        }
+
+        const defenderCache = defenderList
+          .filter(d => d.challengeCnt < 5)
+          .sort((a, b) => a.failCnt - b.failCnt)
+          .slice(0, 10)
+          .map(d => ({
+            roleId: d.roleId,
+            challengeCnt: d.challengeCnt,
+            failCnt: d.failCnt,
+            name: d.name
+          }))
+
+        logOperation('shidian', '篝火营地战斗', {
+          cardType: '俱乐部管理',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'info',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]步骤3：筛选出${defenderCache.length}个对手存入缓存[${defenderCache.map(d => d.name).join(',')}]`
+        })
+
+        // 步骤4：fight_startlevel获取当前阵容
+        const fightResult = await tokenStore.sendFightStartLevel(token.id, {})
+        const battleData = fightResult?.battleData?.leftTeam
+        if (!battleData) throw new Error('未获取到战斗数据')
+
         const team = battleData.team || {}
         const weaponId = battleData.weaponId
         const petUId = battleData.petUId
-
-        // 3. 构建battleTeam参数 格式: {0: heroId, 1: heroId, ...}
         const battleTeam = {}
         for (let pos = 0; pos <= 4; pos++) {
-          if (team[pos]) {
-            battleTeam[pos] = team[pos].id
-          }
+          if (team[pos]) battleTeam[pos] = team[pos].id
         }
+        logOperation('shidian', '篝火营地战斗', {
+          cardType: '俱乐部管理',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'info',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]步骤4：获取当前阵容完成`
+        })
 
-        // 4. 根据选择的战斗类型执行不同命令
-        if (campFightType.value === 'monster') {
-          // 空投战斗，执行3次
-          for (let fightCount = 1; fightCount <= 3; fightCount++) {
-            await tokenStore.sendClubAttackMonster(token.id, {
+        // 步骤5：循环挑战（最多10次），累计失败7次执行空投，清空缓存
+        let challengeCount = 0
+        const maxChallenges = 10
+        let failCount = 0
+        const maxFailCount = 7
+        let challengeLimitReached = false
+        
+        while (challengeCount < maxChallenges && defenderCache.length > 0) {
+          const target = defenderCache[0]
+          const defenderWithNodeId = defenderList.find(d => d.roleId === target.roleId)
+          if (!defenderWithNodeId) {
+            defenderCache.shift()
+            continue
+          }
+
+          try {
+            const attackResult = await tokenStore.sendClubAttack(token.id, {
+              nodeId: defenderWithNodeId.nodeId,
+              targetId: target.roleId,
+              challengeCnt: target.challengeCnt,
+              failCnt: target.failCnt,
               useItem: false,
               teamSetParams: {
                 lordWeaponId: weaponId,
@@ -1103,385 +1201,119 @@ const handleCampBattle = async () => {
                 battleTeam: battleTeam
               }
             })
-            logOperation('shidian', '篝火营地战斗', {
-              cardType: '俱乐部管理',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'info',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]空投战斗第${fightCount}/3次完成`
-            })
-            await waitCommandDelay()
-          }
-        } else {
-          // 战力模式
-          // 1. 切换阵容2（出错也继续）
-          try {
-            await tokenStore.sendPresetteamSaveTeam(token.id, { teamId: 2 })
-            logOperation('shidian', '篝火营地战斗', {
-              cardType: '俱乐部管理',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'info',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]已切换到阵容2`
-            })
-          } catch (e) {
-            logOperation('shidian', '篝火营地战斗', {
-              cardType: '俱乐部管理',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'warning',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]切换阵容2失败，继续执行`
-            })
-          }
-
-          // 2. 获取当前战力
-          const roleInfo = await tokenStore.sendMessageWithPromise(token.id, 'role_getroleinfo', {})
-          const myPower = roleInfo?.role?.power || roleInfo?.power || 0
-          logOperation('shidian', '篝火营地战斗', {
-            cardType: '俱乐部管理',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]当前战力: ${myPower}`
-          })
-
-          // 3. 获取俱乐部信息
-          await tokenStore.sendLegionGetInfo(token.id, {})
-
-          // 4. 获取篝火营地信息
-          const clubInfo = await tokenStore.sendClubGetInfo(token.id, {})
-          const oppoMap = clubInfo?.club?.oppoMap
-          if (!oppoMap) throw new Error('未获取到篝火营地对手信息')
-
-          // 根据星期几获取对手: 只有周2、周3、周4
-          const dayOfWeek = new Date().getDay()
-          const dayToOppo = { 2: '2', 3: '3', 4: '4' }
-          const oppoKey = dayToOppo[dayOfWeek]
-          if (!oppoKey) {
-            throw new Error(`今天星期${dayOfWeek}，篝火营地战力模式只在周2、周3、周4开放`)
-          }
-          const oppoData = oppoMap[oppoKey]
-          if (!oppoData) throw new Error(`未找到星期${dayOfWeek}对应的对手(oppoKey=${oppoKey})`)
-
-          logOperation('shidian', '篝火营地战斗', {
-            cardType: '俱乐部管理',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]对手俱乐部: ${oppoData.name}，星期${dayOfWeek}→oppoKey=${oppoKey}`
-          })
-
-          // 6. 提取defenders并获取每个targetId的战力（使用缓存）
-          const legionId = oppoData.legionId
-          
-          const defenders = oppoData.defenders || {}
-          const defenderList = []
-          let cacheHitCount = 0
-          
-          for (const [nodeId, def] of Object.entries(defenders)) {
-            const d = def
-            try {
-              let power
-              let cachedChallengeCnt = d.challengeCnt || 0
-              let cachedFailCnt = d.failCnt || 0
-              
-              // 检查缓存（按 legionId + roleId 查找）
-              const cached = defenderPowerCache.find(c => c.legionId === legionId && c.roleId === d.roleId)
-              if (cached) {
-                power = cached.power
-                cacheHitCount++
-                // 使用 club_getinfo 返回的最新 challengeCnt 和 failCnt 更新缓存
-                cached.challengeCnt = cachedChallengeCnt
-                cached.failCnt = cachedFailCnt
-              } else {
-                // 缓存未命中，调用API获取战力
-                const teamInfo = await tokenStore.sendClubGetTargetTeam(token.id, { targetId: d.roleId })
-                power = teamInfo?.roleBattleTeam?.role?.power || 0
-                // 存入缓存
-                defenderPowerCache.push({
-                  legionId: legionId,
-                  roleId: d.roleId,
-                  power: power,
-                  challengeCnt: cachedChallengeCnt,
-                  failCnt: cachedFailCnt
-                })
-                await waitCommandDelay()
-              }
-              
-              defenderList.push({
-                nodeId: parseInt(nodeId),
-                targetId: d.roleId,
-                challengeCnt: cachedChallengeCnt,
-                failCnt: cachedFailCnt,
-                power: power,
-                name: d.name || ''
-              })
-            } catch (e) {
+            
+            challengeCount++
+            
+            const resultStr = JSON.stringify(attackResult || {})
+            if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
               logOperation('shidian', '篝火营地战斗', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
                 tokenName: token.name,
                 status: 'warning',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]获取对手${d.roleId}战力失败，跳过`
+                message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：收到提示"今日成功挑战次数已用完，请明日再来"，停止挑战`
               })
+              challengeLimitReached = true
+              break
             }
-          }
-          
-          // 保存缓存到 localStorage
-          saveDefenderPowerCache(defenderPowerCache)
-          
-          if (cacheHitCount > 0) {
-            logOperation('shidian', '篝火营地战斗', {
-              cardType: '俱乐部管理',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'info',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]对手战力缓存命中${cacheHitCount}次，已更新challengeCnt和failCnt`
-            })
-          }
-
-          // 按战力从大到小排序
-          defenderList.sort((a, b) => b.power - a.power)
-          logOperation('shidian', '篝火营地战斗', {
-            cardType: '俱乐部管理',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]获取到${defenderList.length}个对手，按战力排序完成`
-          })
-
-          // 7. 执行fight_startlevel获取当前阵容
-          const fightResult2 = await tokenStore.sendFightStartLevel(token.id, {})
-          const battleData2 = fightResult2?.battleData?.leftTeam
-          if (!battleData2) {
-            throw new Error('未获取到战斗数据')
-          }
-          const team2 = battleData2.team || {}
-          const weaponId2 = battleData2.weaponId
-          const petUId2 = battleData2.petUId
-          const battleTeam2 = {}
-          for (let pos = 0; pos <= 4; pos++) {
-            if (team2[pos]) {
-              battleTeam2[pos] = team2[pos].id
-            }
-          }
-          logOperation('shidian', '篝火营地战斗', {
-            cardType: '俱乐部管理',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]获取当前阵容完成`
-          })
-
-          // 8. 筛选对手：分两组，共7个
-          const filterTargets = () => {
-            // 第一组：challengeCnt<5 且 power<当前战力*1.5，取failCnt最小的前2个
-            const group1 = defenderList
-              .filter(d => d.challengeCnt < 5 && d.power < myPower * 1.5)
-              .sort((a, b) => a.failCnt - b.failCnt)
-              .slice(0, 2)
             
-            // 第二组：challengeCnt<5 且 power<当前战力*1.3，取failCnt最小的前7个
-            const group2 = defenderList
-              .filter(d => d.challengeCnt < 5 && d.power < myPower * 1.3)
-              .sort((a, b) => a.failCnt - b.failCnt)
-              .slice(0, 7)
-            
-            // 合并两组（去重），取前7个
-            const combined = [...group1]
-            for (const d of group2) {
-              if (!combined.find(c => c.nodeId === d.nodeId)) {
-                combined.push(d)
-              }
-            }
-            return combined.slice(0, 7)
-          }
-          
-          let targets = filterTargets()
-          logOperation('shidian', '篝火营地战斗', {
-            cardType: '俱乐部管理',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]筛选出${targets.length}个可挑战对手（challengeCnt<5且战力<${myPower * 1.2}，最多7个）`
-          })
-
-          // 9. 循环挑战，直到执行7次或收到"今日成功挑战次数已用完"提示
-          let challengeCount = 0
-          const maxChallenges = 7
-          
-          while (challengeCount < maxChallenges) {
-            // 如果没有可挑战的对手，重新获取 club_getinfo 更新缓存
-            if (targets.length === 0) {
+            if (resultStr.includes('failCnt')) {
+              failCount++
               logOperation('shidian', '篝火营地战斗', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
                 tokenName: token.name,
-                status: 'info',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]无可挑战对手，重新获取 club_getinfo 更新缓存`
+                status: 'warning',
+                message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：挑战${target.name}(roleId=${target.roleId})失败，failCnt=${target.failCnt} (挑战${challengeCount}/${maxChallenges}, 失败${failCount}/${maxFailCount})`
               })
-              
-              try {
-                const clubInfo2 = await tokenStore.sendClubGetInfo(token.id, {})
-                const oppoMap2 = clubInfo2?.club?.oppoMap
-                if (oppoMap2) {
-                  const dayOfWeek = new Date().getDay()
-                  const dayToOppo = { 2: '2', 3: '3', 4: '4' }
-                  const oppoKey = dayToOppo[dayOfWeek]
-                  const oppoData2 = oppoMap2[oppoKey]
-                  
-                  if (oppoData2) {
-                    const defenders2 = oppoData2.defenders || {}
-                    // 更新缓存中的 challengeCnt 和 failCnt
-                    for (const [nodeId, def] of Object.entries(defenders2)) {
-                      const cached = defenderPowerCache.find(c => c.legionId === legionId && c.roleId === def.roleId)
-                      if (cached) {
-                        cached.challengeCnt = def.challengeCnt || 0
-                        cached.failCnt = def.failCnt || 0
-                      }
-                      // 同时更新 defenderList
-                      const defInList = defenderList.find(d => d.roleId === def.roleId)
-                      if (defInList) {
-                        defInList.challengeCnt = def.challengeCnt || 0
-                        defInList.failCnt = def.failCnt || 0
-                      }
-                    }
-                    saveDefenderPowerCache(defenderPowerCache)
-                    logOperation('shidian', '篝火营地战斗', {
-                      cardType: '俱乐部管理',
-                      tokenId: token.id,
-                      tokenName: token.name,
-                      status: 'info',
-                      message: `【序号${tokenIndex}】[${token.name || token.id}]已更新缓存中的 challengeCnt 和 failCnt`
-                    })
-                  }
-                }
-              } catch (e) {
-                logOperation('shidian', '篝火营地战斗', {
-                  cardType: '俱乐部管理',
-                  tokenId: token.id,
-                  tokenName: token.name,
-                  status: 'warning',
-                  message: `【序号${tokenIndex}】[${token.name || token.id}]重新获取 club_getinfo 失败: ${e.message || e}`
-                })
-              }
-              
-              // 重新筛选
-              targets = filterTargets()
-              if (targets.length === 0) {
+              if (failCount >= maxFailCount) {
                 logOperation('shidian', '篝火营地战斗', {
                   cardType: '俱乐部管理',
                   tokenId: token.id,
                   tokenName: token.name,
                   status: 'info',
-                  message: `【序号${tokenIndex}】[${token.name || token.id}]更新缓存后仍无可挑战对手，停止挑战`
+                  message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：累计失败${failCount}次，停止挑战，执行空投战斗`
                 })
+                defenderCache.shift()
                 break
               }
-            }
-            
-            // 挑战第一个对手
-            const target = targets[0]
-            try {
-              const attackResult = await tokenStore.sendClubAttack(token.id, {
-                nodeId: target.nodeId,
-                targetId: target.targetId,
-                challengeCnt: target.challengeCnt,
-                failCnt: target.failCnt,
-                useItem: false,
-                teamSetParams: {
-                  lordWeaponId: weaponId2,
-                  petUId: petUId2,
-                  battleTeam: battleTeam2
-                }
-              })
-              
-              challengeCount++
-              
-              // 检查是否收到"今日成功挑战次数已用完"提示
-              const resultStr = JSON.stringify(attackResult || {})
-              if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
-                logOperation('shidian', '篝火营地战斗', {
-                  cardType: '俱乐部管理',
-                  tokenId: token.id,
-                  tokenName: token.name,
-                  status: 'warning',
-                  message: `【序号${tokenIndex}】[${token.name || token.id}]收到提示"今日成功挑战次数已用完，请明日再来"，停止挑战`
-                })
-                break
-              }
-              
-              // 检查是否挑战失败（结果包含failCnt）
-              if (resultStr.includes('failCnt')) {
-                logOperation('shidian', '篝火营地战斗', {
-                  cardType: '俱乐部管理',
-                  tokenId: token.id,
-                  tokenName: token.name,
-                  status: 'warning',
-                  message: `【序号${tokenIndex}】[${token.name || token.id}]挑战${target.name}(nodeId=${target.nodeId})失败，failCnt=${target.failCnt} (${challengeCount}/${maxChallenges})`
-                })
-              } else {
-                logOperation('shidian', '篝火营地战斗', {
-                  cardType: '俱乐部管理',
-                  tokenId: token.id,
-                  tokenName: token.name,
-                  status: 'success',
-                  message: `【序号${tokenIndex}】[${token.name || token.id}]挑战${target.name}(nodeId=${target.nodeId})成功 (${challengeCount}/${maxChallenges})`
-                })
-              }
-              
-              // 更新该对手的 challengeCnt
-              target.challengeCnt++
-              const cached = defenderPowerCache.find(c => c.legionId === legionId && c.roleId === target.targetId)
-              if (cached) {
-                cached.challengeCnt = target.challengeCnt
-              }
-              saveDefenderPowerCache(defenderPowerCache)
-              
-            } catch (e) {
+            } else {
               logOperation('shidian', '篝火营地战斗', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
                 tokenName: token.name,
-                status: 'error',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]挑战${target.name}异常: ${e.message || e}，继续挑战下一个`
+                status: 'success',
+                message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：挑战${target.name}(roleId=${target.roleId})成功 (挑战${challengeCount}/${maxChallenges}, 失败${failCount}/${maxFailCount})`
               })
-              // 挑战出错继续执行，不 break
-              // 移除该对手，尝试下一个
-              targets.shift()
-              continue
             }
             
-            await waitCommandDelay()
+            // 将对手从缓存中移除
+            defenderCache.shift()
             
-            // 重新筛选（因为 challengeCnt 已更新）
-            targets = filterTargets()
+          } catch (e) {
+            const errorMsg = e.message || String(e)
+            if (errorMsg.includes('13000090') || errorMsg.includes('今日成功挑战次数已用完') || errorMsg.includes('请明日再来')) {
+              logOperation('shidian', '篝火营地战斗', {
+                cardType: '俱乐部管理',
+                tokenId: token.id,
+                tokenName: token.name,
+                status: 'warning',
+                message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：收到提示"今日成功挑战次数已用完，请明日再来"，停止挑战`
+              })
+              challengeLimitReached = true
+              break
+            }
+            logOperation('shidian', '篝火营地战斗', {
+              cardType: '俱乐部管理',
+              tokenId: token.id,
+              tokenName: token.name,
+              status: 'error',
+              message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：挑战${target.name}异常: ${errorMsg}，继续挑战下一个`
+            })
+            defenderCache.shift()
+            continue
           }
           
-          logOperation('shidian', '篝火营地战斗', {
-            cardType: '俱乐部管理',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]挑战完成，共执行${challengeCount}次`
-          })
+          await waitCommandDelay()
+          defenderCache.sort((a, b) => a.failCnt - b.failCnt)
+        }
+        
+        logOperation('shidian', '篝火营地战斗', {
+          cardType: '俱乐部管理',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'info',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]步骤5：挑战完成，共执行${challengeCount}次，清空缓存`
+        })
 
-          // 执行3次空投战斗
+        // 清空缓存
+        defenderCache.length = 0
+
+        // 步骤6：执行3次空投战斗（如果未达到挑战上限）
+        if (challengeLimitReached) {
           logOperation('shidian', '篝火营地战斗', {
             cardType: '俱乐部管理',
             tokenId: token.id,
             tokenName: token.name,
             status: 'info',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]战力模式完成，开始执行3次空投战斗`
+            message: `【序号${tokenIndex}】[${token.name || token.id}]步骤6：已达到挑战上限，跳过空投战斗`
+          })
+        } else {
+          logOperation('shidian', '篝火营地战斗', {
+            cardType: '俱乐部管理',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'info',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]步骤6：开始执行3次空投战斗`
           })
           for (let fightCount = 1; fightCount <= 3; fightCount++) {
             try {
               await tokenStore.sendClubAttackMonster(token.id, {
                 useItem: false,
                 teamSetParams: {
-                  lordWeaponId: weaponId2,
-                  petUId: petUId2,
-                  battleTeam: battleTeam2
+                  lordWeaponId: weaponId,
+                  petUId: petUId,
+                  battleTeam: battleTeam
                 }
               })
               logOperation('shidian', '篝火营地战斗', {
@@ -1489,7 +1321,7 @@ const handleCampBattle = async () => {
                 tokenId: token.id,
                 tokenName: token.name,
                 status: 'info',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]空投战斗第${fightCount}/3次完成`
+                message: `【序号${tokenIndex}】[${token.name || token.id}]步骤6：空投战斗第${fightCount}/3次完成`
               })
             } catch (e) {
               logOperation('shidian', '篝火营地战斗', {
@@ -1497,7 +1329,7 @@ const handleCampBattle = async () => {
                 tokenId: token.id,
                 tokenName: token.name,
                 status: 'error',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]空投战斗第${fightCount}次失败: ${e.message || e}，停止空投`
+                message: `【序号${tokenIndex}】[${token.name || token.id}]步骤6：空投战斗第${fightCount}次失败: ${e.message || e}，停止空投`
               })
               break
             }

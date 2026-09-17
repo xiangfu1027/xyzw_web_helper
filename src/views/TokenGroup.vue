@@ -458,39 +458,6 @@
                 </n-button>
                 <n-button
                   size="small"
-                  @click="batchClaimCars"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isCarActivityOpen
-                  "
-                >
-                  一键收车
-                </n-button>
-                <n-button
-                  size="small"
-                  @click="batchSmartSendCar"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isCarActivityOpen
-                  "
-                >
-                  智能发车
-                </n-button>
-                <n-button
-                  size="small"
-                  @click="handleSmartSendCar"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isCarActivityOpen
-                  "
-                >
-                  智能收发车
-                </n-button>
-                <n-button
-                  size="small"
                   @click="store_purchase"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -501,7 +468,7 @@
                   @click="collection_claimfreereward"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
-                  一键领取珍宝阁
+                  一键领取珍宝阁⭐
                 </n-button>
                 <n-button
                   size="small"
@@ -4484,14 +4451,24 @@ const startScheduler = () => {
         second: "2-digit",
       });
 
-      // Don't skip all tasks if isRunning is true, just skip individual task execution if already running
+      // 任务级并发控制：最多3个定时任务同时执行
       const tasksToRun = scheduledTasks.value.filter((task) => task.enabled);
 
       if (tasksToRun.length === 0) {
         return;
       }
 
+      // 检查是否达到最大并发任务数
+      if (runningTaskCount >= MAX_CONCURRENT_TASKS) {
+        console.log(`[Scheduler] 已达最大并发任务数(${MAX_CONCURRENT_TASKS})，等待任务完成`);
+        return;
+      }
+
       tasksToRun.forEach((task) => {
+        // 再次检查并发数（因为forEach中可能已启动任务）
+        if (runningTaskCount >= MAX_CONCURRENT_TASKS) {
+          return;
+        }
         let shouldRun = false;
         let reason = "";
 
@@ -4708,9 +4685,31 @@ const verifyTaskDependencies = async (task) => {
 // Execute a scheduled task with dependency verification
 // 改为按Token遍历：连接Token后执行所有任务，再连接下一个Token
 const executeScheduledTask = async (task) => {
+  // 检查并发限制
+  if (runningTaskCount >= MAX_CONCURRENT_TASKS) {
+    addLog({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 定时任务 ${task.name} 等待执行：已达最大并发任务数(${MAX_CONCURRENT_TASKS}) ===`,
+      type: "warning",
+    });
+    return;
+  }
+
+  // 增加并发任务计数
+  runningTaskCount++;
+
+  // 为该任务创建独立的连接池
+  const taskPool = new ConnectionPoolManager(tokenStore, {
+    maxConnections: MAX_CONNECTIONS_PER_TASK,
+    connectionTimeout: batchSettings.connectionTimeout,
+    reconnectDelay: batchSettings.reconnectDelay,
+    maxRetries: 3
+  });
+  taskConnectionPools.set(task.id, taskPool);
+
   addLog({
     time: new Date().toLocaleTimeString(),
-    message: `=== 开始执行定时任务: ${task.name} ===`,
+    message: `=== 开始执行定时任务: ${task.name} (连接池: ${MAX_CONNECTIONS_PER_TASK}连接, 并发任务: ${runningTaskCount}/${MAX_CONCURRENT_TASKS}) ===`,
     type: "info",
   });
 
@@ -4860,7 +4859,7 @@ const executeScheduledTask = async (task) => {
 
       try {
         // 连接Token
-        const connected = await scheduledTaskPool.acquire(tokenId);
+        const connected = await taskPool.acquire(tokenId);
         
         if (!connected) {
           addLog({
@@ -4881,10 +4880,10 @@ const executeScheduledTask = async (task) => {
           });
           // 释放失败的连接
           try {
-            await scheduledTaskPool.release(tokenId, true);
+            await taskPool.release(tokenId, true);
           } catch (e) {}
           // 重新连接
-          const reconnected = await scheduledTaskPool.acquire(tokenId);
+          const reconnected = await taskPool.acquire(tokenId);
           if (!reconnected) {
             addLog({
               time: new Date().toLocaleTimeString(),
@@ -4912,10 +4911,10 @@ const executeScheduledTask = async (task) => {
             });
             // 尝试重新连接
             try {
-              await scheduledTaskPool.release(tokenId, true);
+              await taskPool.release(tokenId, true);
             } catch (e) {}
             
-            const reconnected = await scheduledTaskPool.acquire(tokenId);
+            const reconnected = await taskPool.acquire(tokenId);
             if (!reconnected) {
               addLog({
                 time: new Date().toLocaleTimeString(),
@@ -4940,8 +4939,8 @@ const executeScheduledTask = async (task) => {
             const forTokenTaskFunction = taskFunctionMap[forTokenTaskName];
             
             if (typeof forTokenTaskFunction === "function") {
-              // 定时任务已建立连接，传递 skipConnect = true
-              await forTokenTaskFunction(tokenId, true);
+              // ForToken 函数由定时任务执行器管理连接，传递任务名称用于日志前缀
+              await forTokenTaskFunction(tokenId, task.name);
             } else {
               const taskFunction = taskFunctionMap[taskName];
               if (typeof taskFunction === "function") {
@@ -4962,7 +4961,7 @@ const executeScheduledTask = async (task) => {
               } else {
                 addLog({
                   time: new Date().toLocaleTimeString(),
-                  message: `任务函数不存在: ${taskName}`,
+                  message: `【${task.name}】任务函数不存在: ${taskName}`,
                   type: "error",
                 });
               }
@@ -4970,7 +4969,7 @@ const executeScheduledTask = async (task) => {
           } catch (taskError) {
             addLog({
               time: new Date().toLocaleTimeString(),
-              message: `任务 ${availableTasks.find((t) => t.value === taskName)?.label || taskName} 执行失败: ${taskError.message}`,
+              message: `【${task.name}】任务 ${availableTasks.find((t) => t.value === taskName)?.label || taskName} 执行失败: ${taskError.message}`,
               type: "error",
             });
           }
@@ -4985,11 +4984,11 @@ const executeScheduledTask = async (task) => {
           type: "error",
         });
       } finally {
-        // 每个token完成后立即断开连接并释放槽位（参照批量日常页面）
+        // 每个token完成后立即断开连接并释放槽位
         try {
           const status = tokenStore.getWebSocketStatus(tokenId);
           if (status === 'connected') {
-            await scheduledTaskPool.release(tokenId, true);
+            await taskPool.release(tokenId, true);
             addLog({
               time: new Date().toLocaleTimeString(),
               message: `${token.name || token.id} 连接已关闭`,
@@ -5017,6 +5016,22 @@ const executeScheduledTask = async (task) => {
       `[${new Date().toISOString()}] Error executing scheduled task ${task.name}:`,
       error,
     );
+  } finally {
+    // 任务完成后销毁连接池，释放资源
+    try {
+      await taskPool.destroy();
+      taskConnectionPools.delete(task.id);
+      addLog({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 定时任务 ${task.name} 连接池已销毁 ===`,
+        type: "info",
+      });
+    } catch (error) {
+      console.error(`销毁连接池失败:`, error);
+    }
+    
+    // 减少并发任务计数
+    runningTaskCount--;
   }
 };
 
@@ -6116,9 +6131,11 @@ const {
   batchAddHangUpTime,
   batchAddHangUpTimeForToken,
   batchStudy,
+  batchStudyForToken,
   batchclubsign,
   batchclubsignForToken,
   batchWarGuessCheer,
+  batchWarGuessCheerForToken,
 } = tasksHangUp;
 
 const tasksBottle = createTasksBottle(createTaskDeps());
@@ -6127,27 +6144,46 @@ const { resetBottles, batchlingguanzi, resetBottlesForToken, batchlingguanziForT
 const tasksTower = createTasksTower(createTaskDeps());
 const {
   climbTower,
+  climbTowerForToken,
   climbWeirdTower,
+  climbWeirdTowerForToken,
   batchClaimFreeEnergy,
+  batchClaimFreeEnergyForToken,
   skinChallenge,
+  skinChallengeForToken,
   batchUseItems,
+  batchUseItemsForToken,
   batchMergeItems,
+  batchMergeItemsForToken,
 } = tasksTower;
 
 const tasksCar = createTasksCar(createTaskDeps());
-const { batchSmartSendCar, batchClaimCars, handleSmartSendCar } = tasksCar;
+const {
+  batchSmartSendCar,
+  batchSmartSendCarForToken,
+  batchClaimCars,
+  batchClaimCarsForToken,
+  handleSmartSendCar,
+  handleSmartSendCarForToken,
+} = tasksCar;
 
 const tasksItem = createTasksItem(createTaskDeps());
 const {
   batchOpenBox,
+  batchOpenBoxForToken,
   batchOpenBoxByPoints,
+  batchOpenBoxByPointsForToken,
   batchClaimBoxPointReward,
+  batchClaimBoxPointRewardForToken,
   batchFish,
+  batchFishForToken,
   batchRecruit,
+  batchRecruitForToken,
   batchHeroUpgrade,
   batchBookUpgrade,
   batchClaimStarRewards,
   batchClaimPeachTasks,
+  batchClaimPeachTasksForToken,
   batchGenieSweep,
   batchGenieSweepForToken,
   batchLegionBoss,
@@ -6172,31 +6208,55 @@ const {
   batchSaltFormationForToken,
 } = tasksItem;
 
-const scheduledTaskPool = new ConnectionPoolManager(tokenStore, {
-  maxConnections: batchSettings.maxActive,
-  connectionTimeout: batchSettings.connectionTimeout,
-  reconnectDelay: batchSettings.reconnectDelay,
-  maxRetries: 3
-});
+// 任务级连接隔离：每个定时任务使用独立的连接池
+const taskConnectionPools = new Map(); // taskId -> ConnectionPoolManager
+const MAX_CONCURRENT_TASKS = 4; // 最多4个定时任务同时执行
+const MAX_CONNECTIONS_PER_TASK = 6; // 每个任务最大6个连接
+let runningTaskCount = 0; // 当前正在执行的任务数
 
 const tasksDungeon = createTasksDungeon(createTaskDeps());
-const { batchbaoku13, batchbaoku45, batchmengjing, batchBuyDreamItems } =
-  tasksDungeon;
+const {
+  batchbaoku13,
+  batchbaoku13ForToken,
+  batchbaoku45,
+  batchbaoku45ForToken,
+  batchmengjing,
+  batchmengjingForToken,
+  batchBuyDreamItems,
+  batchBuyDreamItemsForToken,
+} = tasksDungeon;
 
 const tasksArena = createTasksArena(createTaskDeps());
-const { batcharenafight, batchTopUpFish, batchTopUpArena, batcharenafightForToken } = tasksArena;
+const {
+  batcharenafight,
+  batcharenafightForToken,
+  batchTopUpFish,
+  batchTopUpFishForToken,
+  batchTopUpArena,
+  batchTopUpArenaForToken,
+} = tasksArena;
 
 const tasksStore = createTasksStore(createTaskDeps());
 const {
   legion_storebuygoods,
+  legion_storebuygoodsForToken,
   legionStoreBuySkinCoins,
+  legionStoreBuySkinCoinsForToken,
   store_purchase,
   store_purchaseForToken,
   collection_claimfreereward,
+  collection_claimfreerewardForToken,
+  collection_exchange,
+  collection_exchangeForToken,
 } = tasksStore;
 
 const tasksLegacy = createTasksLegacy(createTaskDeps());
-const { batchLegacyClaim, batchLegacyClaimForToken, batchLegacyGiftSendEnhanced } = tasksLegacy;
+const {
+  batchLegacyClaim,
+  batchLegacyClaimForToken,
+  batchLegacyGiftSendEnhanced,
+  batchLegacyGiftSendEnhancedForToken,
+} = tasksLegacy;
 
 // 判断是否为连接错误
 const isConnectionError = (error) => {
@@ -6260,7 +6320,7 @@ const startBatch = async () => {
         const runner = new DailyTaskRunner(tokenStore, {
           commandDelay: batchSettings.commandDelay,
           taskDelay: batchSettings.taskDelay,
-        });
+        }, "日常任务");
 
         // Run tasks
         await runner.run(tokenId, {
@@ -6389,17 +6449,13 @@ const startBatch = async () => {
  * 日常任务 - ForToken版本（使用 DailyTaskRunner）
  * 用于定时任务执行单个 token 的日常任务
  * @param {string} tokenId - Token ID
- * @param {boolean} skipConnect - 是否跳过连接检查（定时任务调用时为true）
+ * @param {string} taskName - 任务名称（用于日志前缀）
  */
-const startBatchForToken = async (tokenId, skipConnect = false) => {
+const startBatchForToken = async (tokenId, taskName = "") => {
   const token = tokens.value.find((t) => t.id === tokenId);
   if (!token) return;
 
   try {
-    if (!skipConnect) {
-      await ensureConnection(tokenId);
-    }
-
     addLog({
       time: new Date().toLocaleTimeString(),
       message: `${token.name} 开始日常任务`,
@@ -6410,7 +6466,7 @@ const startBatchForToken = async (tokenId, skipConnect = false) => {
     const runner = new DailyTaskRunner(tokenStore, {
       commandDelay: batchSettings.commandDelay,
       taskDelay: batchSettings.taskDelay,
-    });
+    }, taskName || "日常任务");
 
     // Run tasks
     await runner.run(tokenId, {
@@ -6443,11 +6499,13 @@ const taskFunctionMap = {
   batchAddHangUpTime,
   batchAddHangUpTimeForToken,
   batchStudy,
+  batchStudyForToken,
   startBatch,
   startBatchForToken,
   batchclubsign,
   batchclubsignForToken,
   batchWarGuessCheer,
+  batchWarGuessCheerForToken,
   // Bottle
   resetBottles,
   batchlingguanzi,
@@ -6455,25 +6513,40 @@ const taskFunctionMap = {
   batchlingguanziForToken,
   // Tower
   climbTower,
+  climbTowerForToken,
   climbWeirdTower,
+  climbWeirdTowerForToken,
   batchClaimFreeEnergy,
+  batchClaimFreeEnergyForToken,
   skinChallenge,
+  skinChallengeForToken,
   batchUseItems,
+  batchUseItemsForToken,
   batchMergeItems,
+  batchMergeItemsForToken,
   // Car
   batchSmartSendCar,
+  batchSmartSendCarForToken,
   batchClaimCars,
+  batchClaimCarsForToken,
   handleSmartSendCar,
+  handleSmartSendCarForToken,
   // Item
   batchOpenBox,
+  batchOpenBoxForToken,
   batchOpenBoxByPoints,
+  batchOpenBoxByPointsForToken,
   batchClaimBoxPointReward,
+  batchClaimBoxPointRewardForToken,
   batchFish,
+  batchFishForToken,
   batchRecruit,
+  batchRecruitForToken,
   batchHeroUpgrade,
   batchBookUpgrade,
   batchClaimStarRewards,
   batchClaimPeachTasks,
+  batchClaimPeachTasksForToken,
   batchGenieSweep,
   batchGenieSweepForToken,
   batchLegionBoss,
@@ -6498,24 +6571,36 @@ const taskFunctionMap = {
   batchSaltFormationForToken,
   // Dungeon
   batchbaoku13,
+  batchbaoku13ForToken,
   batchbaoku45,
+  batchbaoku45ForToken,
   batchmengjing,
+  batchmengjingForToken,
   batchBuyDreamItems,
+  batchBuyDreamItemsForToken,
   // Arena
   batcharenafight,
-  batchTopUpFish,
-  batchTopUpArena,
   batcharenafightForToken,
+  batchTopUpFish,
+  batchTopUpFishForToken,
+  batchTopUpArena,
+  batchTopUpArenaForToken,
   // Store
   legion_storebuygoods,
+  legion_storebuygoodsForToken,
   legionStoreBuySkinCoins,
+  legionStoreBuySkinCoinsForToken,
   store_purchase,
   store_purchaseForToken,
   collection_claimfreereward,
+  collection_claimfreerewardForToken,
+  collection_exchange,
+  collection_exchangeForToken,
   // Legacy
   batchLegacyClaim,
   batchLegacyClaimForToken,
   batchLegacyGiftSendEnhanced,
+  batchLegacyGiftSendEnhancedForToken,
 };
 
 const stopBatch = () => {

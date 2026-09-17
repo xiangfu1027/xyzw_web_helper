@@ -33,14 +33,20 @@ export function createTasksLegacy(deps) {
   /**
    * 批量领取功法残卷 - ForToken版本
    */
-  const batchLegacyClaimForToken = async (tokenId) => {
+  const batchLegacyClaimForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
-      await ensureConnection(tokenId);
-      
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始领取功法残卷`,
         type: "info",
@@ -52,14 +58,14 @@ export function createTasksLegacy(deps) {
         {},
         5000,
       );
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 成功领取功法残卷${LegacyClaimHangUpResp.reward[0].value}，共有${LegacyClaimHangUpResp.role.items[37007].quantity}个`,
         type: "success",
       });
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 领取功法残卷失败: ${error.message || "未知错误"}`,
         type: "error",
@@ -378,9 +384,147 @@ export function createTasksLegacy(deps) {
     );
   };
 
+  /**
+   * 赠送功法残卷 - ForToken版本（不含连接管理）
+   * @param {string} tokenId - Token ID
+   * @param {boolean} isScheduledTask - 是否为定时任务
+   */
+  const batchLegacyGiftSendEnhancedForToken = async (tokenId, taskName = "", isScheduledTask = false) => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) {
+      throw new Error("Token not found");
+    }
+
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const recipientId = isScheduledTask
+      ? batchSettings.receiverId
+      : recipientIdInput.value;
+    const password = isScheduledTask
+      ? batchSettings.password
+      : securityPassword.value;
+
+    const giftConfig = {
+      recipientId: Number(recipientId),
+      itemId: 37007,
+      quantity: Math.min(giftQuantity.value, 9999) || 0,
+      serverName: recipientInfo.value?.serverName || "",
+      name: recipientInfo.value?.name || "",
+    };
+
+    if (!isScheduledTask) {
+      if (!giftConfig.recipientId || giftConfig.recipientId <= 0) {
+        throw new Error("请输入有效的接收者ID");
+      }
+
+      if (giftConfig.quantity <= 0 || giftConfig.quantity > 9999) {
+        throw new Error("赠送数量必须在1-9999之间");
+      }
+    }
+
+    const roleInfo = await tokenStore.sendGetRoleInfo(tokenId);
+    const legacyFragmentCount =
+      Math.min(
+        roleInfo?.role?.items?.[giftConfig.itemId]?.quantity,
+        9999,
+      ) || 0;
+
+    if (isScheduledTask) {
+      if (legacyFragmentCount === 0) {
+        throw new Error(`功法残卷不足，当前拥有: 0`);
+      }
+      const rankroleinfo = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "rank_getroleinfo",
+        {
+          bottleType: 0,
+          includeBottleTeam: false,
+          isSearch: false,
+          roleId: giftConfig.recipientId,
+        },
+        5000,
+      );
+      giftConfig.serverName = rankroleinfo?.roleInfo?.serverName || "";
+      giftConfig.name = rankroleinfo?.roleInfo?.name || "";
+      if (!rankroleinfo?.roleInfo?.roleId) {
+        throw new Error(`赠送功法残卷失败: 接收者${giftConfig.recipientId}不存在`);
+      }
+      giftConfig.quantity = legacyFragmentCount;
+    }
+
+    if (legacyFragmentCount < giftConfig.quantity) {
+      throw new Error(`功法残卷不足，当前拥有: ${legacyFragmentCount}，需要: ${giftConfig.quantity}`);
+    }
+
+    logWithPrefix({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 开始解除安全密码验证 ===`,
+      type: "info",
+    });
+
+    const commitPasswordResp = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_commitpassword",
+      {
+        password: password,
+        passwordType: 1,
+      },
+      5000,
+    );
+
+    if (!commitPasswordResp) {
+      throw new Error("安全密码验证请求无响应");
+    }
+    if (!commitPasswordResp.role?.statistics?.["que:wh:tm"]) {
+      throw new Error("密码解除失败,请检查密码是否配置正确");
+    }
+
+    logWithPrefix({
+      time: new Date().toLocaleTimeString(),
+      message: `=== 安全密码验证成功 ===`,
+      type: "success",
+    });
+
+    logWithPrefix({
+      time: new Date().toLocaleTimeString(),
+      message: `${token.name} === 开始赠送功法残卷${giftConfig.quantity}个,目标:[${giftConfig.serverName}] ID:${giftConfig.recipientId} ${giftConfig.name} ===`,
+      type: "info",
+    });
+
+    const legacySendGiftResp = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "legacy_sendgift",
+      {
+        itemCnt: giftConfig.quantity,
+        legacyUIds: [],
+        targetId: giftConfig.recipientId,
+      },
+      5000,
+    );
+
+    if (!legacySendGiftResp) {
+      throw new Error("赠送请求无响应");
+    }
+
+    await tokenStore.sendMessage(tokenId, "role_getroleinfo");
+
+    logWithPrefix({
+      time: new Date().toLocaleTimeString(),
+      message: `=== ${token.name} 成功赠送功法残卷${giftConfig.quantity}个给[${giftConfig.serverName}] ID:${giftConfig.recipientId} ${giftConfig.name} ===`,
+      type: "success",
+    });
+  };
+
   return {
     batchLegacyClaim,
     batchLegacyClaimForToken,
     batchLegacyGiftSendEnhanced,
+    batchLegacyGiftSendEnhancedForToken,
   };
 }

@@ -44,19 +44,21 @@ const getTodayBossId = () => {
 };
 
 export class DailyTaskRunner {
-  constructor(tokenStore, delaySettings = null) {
+  constructor(tokenStore, delaySettings = null, taskName = "") {
     this.tokenStore = tokenStore;
     this.delaySettings = delaySettings || {
       commandDelay: 500,
       taskDelay: 500
     };
+    this.taskName = taskName;
   }
 
   log(message, type = "info") {
     if (this.callbacks?.onLog) {
+      const prefix = this.taskName ? `【${this.taskName}】` : "";
       this.callbacks.onLog({
         time: new Date().toLocaleTimeString(),
-        message,
+        message: `${prefix}${message}`,
         type,
       });
     }
@@ -486,38 +488,92 @@ export class DailyTaskRunner {
     }
 
     // 4. 固定奖励
-    const fixedRewards = [
-      { name: "福利签到", cmd: "system_signinreward" },
-      { name: "俱乐部", cmd: "legion_signin" },
-      { name: "领取每日礼包", cmd: "discount_claimreward" },
-      { name: "领取每日免费奖励", cmd: "collection_claimfreereward" },
-      { name: "领取免费礼包", cmd: "card_claimreward" },
-      {
-        name: "领取永久卡礼包",
-        cmd: "card_claimreward",
-        params: { cardId: 4003 },
-      },
-    ];
+    // 4.1 俱乐部签到
+    taskList.push({
+      name: "俱乐部签到",
+      execute: () =>
+        this.executeGameCommand(tokenId, "legion_signin", {}, "俱乐部签到"),
+    });
 
+    // 4.2 福利签到 + 条件判断
+    let signInFailed = false;
+    taskList.push({
+      name: "福利签到",
+      execute: async () => {
+        try {
+          await this.executeGameCommand(
+            tokenId,
+            "system_signinreward",
+            {},
+            "福利签到",
+          );
+        } catch (error) {
+          if (error.message && error.message.includes("400190")) {
+            this.log(`福利签到：没有可领取的签到奖励，跳过后续礼包领取`, "warning");
+            signInFailed = true;
+          } else {
+            throw error;
+          }
+        }
+      },
+    });
+
+    // 4.3 领取每日礼包（福利签到失败则跳过）
+    taskList.push({
+      name: "领取每日礼包",
+      execute: async () => {
+        if (signInFailed) {
+          this.log(`跳过领取每日礼包（福利签到失败）`, "warning");
+          return;
+        }
+        await this.executeGameCommand(tokenId, "discount_claimreward", {}, "领取每日礼包");
+      },
+    });
+
+    // 4.4 领取每日免费奖励（福利签到失败则跳过）
+    taskList.push({
+      name: "领取每日免费奖励",
+      execute: async () => {
+        if (signInFailed) {
+          this.log(`跳过领取每日免费奖励（福利签到失败）`, "warning");
+          return;
+        }
+        await this.executeGameCommand(tokenId, "collection_claimfreereward", {}, "领取每日免费奖励");
+      },
+    });
+
+    // 4.5 领取免费礼包（福利签到失败则跳过）
+    taskList.push({
+      name: "领取免费礼包",
+      execute: async () => {
+        if (signInFailed) {
+          this.log(`跳过领取免费礼包（福利签到失败）`, "warning");
+          return;
+        }
+        await this.executeGameCommand(tokenId, "card_claimreward", {}, "领取免费礼包");
+      },
+    });
+
+    // 4.6 领取永久卡礼包（福利签到失败则跳过）
+    taskList.push({
+      name: "领取永久卡礼包",
+      execute: async () => {
+        if (signInFailed) {
+          this.log(`跳过领取永久卡礼包（福利签到失败）`, "warning");
+          return;
+        }
+        await this.executeGameCommand(tokenId, "card_claimreward", { cardId: 4003 }, "领取永久卡礼包");
+      },
+    });
+
+    // 4.7 领取邮件奖励
     if (settings.claimEmail) {
-      fixedRewards.push({
+      taskList.push({
         name: "领取邮件奖励",
-        cmd: "mail_claimallattachment",
+        execute: () =>
+          this.executeGameCommand(tokenId, "mail_claimallattachment", {}, "领取邮件奖励"),
       });
     }
-
-    fixedRewards.forEach((reward) => {
-      taskList.push({
-        name: reward.name,
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            reward.cmd,
-            reward.params || {},
-            reward.name,
-          ),
-      });
-    });
 
     taskList.push({
       name: "开始领取珍宝阁礼包",
@@ -540,9 +596,12 @@ export class DailyTaskRunner {
         ),
     });
 
+    // 免费扭蛋：只在周二/周四/周六执行
+    const dayOfWeek = new Date().getDay();
     if (
       settings.freeGachaEnable !== false
       && isTodayAvailable(statisticsTime["gacha:free"])
+      && (dayOfWeek === 2 || dayOfWeek === 4 || dayOfWeek === 6)
     ) {
       taskList.push({
         name: "免费扭蛋",
@@ -572,33 +631,52 @@ export class DailyTaskRunner {
       }
     }
 
+    // 先领取免费扫荡卷（3次），再执行灯神免费扫荡（4国）
+    // 如果第一次领取免费扫荡卷失败（3300050错误），跳过剩余次数和灯神扫荡
+    let sweepRollFailed = false;
+    for (let i = 0; i < 3; i++) {
+      if (sweepRollFailed) break;
+      taskList.push({
+        name: `领取免费扫荡卷 ${i + 1}/3`,
+        execute: async () => {
+          try {
+            await this.executeGameCommand(
+              tokenId,
+              "genie_buysweep",
+              {},
+              `领取免费扫荡卷 ${i + 1}`,
+            );
+          } catch (error) {
+            if (error.message && error.message.includes("3300050")) {
+              this.log(`领取免费扫荡卷失败（购买数量超出限制），跳过剩余次数和灯神扫荡`, "warning");
+              sweepRollFailed = true;
+            } else {
+              throw error;
+            }
+          }
+        },
+      });
+    }
+
     const kingdoms = ["魏国", "蜀国", "吴国", "群雄"];
     for (let gid = 1; gid <= 4; gid++) {
       if (isTodayAvailable(statisticsTime[`genie:daily:free:${gid}`])) {
         taskList.push({
           name: `${kingdoms[gid - 1]}灯神免费扫荡`,
-          execute: () =>
-            this.executeGameCommand(
+          execute: async () => {
+            if (sweepRollFailed) {
+              this.log(`跳过${kingdoms[gid - 1]}灯神免费扫荡（扫荡卷领取失败）`, "warning");
+              return;
+            }
+            await this.executeGameCommand(
               tokenId,
               "genie_sweep",
               { genieId: gid },
               `${kingdoms[gid - 1]}灯神免费扫荡`,
-            ),
+            );
+          },
         });
       }
-    }
-
-    for (let i = 0; i < 3; i++) {
-      taskList.push({
-        name: `领取免费扫荡卷 ${i + 1}/3`,
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "genie_buysweep",
-            {},
-            `领取免费扫荡卷 ${i + 1}`,
-          ),
-      });
     }
 
     // 6. 黑市

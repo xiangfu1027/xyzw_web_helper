@@ -2,6 +2,7 @@
  * 罐子类任务
  * 包含: resetBottles, batchlingguanzi
  */
+import ConnectionPoolManager from '@/utils/connectionPoolManager.js';
 
 /**
  * 创建罐子类任务执行器
@@ -28,18 +29,26 @@ export function createTasksBottle(deps) {
   /**
    * 重置罐子（单个Token）
    */
-  const resetBottlesForToken = async (tokenId) => {
+  const resetBottlesForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始重置罐子`,
         type: "info",
       });
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 停止计时...`,
         type: "info",
@@ -53,7 +62,7 @@ export function createTasksBottle(deps) {
 
       await new Promise((r) => setTimeout(r, 500));
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始计时...`,
         type: "info",
@@ -65,7 +74,7 @@ export function createTasksBottle(deps) {
         5000,
       );
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 重置完成`,
         type: "success",
@@ -73,7 +82,7 @@ export function createTasksBottle(deps) {
 
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 重置失败: ${error.message}`,
         type: "error",
@@ -95,15 +104,35 @@ export function createTasksBottle(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
-
       const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -152,19 +181,13 @@ export function createTasksBottle(deps) {
           message: `${token.name} 重置失败: ${error.message}`,
           type: "error",
         });
-        // 不抛出异常，继续执行后续命令
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -174,12 +197,20 @@ export function createTasksBottle(deps) {
   /**
    * 一键领取盐罐（单个Token）
    */
-  const batchlingguanziForToken = async (tokenId) => {
+  const batchlingguanziForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始领取盐罐`,
         type: "info",
@@ -194,7 +225,7 @@ export function createTasksBottle(deps) {
 
       await new Promise((r) => setTimeout(r, 500));
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 领取盐罐完成`,
         type: "success",
@@ -202,7 +233,7 @@ export function createTasksBottle(deps) {
 
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 领取盐罐失败: ${error.message || "未知错误"}`,
         type: "error",
@@ -223,8 +254,19 @@ export function createTasksBottle(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
       try {
@@ -233,8 +275,23 @@ export function createTasksBottle(deps) {
           message: `=== 开始一键领取盐罐: ${token.name} ===`,
           type: "info",
         });
-        await ensureConnection(tokenId);
-        if (shouldStop.value) return;
+        
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+        
+        if (shouldStop.value) {
+          await connectionPool.release(tokenId, true);
+          break;
+        }
         await tokenStore.sendMessageWithPromise(
           tokenId,
           "bottlehelper_claim",
@@ -256,19 +313,14 @@ export function createTasksBottle(deps) {
           message: `${token.name} 领取盐罐失败: ${error.message || "未知错误"}`,
           type: "error",
         });
-        // 不抛出异常，继续执行后续命令
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
+    
     isRunning.value = false;
     currentRunningTokenId.value = null;
     message.success("批量领取盐罐结束");

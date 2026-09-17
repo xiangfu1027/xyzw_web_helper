@@ -58,6 +58,7 @@ export const availableTasks = [
   { label: "一键购买四圣碎片", value: "legion_storebuygoods" },
   { label: "一键黑市采购⭐", value: "store_purchase" },
   { label: "免费领取珍宝阁", value: "collection_claimfreereward" },
+  { label: "换购宝箱", value: "collection_exchange" },
   { label: "批量领取功法残卷", value: "batchLegacyClaim" },
   { label: "批量赠送功法残卷", value: "batchLegacyGiftSendEnhanced" },
   { label: "一键使用怪异塔道具", value: "batchUseItems" },

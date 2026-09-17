@@ -121,6 +121,12 @@
             />
             <CustomizedCard 
               mode="button" 
+              :name="isExportingTowerDetail ? '导出中...' : '导出详情'" 
+              :disabled="tokenStore.gameTokens.length === 0 || isExportingTowerDetail" 
+              @button-click="handleExportTowerDetail" 
+            />
+            <CustomizedCard 
+              mode="button" 
               :name="isExportingInactiveMembers ? '导出中...' : '导出未激活成员'" 
               :disabled="tokenStore.gameTokens.length === 0 || isExportingInactiveMembers" 
               @button-click="handleExportInactiveMembers" 
@@ -208,6 +214,7 @@ const mergeTimeout = ref(null)
 const isBatchPrivilegeRunning = ref(false)
 const isBatchQuickClimbing = ref(false)
 const isExportingTowerInfo = ref(false)
+const isExportingTowerDetail = ref(false)
 const isBatchClaimingFreeKey = ref(false)
 const isExportingInactiveMembers = ref(false)
 
@@ -1475,6 +1482,18 @@ const executeUseItemsForToken = async (tokenId) => {
     5000
   )
 
+  // 领取爬塔奖励
+  try {
+    await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "activity_battlepassrewardclaim",
+      { battlePassId: 1003 },
+      5000
+    )
+  } catch (error) {
+    // 忽略错误，继续执行
+  }
+
   const towerInfoRes = await tokenStore.sendMessageWithPromise(
     tokenId,
     "evotower_getinfo",
@@ -1484,6 +1503,57 @@ const executeUseItemsForToken = async (tokenId) => {
 
   if (!infoRes || !infoRes.mergeBox) {
     throw new Error("获取活动信息失败")
+  }
+
+  // 领取怪异塔任务奖励（taskId 1-3）
+  if (towerInfoRes?.evoTower) {
+    for (let taskId = 1; taskId <= 3; taskId++) {
+      try {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "evotower_claimtask",
+          { taskId },
+          5000
+        )
+      } catch (error) {
+        // 如果提示"怪异咸将塔任务未完成"或"怪异咸将塔任务已领取"，跳过剩余次数
+        const errorMsg = error.message || error.error || error.detail || error.hint || String(error)
+        if (errorMsg.includes("任务未完成") || errorMsg.includes("任务已领取")) {
+          break
+        }
+        throw error
+      }
+      await waitCommandDelay()
+    }
+
+    // 领取俱乐部任务奖励（taskId 4-9）
+    const legionTaskClaimMap = towerInfoRes.evoTower.legionTaskClaimMap || {}
+    let startTaskId = 4
+    // 找到第一个没有时间戳的 taskId
+    for (let taskId = 4; taskId <= 9; taskId++) {
+      if (!legionTaskClaimMap[taskId]) {
+        startTaskId = taskId
+        break
+      }
+    }
+    // 从 startTaskId 开始执行
+    for (let taskId = startTaskId; taskId <= 9; taskId++) {
+      try {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "evotower_claimlegiontask",
+          { taskId },
+          5000
+        )
+      } catch (error) {
+        // 如果提示"怪异咸将塔任务未完成"，跳过剩余
+        if (error.message && error.message.includes("任务未完成")) {
+          break
+        }
+        throw error
+      }
+      await waitCommandDelay()
+    }
   }
 
   let costTotalCnt = infoRes.mergeBox.costTotalCnt || 0
@@ -2343,6 +2413,183 @@ const handleExportTowerInfo = async () => {
     message.error('导出爬塔信息失败: ' + (error.message || '未知错误'))
   } finally {
     isExportingTowerInfo.value = false
+  }
+}
+
+// 奖励层数对应的奖励内容映射
+const rewardLayerMap = {
+  1: '红碎',
+  2: '金竿',
+  3: '招募',
+  4: '珍珠',
+  5: '皮肤币',
+  6: '珍珠',
+  7: '四圣宝珠碎片'
+}
+
+const handleExportTowerDetail = async () => {
+  const sortedTokensList = [...tokenStore.gameTokens].sort((a, b) => {
+    const nameA = (a.name || '未命名').toLowerCase()
+    const nameB = (b.name || '未命名').toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+  
+  if (sortedTokensList.length === 0) {
+    message.warning('没有可用的Token')
+    return
+  }
+  
+  const tokenIndices = parseTokenRange(batchTokens.value)
+  let targetTokens = []
+  
+  if (tokenIndices === null || tokenIndices.length === 0) {
+    targetTokens = sortedTokensList
+  } else {
+    targetTokens = tokenIndices
+      .map(index => {
+        const arrayIndex = index - 1
+        const token = sortedTokensList[arrayIndex]
+        return token ? { token, index } : null
+      })
+      .filter(item => item !== null)
+      .sort((a, b) => a.index - b.index)
+      .map(item => item.token)
+  }
+  
+  if (targetTokens.length === 0) {
+    message.warning('执行范围内没有有效的Token')
+    return
+  }
+  
+  try {
+    isExportingTowerDetail.value = true
+    message.info(`开始导出详情，共${targetTokens.length}个Token...`)
+    
+    const towerDetailList = []
+    
+    const exportOperation = async (token, globalIndex) => {
+      const tokenIndex = globalIndex + 1
+      
+      try {
+        // 获取爬塔信息
+        const towerInfoRes = await tokenStore.sendMessageWithPromise(
+          token.id,
+          'evotower_getinfo',
+          {},
+          5000
+        )
+        
+        const towerId = towerInfoRes?.evoTower?.towerId || 0
+        // 取前两位为爬塔层数
+        const towerFloor = Math.floor(towerId / 10)
+        
+        await waitCommandDelay()
+        
+        // 获取合成箱信息
+        const mergeBoxRes = await tokenStore.sendMessageWithPromise(
+          token.id,
+          'mergebox_getinfo',
+          { actType: 1 },
+          5000
+        )
+        
+        const taskClaimMap = mergeBoxRes?.mergeBox?.taskClaimMap || {}
+        
+        // 从taskClaimMap中找到有时间戳的最后一个key
+        let rewardFloor = 0
+        let rewardContent = ''
+        
+        const keysWithTimestamp = Object.entries(taskClaimMap)
+          .filter(([key, value]) => typeof value === 'number' && value > 0)
+          .map(([key, value]) => ({ key: parseInt(key), timestamp: value }))
+          .sort((a, b) => a.key - b.key)
+        
+        if (keysWithTimestamp.length > 0) {
+          const lastKey = keysWithTimestamp[keysWithTimestamp.length - 1].key
+          // 取个位数作为奖励层数
+          rewardFloor = lastKey % 10
+          rewardContent = rewardLayerMap[rewardFloor] || ''
+        }
+        
+        towerDetailList.push({
+          index: tokenIndex,
+          name: token.name || token.id,
+          towerFloor: towerFloor,
+          rewardFloor: rewardFloor,
+          rewardContent: rewardContent
+        })
+        
+        message.success(`[序号${tokenIndex}] ${token.name || token.id} 爬塔层数：${towerFloor}，奖励层数：${rewardFloor}（${rewardContent}）`)
+        
+        await waitCommandDelay()
+        
+        return { success: true, tokenId: token.id }
+      } catch (error) {
+        console.error(`获取 ${token.name || token.id} 详情失败:`, error)
+        towerDetailList.push({
+          index: tokenIndex,
+          name: token.name || token.id,
+          towerFloor: '获取失败',
+          rewardFloor: '获取失败',
+          rewardContent: '获取失败'
+        })
+        
+        message.warning(`[序号${tokenIndex}] ${token.name || token.id} 获取失败`)
+        
+        return { success: false, tokenId: token.id }
+      }
+    }
+    
+    await connectionPool.batchOperate(
+      targetTokens,
+      exportOperation,
+      {
+        batchSize: 1,
+        delayBetween: 100,
+        keepConnections: true,
+        onProgress: (progress) => {
+          if (progress.type === 'token-start') {
+            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+          } else if (progress.type === 'token-success' && progress.message === '连接成功') {
+            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+          } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
+            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+          }
+        }
+      }
+    )
+    
+    let csvContent = '\uFEFF序号,昵称,爬塔层数,奖励层数,奖励内容\n'
+    towerDetailList.forEach(item => {
+      csvContent += `${item.index},${item.name},${item.towerFloor},${item.rewardFloor},${item.rewardContent}\n`
+    })
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `怪异塔详情_${new Date().toLocaleDateString()}.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    message.success(`详情导出完成，共${towerDetailList.length}个Token`)
+    
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '怪异塔',
+      operation: '导出详情',
+      tokenId: '',
+      tokenName: '',
+      status: 'success',
+      message: `导出详情完成，共${towerDetailList.length}个Token`
+    })
+  } catch (error) {
+    console.error('导出详情失败:', error)
+    message.error('导出详情失败: ' + (error.message || '未知错误'))
+  } finally {
+    isExportingTowerDetail.value = false
   }
 }
 

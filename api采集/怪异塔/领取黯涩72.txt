@@ -1,0 +1,83 @@
+[11:36:21] [GAME] [VERBOSE] 收到怪异塔信息事件: 571e8122a2e8ba8fea96bbedda73e1ff 
+{tokenId: '571e8122a2e8ba8fea96bbedda73e1ff', body: {…}, message: ProtoMsg, client: XyzwWebSocketClient, gameData: RefImpl}
+body
+: 
+evoTower
+: 
+bindLegionId
+: 
+2781636
+energy
+: 
+4
+energyRecoveryTime
+: 
+1789614448
+legionPrivilege
+: 
+{1: 1, 2: 1, 3: 1, 4: 1}
+legionTaskClaimMap
+: 
+{4: 1789535982, 5: 1789535983, 6: 1789535984, 7: 1789535985}
+legionTaskMap
+: 
+{4: 29, 5: 29, 6: 24, 7: 12, 8: 4, 9: 1}
+lotteryLeftCnt
+: 
+10
+lotterySkipCnt
+: 
+0
+orderPassReward
+: 
+{}
+packRecord
+: 
+{}
+plugInTowerId
+: 
+0
+rewardTowerId
+: 
+24
+serverId
+: 
+1009004
+storeMap
+: 
+{}
+taskClaimMap
+: 
+[[Prototype]]
+: 
+Object
+taskMap
+: 
+{260911: {…}, 260916: {…}, 260917: {…}}
+towerId
+: 
+249
+towerScore
+: 
+249
+[[Prototype]]
+: 
+Object
+[[Prototype]]
+: 
+Object
+client
+: 
+XyzwWebSocketClient {url: 'wss://xxz-xyzw.hortorgames.com/agent?p=%7B%22roleT…2996935%2C%22isRestore%22%3A0%7D&e=x&lang=chinese', utils: {…}, enc: {…}, socket: WebSocket, ack: 3, …}
+gameData
+: 
+RefImpl {dep: Dep, __v_isRef: true, __v_isShallow: false, _rawValue: {…}, _value: Proxy(Object)}
+message
+: 
+ProtoMsg {_raw: {…}, _rawData: {…}, _data: {…}, _t: undefined, _sendMsg: undefined, …}
+tokenId
+: 
+"571e8122a2e8ba8fea96bbedda73e1ff"
+[[Prototype]]
+: 
+Object

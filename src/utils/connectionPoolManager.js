@@ -37,6 +37,9 @@ export class ConnectionPoolManager {
         // 重连状态跟踪 - 用于指数退避
         this.reconnectState = new Map(); // tokenId -> { retries, delay }
 
+        // Token 刷新限制 - 每个 token 每天只刷新一次
+        this.tokenRefreshHistory = new Map(); // tokenId -> lastRefreshDate (YYYY-MM-DD)
+
         console.log('[ConnectionPool] 连接池管理器已初始化（简化版）', this.config);
     }
 
@@ -173,6 +176,9 @@ export class ConnectionPoolManager {
                 5000,
             );
 
+            // 等待800ms后执行第二个命令
+            await new Promise(resolve => setTimeout(resolve, 800));
+
             // 获取战斗版本
             const res = await this.tokenStore.sendMessageWithPromise(
                 tokenId,
@@ -183,17 +189,34 @@ export class ConnectionPoolManager {
             if (res?.battleData?.version) {
                 this.tokenStore.setBattleVersion(res.battleData.version);
             }
+
+            // 第二个命令执行完后等待800ms再执行其他命令
+            await new Promise(resolve => setTimeout(resolve, 800));
         } catch (e) {
             console.warn(`[ConnectionPool] 初始化数据失败：${tokenId}`, e.message);
             
-            // 检查是否是 "check token error" 或其他 token 相关错误
-            if (e.message && (e.message.includes('check token error') || e.message.includes('token'))) {
-                console.warn(`[ConnectionPool] 检测到 Token 失效：${tokenId}，立即刷新并重连...`);
+            // 检查是否是 token expired 或 check token error
+            if (e.message && (e.message.includes('token expired') || e.message.includes('check token error'))) {
+                // 检查今天是否已经刷新过该 token
+                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+                const lastRefreshDate = this.tokenRefreshHistory.get(tokenId);
+                
+                if (lastRefreshDate === today) {
+                    console.error(`[ConnectionPool] Token 已过期且今日已刷新过，无法再次刷新：${tokenId}`);
+                    this.tokenStore.closeWebSocketConnection(tokenId);
+                    this.releaseConnectionSlot();
+                    throw new Error(`Token 已过期，今日已刷新过，请重新导入: ${tokenId}`);
+                }
+                
+                console.warn(`[ConnectionPool] 检测到 Token 失效：${tokenId}，尝试刷新（今日首次）...`);
                 
                 // 立即刷新 Token（从 IndexedDB 读取）
                 const refreshed = await this.refreshToken(tokenId);
                 
                 if (refreshed) {
+                    // 记录刷新日期
+                    this.tokenRefreshHistory.set(tokenId, today);
+                    
                     console.log(`[ConnectionPool] Token 刷新成功，断开旧连接并重新连接：${tokenId}`);
                     
                     // 断开旧连接
@@ -227,6 +250,9 @@ export class ConnectionPoolManager {
                                 5000,
                             );
 
+                            // 等待800ms后执行第二个命令
+                            await new Promise(resolve => setTimeout(resolve, 800));
+
                             const res = await this.tokenStore.sendMessageWithPromise(
                                 tokenId,
                                 "fight_startlevel",
@@ -236,23 +262,34 @@ export class ConnectionPoolManager {
                             if (res?.battleData?.version) {
                                 this.tokenStore.setBattleVersion(res.battleData.version);
                             }
+
+                            // 第二个命令执行完后等待800ms再执行其他命令
+                            await new Promise(resolve => setTimeout(resolve, 800));
                             
                             console.log(`[ConnectionPool] Token 刷新后初始化成功：${tokenId}`);
                         } catch (retryError) {
                             console.error(`[ConnectionPool] Token 刷新后初始化仍失败：${tokenId}`, retryError.message);
+                            this.tokenStore.closeWebSocketConnection(tokenId);
+                            this.releaseConnectionSlot();
+                            throw retryError;
                         }
                     } else {
                         console.error(`[ConnectionPool] 重连失败：${tokenId}`);
-                        // 重连失败，释放槽位
+                        this.tokenStore.closeWebSocketConnection(tokenId);
                         this.releaseConnectionSlot();
                         return false;
                     }
                 } else {
                     console.error(`[ConnectionPool] Token 刷新失败，需要手动重新导入：${tokenId}`);
-                    // Token刷新失败，释放槽位
+                    this.tokenStore.closeWebSocketConnection(tokenId);
                     this.releaseConnectionSlot();
-                    return false;
+                    throw new Error(`Token 刷新失败，请重新导入: ${tokenId}`);
                 }
+            } else {
+                // 其他错误也释放槽位并抛出异常
+                this.tokenStore.closeWebSocketConnection(tokenId);
+                this.releaseConnectionSlot();
+                throw e;
             }
         }
 

@@ -2,6 +2,7 @@
  * 挂机、答题、签到类任务
  * 包含: claimHangUpRewards, batchAddHangUpTime, batchStudy, batchclubsign
  */
+import ConnectionPoolManager from '@/utils/connectionPoolManager.js';
 
 /**
  * 创建挂机、答题、签到类任务执行器
@@ -38,11 +39,21 @@ export function createTasksHangUp(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
-
       const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
@@ -52,7 +63,17 @@ export function createTasksHangUp(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         // 1. Claim reward
         addLog({
@@ -99,19 +120,13 @@ export function createTasksHangUp(deps) {
           message: `${token.name} 领取挂机奖励失败: ${error.message}`,
           type: "error",
         });
-        // 不抛出异常，继续执行后续命令
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -130,8 +145,19 @@ export function createTasksHangUp(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
       try {
@@ -140,7 +166,19 @@ export function createTasksHangUp(deps) {
           message: `=== 开始一键加钟: ${token.name} ===`,
           type: "info",
         });
-        await ensureConnection(tokenId);
+        
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+        
         for (let i = 0; i < 4; i++) {
           if (shouldStop.value) break;
           addLog({
@@ -170,19 +208,14 @@ export function createTasksHangUp(deps) {
           message: `${token.name} 加钟失败: ${error.message || "未知错误"}`,
           type: "error",
         });
-        // 不抛出异常，继续执行后续命令
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
+    
     isRunning.value = false;
     currentRunningTokenId.value = null;
     message.success("批量加钟结束");
@@ -210,6 +243,16 @@ export function createTasksHangUp(deps) {
     });
     await preloadQuestions();
 
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
     // 顺序执行：执行完一个token所有任务后，再执行下一个token
     for (const tokenId of selectedTokens.value) {
       if (shouldStop.value) break;
@@ -225,7 +268,17 @@ export function createTasksHangUp(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         // Reset local study status
         tokenStore.gameData.studyStatus = {
@@ -310,15 +363,12 @@ export function createTasksHangUp(deps) {
           type: "error",
         });
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
     }
+
+    // 销毁连接池
+    await connectionPool.destroy();
 
     isRunning.value = false;
     currentRunningTokenId.value = null;
@@ -337,8 +387,19 @@ export function createTasksHangUp(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
       try {
@@ -347,8 +408,23 @@ export function createTasksHangUp(deps) {
           message: `=== 开始一键俱乐部签到: ${token.name} ===`,
           type: "info",
         });
-        await ensureConnection(tokenId);
-        if (shouldStop.value) return;
+        
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+        
+        if (shouldStop.value) {
+          await connectionPool.release(tokenId, true);
+          break;
+        }
         try {
           await tokenStore.sendMessageWithPromise(
             tokenId,
@@ -399,17 +475,13 @@ export function createTasksHangUp(deps) {
           type: "error",
         });
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
+    
     isRunning.value = false;
     currentRunningTokenId.value = null;
     message.success("批量俱乐部签到结束");
@@ -437,8 +509,19 @@ export function createTasksHangUp(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
       try {
@@ -447,7 +530,18 @@ export function createTasksHangUp(deps) {
           message: `=== 开始助威: ${token.name} ===`,
           type: "info",
         });
-        await ensureConnection(tokenId);
+
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
         
         // 尝试领取拍手器
         try {
@@ -495,7 +589,7 @@ export function createTasksHangUp(deps) {
                 type: "warning",
               });
              tokenStatus.value[tokenId] = "completed";
-             return;
+             continue;
         }
 
         let coinToUse = Number(guessCoin);
@@ -512,7 +606,7 @@ export function createTasksHangUp(deps) {
 
         if (coinToUse <= 0) {
              tokenStatus.value[tokenId] = "completed";
-             return;
+             continue;
         }
 
         const result = await tokenStore.sendMessageWithPromise(
@@ -557,31 +651,165 @@ export function createTasksHangUp(deps) {
           });
         }
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
+
     isRunning.value = false;
     currentRunningTokenId.value = null;
     message.success("批量助威结束");
   };
 
   /**
-   * 领取挂机奖励 - ForToken版本
+   * 月赛助威 - ForToken版本
+   * @param {string} tokenId - Token ID
+   * @param {number} legionId - 俱乐部ID
+   * @param {number} guessCoin - 竞猜币数量
    */
-  const claimHangUpRewardsForToken = async (tokenId) => {
+  const batchWarGuessCheerForToken = async (tokenId, legionId, guessCoin, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 开始助威: ${token.name} ===`,
+        type: "info",
+      });
+
+      // 尝试领取拍手器
+      try {
+        const rewardRes = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "warguess_getguesscoinreward",
+          {},
+          3000
+        );
+        if (rewardRes && rewardRes.reward) {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `=== ${token.name} 领取拍手器成功 ===`,
+            type: "success",
+          });
+        }
+      } catch (e) {
+        // 忽略领取失败
+      }
+
+      // 获取助威数据以判断次数
+      const rankRes = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "warguess_getrank",
+        { bfId: '' },
+        5000,
+      );
+
+      let totalGuessNum = 0;
+      if (rankRes && rankRes.list) {
+        let list = [];
+        if (Array.isArray(rankRes.list)) {
+          list = rankRes.list;
+        } else {
+          list = Object.values(rankRes.list);
+        }
+        totalGuessNum = list.reduce((sum, item) => sum + (item.guessNum || 0), 0);
+      }
+
+      if (totalGuessNum === 20) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 助威次数已满 (${totalGuessNum}/20)，跳过 ===`,
+          type: "warning",
+        });
+        return;
+      }
+
+      let coinToUse = Number(guessCoin);
+      const remaining = 20 - totalGuessNum;
+      
+      if (coinToUse > remaining) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 剩余助威次数不足，调整为 ${remaining} 次 (原计划: ${coinToUse}) ===`,
+          type: "info",
+        });
+        coinToUse = remaining;
+      }
+
+      if (coinToUse <= 0) {
+        return;
+      }
+
+      const result = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "warguess_startguess",
+        { guessCoin: coinToUse, legionId: legionId },
+        5000,
+      );
+
+      if (result && result.guessLegion) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 助威成功 (当前次数: ${result.guessLegion.guessNum}/20) ===`,
+          type: "success",
+        });
+      } else {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 助威失败 ===`,
+          type: "error",
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      
+      if (error.code === 400000 || (error.message && error.message.includes("400000"))) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 助威失败: 未解锁该功能===`,
+          type: "warning",
+        });
+      } else {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 助威失败: ${error.message || "未知错误"}`,
+          type: "error",
+        });
+      }
+      throw error;
+    }
+  };
+
+  /**
+   * 领取挂机奖励 - ForToken版本
+   */
+  const claimHangUpRewardsForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始领取挂机奖励`,
         type: "info",
@@ -599,7 +827,7 @@ export function createTasksHangUp(deps) {
       // 2. Add time 4 times
       for (let i = 0; i < 4; i++) {
         if (shouldStop.value) break;
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 挂机加钟 ${i + 1}/4`,
           type: "info",
@@ -613,14 +841,14 @@ export function createTasksHangUp(deps) {
         await new Promise((r) => setTimeout(r, 500));
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 领取挂机奖励完成`,
         type: "success",
       });
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 领取挂机奖励失败: ${error.message}`,
         type: "error",
@@ -632,12 +860,21 @@ export function createTasksHangUp(deps) {
   /**
    * 一键加钟 - ForToken版本
    */
-  const batchAddHangUpTimeForToken = async (tokenId) => {
+  const batchAddHangUpTimeForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
-    try {
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
       addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始一键加钟`,
         type: "info",
@@ -645,7 +882,7 @@ export function createTasksHangUp(deps) {
 
       for (let i = 0; i < 4; i++) {
         if (shouldStop.value) break;
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行加钟 ${i + 1}/4`,
           type: "info",
@@ -659,14 +896,14 @@ export function createTasksHangUp(deps) {
         await new Promise((r) => setTimeout(r, 500));
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 一键加钟完成`,
         type: "success",
       });
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 一键加钟失败: ${error.message}`,
         type: "error",
@@ -678,12 +915,21 @@ export function createTasksHangUp(deps) {
   /**
    * 俱乐部签到 - ForToken版本
    */
-  const batchclubsignForToken = async (tokenId) => {
+  const batchclubsignForToken = async (tokenId, taskName = "") => {
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
     try {
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 开始俱乐部签到`,
           type: "info",
@@ -696,7 +942,7 @@ export function createTasksHangUp(deps) {
             {},
             5000,
           );
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} 俱乐部签到成功`,
             type: "success",
@@ -704,7 +950,7 @@ export function createTasksHangUp(deps) {
         } catch (signinError) {
           // 如果今天已经签到过了或未加入俱乐部，不报错，继续执行
           if (signinError.message && (signinError.message.includes('今天已经签到过了') || signinError.message.includes('未加入俱乐部'))) {
-            addLog({
+            logWithPrefix({
               time: new Date().toLocaleTimeString(),
               message: `${token.name} ${signinError.message.includes('未加入俱乐部') ? '未加入俱乐部' : '今天已经签到过了'}，继续领取火把`,
               type: "info",
@@ -724,19 +970,135 @@ export function createTasksHangUp(deps) {
       );
       await new Promise((r) => setTimeout(r, 500));
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 俱乐部签到完成`,
         type: "success",
       });
     } catch (error) {
       console.error(error);
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 俱乐部签到失败: ${error.message || "未知错误"}`,
         type: "error",
       });
       // 不抛出异常，继续执行后续命令
+    }
+  };
+
+  /**
+   * 一键答题 - 单Token版本（用于定时任务）
+   */
+  const batchStudyForToken = async (tokenId, taskName = "") => {
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) return;
+
+    // 创建带任务名称前缀的日志函数
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `=== 开始答题: ${token.name} ===`,
+        type: "info",
+      });
+
+      // Preload questions
+      const { preloadQuestions } = await import("@/utils/studyQuestionsFromJSON.js");
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `正在加载题库...`,
+        type: "info",
+      });
+      await preloadQuestions();
+
+      // Reset local study status
+      tokenStore.gameData.studyStatus = {
+        isAnswering: false,
+        questionCount: 0,
+        answeredCount: 0,
+        status: "",
+        timestamp: null,
+      };
+
+      // Send start command
+      await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "study_startgame",
+        {},
+        5000,
+      );
+
+      // Wait for completion
+      let maxWait = 90;
+      let completed = false;
+      let lastStatus = "";
+
+      while (maxWait > 0 && !shouldStop.value) {
+        const status = tokenStore.gameData.studyStatus;
+
+        if (status.status !== lastStatus) {
+          lastStatus = status.status;
+          if (status.status === "answering") {
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 开始答题...`,
+              type: "info",
+            });
+          } else if (status.status === "claiming_rewards") {
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 领取奖励...`,
+              type: "info",
+            });
+          }
+        }
+
+        if (status.status === "completed") {
+          completed = true;
+          break;
+        }
+
+        await new Promise((r) => setTimeout(r, 1000));
+        maxWait--;
+      }
+
+      if (completed) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 答题完成 ===`,
+          type: "success",
+        });
+      } else {
+        if (shouldStop.value) {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 已停止`,
+            type: "warning",
+          });
+        } else {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 答题超时或未开始`,
+            type: "error",
+          });
+          throw new Error("答题超时或未开始");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 答题失败: ${error.message}`,
+        type: "error",
+      });
+      throw error;
     }
   };
 
@@ -746,8 +1108,10 @@ export function createTasksHangUp(deps) {
     batchAddHangUpTime,
     batchAddHangUpTimeForToken,
     batchStudy,
+    batchStudyForToken,
     batchclubsign,
     batchclubsignForToken,
     batchWarGuessCheer,
+    batchWarGuessCheerForToken,
   };
 }

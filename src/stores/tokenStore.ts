@@ -1193,6 +1193,11 @@ export const useTokenStore = defineStore("tokens", () => {
     return sendMessageWithPromise(tokenId, "collection_claimfreereward", params);
   };
 
+  // 发送珍宝阁换购宝箱
+  const sendCollectionExchange = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "collection_exchange", params);
+  };
+
   // 发送领取功法挂机奖励
   const sendLegacyClaimHangup = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "legacy_claimhangup", params);
@@ -1675,6 +1680,16 @@ export const useTokenStore = defineStore("tokens", () => {
   // 发送获取进化塔军团成员信息
   const sendEvotowerGetLegionJoinMembers = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "evotower_getlegionjoinmembers", params);
+  };
+
+  // 发送进化塔领取俱乐部任务奖励
+  const sendEvotowerClaimLegionTask = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "evotower_claimlegiontask", params);
+  };
+
+  // 发送领取怪异塔爬塔奖励
+  const sendActivityBattlepassRewardClaim = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "activity_battlepassrewardclaim", params);
   };
 
   // 发送融合盒合并物品
@@ -2360,6 +2375,7 @@ export const useTokenStore = defineStore("tokens", () => {
     sendGetTeamInfo,
     sendLegionStoreBuyGoods,
     sendCollectionClaimFreeReward,
+    sendCollectionExchange,
     sendLegacyClaimHangup,
     sendLegacyClaimGift,
     sendLegacyClaimChargeReward,
@@ -2456,6 +2472,8 @@ export const useTokenStore = defineStore("tokens", () => {
     sendEvotowerClaimTask,
     sendEvotowerClaimLegionPrivilege,
     sendEvotowerGetLegionJoinMembers,
+    sendEvotowerClaimLegionTask,
+    sendActivityBattlepassRewardClaim,
     sendMergeboxMergeItem,
     sendMergeboxOpenBox,
     sendTowersStart,

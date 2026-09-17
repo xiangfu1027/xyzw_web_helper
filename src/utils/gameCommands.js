@@ -818,6 +818,23 @@ export class GameCommands {
   }
 
   /**
+   * 珍宝阁换购宝箱
+   */
+  collection_exchange(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	  goodsId:7001,
+      	  goodsNum:3,
+        ...params,
+      }),
+      cmd: "collection_exchange",
+      seq,
+      time: Date.now(),
+    };
+  }
+
+  /**
    * 开启功法挂机
    */
  legacy_beginhangup(ack = 0, seq = 0, params = {}) {
@@ -3015,6 +3032,36 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
     }
   }
 
+  /**
+   * 怪异塔详情
+   */
+  evotower_getinfo(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+                ...params
+      }),
+      cmd: "evotower_getinfo",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
+   * 怪异塔爬塔奖励领取
+   */
+  activity_battlepassrewardclaim(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	  battlePassId:1003
+                ...params
+      }),
+      cmd: "activity_battlepassrewardclaim",
+      seq,
+      time: Date.now()
+    }
+  }
 
   /**
    * 怪异塔特权
@@ -3082,6 +3129,21 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
     }
   }
 
+  /**
+   * 怪异塔俱乐部任务奖励
+   */
+  evotower_claimlegiontask(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+                taskId:params.taskId,
+        ...params
+      }),
+      cmd: "evotower_claimlegiontask",
+      seq,
+      time: Date.now()
+    }
+  }
 
   /**
    * 怪异塔免费钥匙

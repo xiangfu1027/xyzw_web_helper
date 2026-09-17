@@ -1,9 +1,10 @@
 import { isDungeonOpen, merchantConfig, goldItemsConfig } from "@/utils/dreamConstants";
 
 /**
- * 宝库、梦境类任务
+ * 副本类任务
  * 包含: batchbaoku13, batchbaoku45, batchmengjing, batchBuyDreamItems
  */
+import ConnectionPoolManager from '@/utils/connectionPoolManager.js';
 
 /**
  * 创建宝库、梦境类任务执行器
@@ -190,8 +191,19 @@ export function createTasksDungeon(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
       try {
@@ -200,8 +212,23 @@ export function createTasksDungeon(deps) {
           message: `=== 开始咸王梦境: ${token.name} ===`,
           type: "info",
         });
-        await ensureConnection(tokenId);
-        if (shouldStop.value) return;
+        
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+        
+        if (shouldStop.value) {
+          await connectionPool.release(tokenId, true);
+          break;
+        }
         const mjbattleTeam = { 0: 107 };
         const dayOfWeek = new Date().getDay();
         if (
@@ -239,17 +266,13 @@ export function createTasksDungeon(deps) {
           type: "error",
         });
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
+    
     isRunning.value = false;
     currentRunningTokenId.value = null;
     message.success("批量梦境结束");
@@ -279,8 +302,19 @@ export function createTasksDungeon(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
       tokenStatus.value[tokenId] = "running";
       const token = tokens.value.find((t) => t.id === tokenId);
       try {
@@ -289,7 +323,18 @@ export function createTasksDungeon(deps) {
           message: `=== 开始梦境购买: ${token.name} ===`,
           type: "info",
         });
-        await ensureConnection(tokenId);
+        
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         // 1. 获取角色信息以获得商店数据
         const roleInfo = await tokenStore.sendMessageWithPromise(
@@ -340,7 +385,7 @@ export function createTasksDungeon(deps) {
               message: `${token.name} 关卡数小于4000，无法购买`,
               type: "warning",
             });
-            return;
+            break;
           }
 
           try {
@@ -390,20 +435,193 @@ export function createTasksDungeon(deps) {
           type: "error",
         });
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
+    
     isRunning.value = false;
     currentRunningTokenId.value = null;
     message.success("批量梦境购买结束");
+  };
+
+  /**
+   * 宝库前3层 - 单token
+   */
+  const batchbaoku13ForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const bosstowerinfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "bosstower_getinfo",
+      {},
+    );
+    const towerId = bosstowerinfo.bossTower.towerId;
+    if (towerId >= 1 && towerId <= 3) {
+      for (let i = 0; i < 2; i++) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "bosstower_startboss",
+          {},
+        );
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      for (let i = 0; i < 9; i++) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "bosstower_startbox",
+          {},
+        );
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+  };
+
+  /**
+   * 宝库4,5层 - 单token
+   */
+  const batchbaoku45ForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const bosstowerinfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "bosstower_getinfo",
+      {},
+    );
+    const towerId = bosstowerinfo.bossTower.towerId;
+    if (towerId >= 4 && towerId <= 5) {
+      for (let i = 0; i < 2; i++) {
+        await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "bosstower_startboss",
+          {},
+        );
+        await new Promise((r) => setTimeout(r, 500));
+      }
+    }
+  };
+
+  /**
+   * 咸王梦境 - 单token
+   */
+  const batchmengjingForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const mjbattleTeam = { 0: 107 };
+    const dayOfWeek = new Date().getDay();
+    if (
+      dayOfWeek === 0 ||
+      dayOfWeek === 1 ||
+      dayOfWeek === 3 ||
+      dayOfWeek === 4
+    ) {
+      await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "dungeon_selecthero",
+        { battleTeam: mjbattleTeam },
+        5000,
+      );
+    } else {
+      throw new Error("当前未在咸王梦境开放时间");
+    }
+  };
+
+  /**
+   * 购买梦境商品 - 单token
+   */
+  const batchBuyDreamItemsForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    if (!isDungeonOpen()) {
+      throw new Error("当前不是梦境开放时间（周三/周四/周日/周一）");
+    }
+
+    const purchaseList = batchSettings.dreamPurchaseList || [];
+    if (purchaseList.length === 0) {
+      throw new Error("请先在设置中配置购买清单");
+    }
+
+    // 1. 获取角色信息以获得商店数据
+    const roleInfo = await tokenStore.sendMessageWithPromise(
+      tokenId,
+      "role_getroleinfo",
+      {},
+      15000
+    );
+
+    if (!roleInfo || !roleInfo.role || !roleInfo.role.dungeon || !roleInfo.role.dungeon.merchant) {
+      throw new Error("无法获取梦境商店数据");
+    }
+
+    const merchantData = roleInfo.role.dungeon.merchant;
+    const levelId = roleInfo.role.levelId || 0;
+
+    const operations = [];
+
+    for (const itemKey of purchaseList) {
+      const [targetMerchantId, targetItemIndex] = itemKey.split("-").map(Number);
+
+      const merchantItems = merchantData[targetMerchantId];
+      if (merchantItems) {
+        for (let pos = 0; pos < merchantItems.length; pos++) {
+          if (merchantItems[pos] === targetItemIndex) {
+            operations.push({
+              merchantId: targetMerchantId,
+              index: targetItemIndex,
+              pos: pos
+            });
+          }
+        }
+      }
+    }
+    operations.sort((a, b) => {
+      if (a.merchantId !== b.merchantId) return a.merchantId - b.merchantId;
+      return b.pos - a.pos;
+    });
+
+    for (const op of operations) {
+      if (levelId < 4000) {
+        throw new Error("关卡数小于4000，无法购买");
+      }
+
+      await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "dungeon_buymerchant",
+        {
+          id: op.merchantId,
+          index: op.index,
+          pos: op.pos,
+        },
+        5000
+      );
+      await new Promise((r) => setTimeout(r, 500));
+    }
   };
 
   return {
@@ -411,5 +629,9 @@ export function createTasksDungeon(deps) {
     batchbaoku45,
     batchmengjing,
     batchBuyDreamItems,
+    batchbaoku13ForToken,
+    batchbaoku45ForToken,
+    batchmengjingForToken,
+    batchBuyDreamItemsForToken,
   };
 }

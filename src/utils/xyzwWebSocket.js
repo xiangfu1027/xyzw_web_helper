@@ -52,6 +52,7 @@ const errorCodeMap = {
   200330: "无效的ID",
   1500040: "上座塔的奖励未领取",
   1500010: "已经全部通关",
+  13000090: "今日成功挑战次数已用完，请明日再来",
 };
 
 // 事件节流定义表，根据实际需要调整命令和节流时间
@@ -281,6 +282,8 @@ export function registerDefaultCommands(reg) {
     .register("mergebox_claimfreeenergy", { actType: 1 })
     .register("mergebox_claimmergeprogress", { actType: 1 })
     .register("evotower_claimtask", { taskId: 1 })
+    .register("evotower_claimlegiontask")
+    .register("activity_battlepassrewardclaim")
 
     // 瓶子机器人
     .register("bottlehelper_claim")
@@ -365,6 +368,7 @@ export function registerDefaultCommands(reg) {
     // 珍宝阁相关
     .register("collection_claimfreereward")
     .register("collection_goodslist")
+    .register("collection_exchange")
 
     // 扭蛋相关
     .register("gacha_drawreward", { num: 1, isGroup: false })
@@ -469,7 +473,6 @@ export function registerDefaultCommands(reg) {
     .register("mergebox_claimmergeprogress")
     .register("mergebox_claimcostprogress")
     .register("mergebox_claimfreeenergy")
-    .register("evotower_claimtask")
     .register("evotower_claimlegionprivilege")
     .register("mergebox_mergeitem")
     .register("mergebox_openbox")
@@ -1174,6 +1177,13 @@ export class XyzwWebSocketClient {
             ? packet.decodedBody
             : packet.body;
 
+      // 检查 message.error 字段（服务器返回的业务错误）
+      if (packet.error) {
+        const errorText = String(packet.error);
+        promiseData.reject(new Error(errorText));
+        return;
+      }
+
       if (packet.code === 0 || packet.code === undefined) {
         promiseData.resolve(responseBody || packet);
       } else {
@@ -1200,7 +1210,21 @@ export class XyzwWebSocketClient {
 
     // 兼容旧的基于cmd名称的匹配方式（保留为向后兼容）
     const cmd = packet.cmd;
-    if (!cmd) return;
+    if (!cmd) {
+      // 如果响应无法识别（unknown），但有错误信息，reject所有待处理的Promise
+      if (packet.error) {
+        const errorText = String(packet.error);
+        const pendingPromises = Object.keys(this.promises);
+        if (pendingPromises.length > 0) {
+          // reject最早的Promise
+          const oldestSeq = Math.min(...pendingPromises.map(Number));
+          const promiseData = this.promises[oldestSeq];
+          delete this.promises[oldestSeq];
+          promiseData.reject(new Error(errorText));
+        }
+      }
+      return;
+    }
     const respCmdKey = typeof cmd === "string" ? cmd.toLowerCase() : cmd;
 
     // 命令到响应的映射 - 处理响应命令与原始命令不匹配的情况
@@ -1210,6 +1234,7 @@ export class XyzwWebSocketClient {
       activity_getresp: "activity_get",
       collection_goodslistresp: "collection_goodslist",
       collection_claimfreerewardresp: "collection_claimfreereward",
+      collection_exchangeresp: "collection_exchange",
       legion_getarearankresp: "legion_getarearank",
       legionwar_getgoldmonthwarrankresp: "legionwar_getgoldmonthwarrank",
       nightmare_getroleinforesp: "nightmare_getroleinfo",
@@ -1272,6 +1297,8 @@ export class XyzwWebSocketClient {
       mergebox_claimfreeenergyresp: "mergebox_claimfreeenergy",
       mergebox_claimmergeprogressresp: "mergebox_claimmergeprogress",
       evotower_claimtaskresp: "evotower_claimtask",
+      evotower_claimlegiontaskresp: "evotower_claimlegiontask",
+      activity_battlepassrewardclaimresp: "activity_battlepassrewardclaim",
       item_openpackresp: "item_openpack",
       equipment_quenchresp: "equipment_quench",
       rank_getserverrankresp: "rank_getserverrank",

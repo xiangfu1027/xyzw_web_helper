@@ -352,28 +352,6 @@
                 </n-button>
                 <n-button
                   size="small"
-                  @click="batchSmartSendCar"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isCarActivityOpen
-                  "
-                >
-                  智能发车
-                </n-button>
-                <n-button
-                  size="small"
-                  @click="batchClaimCars"
-                  :disabled="
-                    isRunning ||
-                    selectedTokens.length === 0 ||
-                    !isCarActivityOpen
-                  "
-                >
-                  一键收车
-                </n-button>
-                <n-button
-                  size="small"
                   @click="store_purchase"
                   :disabled="isRunning || selectedTokens.length === 0"
                 >
@@ -2887,6 +2865,7 @@ import { preloadQuestions } from "@/utils/studyQuestionsFromJSON.js";
 import { useMessage } from "naive-ui";
 import { Settings } from "@vicons/ionicons5";
 import { DEFAULT_WEIRD_TOWER_MAX_CLIMB } from "@/utils/towerClimbLimit.js";
+import { ConnectionPoolManager } from "@/utils/connectionPoolManager";
 
 // Import batch task modules
 import {
@@ -5662,125 +5641,28 @@ const clearLogs = () => {
   message.success("日志已清空");
 };
 
-const waitForConnection = async (
-  tokenId,
-  timeout = batchSettings.connectionTimeout,
-) => {
-  const start = Date.now();
-  while (Date.now() - start < timeout) {
-    const status = tokenStore.getWebSocketStatus(tokenId);
-    if (status === "connected") return true;
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  return false;
-};
+// 使用 ConnectionPoolManager 管理连接
+const connectionPool = new ConnectionPoolManager(tokenStore, {
+  maxConnections: batchSettings.maxActive,
+  connectionTimeout: batchSettings.connectionTimeout,
+  reconnectDelay: batchSettings.reconnectDelay,
+  maxRetries: 2,
+});
 
-// 全局连接队列控制 - 限制并发连接数
-const connectionQueue = { active: 0 };
-
-const waitForConnectionSlot = async () => {
-  while (connectionQueue.active >= batchSettings.maxActive) {
-    await new Promise((r) => setTimeout(r, 1000));
-  }
-  connectionQueue.active++;
+// 兼容旧接口 - 供任务函数调用
+const ensureConnection = async (tokenId) => {
+  return await connectionPool.acquire(tokenId);
 };
 
 const releaseConnectionSlot = () => {
-  if (connectionQueue.active > 0) {
-    connectionQueue.active--;
-  }
+  connectionPool.releaseConnectionSlot();
 };
 
-const ensureConnection = async (tokenId, maxRetries = 2) => {
-  const latestToken = tokens.value.find((t) => t.id === tokenId);
-  if (!latestToken) {
-    throw new Error(`Token not found: ${tokenId}`);
+// 兼容旧接口 - 供日志显示
+const connectionQueue = {
+  get active() {
+    return connectionPool.connectionSlots.active;
   }
-
-  let status = tokenStore.getWebSocketStatus(tokenId);
-  let connected = status === "connected";
-
-  if (!connected) {
-    // 等待连接槽位，限制并发连接数
-    await waitForConnectionSlot();
-
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `正在连接... (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-      type: "info",
-    });
-
-    tokenStore.createWebSocketConnection(
-      tokenId,
-      latestToken.token,
-      latestToken.wsUrl,
-    );
-    connected = await waitForConnection(tokenId);
-
-    if (!connected && maxRetries > 0) {
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `连接超时，尝试重连...`,
-        type: "warning",
-      });
-
-      tokenStore.closeWebSocketConnection(tokenId);
-      await new Promise((r) => setTimeout(r, batchSettings.reconnectDelay));
-
-      addLog({
-        time: new Date().toLocaleTimeString(),
-        message: `正在重连...`,
-        type: "info",
-      });
-
-      const refreshedToken = tokens.value.find((t) => t.id === tokenId);
-      tokenStore.createWebSocketConnection(
-        tokenId,
-        refreshedToken.token,
-        refreshedToken.wsUrl,
-      );
-
-      connected = await waitForConnection(tokenId);
-    }
-
-    if (!connected) {
-      // 连接失败，释放槽位
-      releaseConnectionSlot();
-      throw new Error("连接失败 (重试后仍超时)");
-    }
-  }
-
-  // 连接成功，槽位保持占用，直到任务完成后手动释放
-
-  // Initialize Game Data (Critical for Battle Version and Session)
-  try {
-    // Fetch Role Info first (Standard flow)
-    await tokenStore.sendMessageWithPromise(
-      tokenId,
-      "role_getroleinfo",
-      {},
-      5000,
-    );
-
-    // Fetch Battle Version
-    const res = await tokenStore.sendMessageWithPromise(
-      tokenId,
-      "fight_startlevel",
-      {},
-      5000,
-    );
-    if (res?.battleData?.version) {
-      tokenStore.setBattleVersion(res.battleData.version);
-    }
-  } catch (e) {
-    addLog({
-      time: new Date().toLocaleTimeString(),
-      message: `初始化数据失败: ${e.message}`,
-      type: "warning",
-    });
-  }
-
-  return true;
 };
 
 const createTaskDeps = () => ({

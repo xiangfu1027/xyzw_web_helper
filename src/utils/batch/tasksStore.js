@@ -2,6 +2,7 @@
  * 商店类任务
  * 包含: legion_storebuygoods, legionStoreBuySkinCoins, store_purchase, collection_claimfreereward
  */
+import ConnectionPoolManager from '@/utils/connectionPoolManager.js';
 
 /**
  * 创建商店类任务执行器
@@ -39,11 +40,21 @@ export function createTasksStore(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
-
       const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
@@ -53,7 +64,17 @@ export function createTasksStore(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -107,17 +128,12 @@ export function createTasksStore(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     currentRunningTokenId.value = null;
     isRunning.value = false;
@@ -137,11 +153,21 @@ export function createTasksStore(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
-
       const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
@@ -151,7 +177,17 @@ export function createTasksStore(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -210,17 +246,12 @@ export function createTasksStore(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     currentRunningTokenId.value = null;
     isRunning.value = false;
@@ -238,12 +269,21 @@ export function createTasksStore(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    // 顺序执行：执行完一个token后，再执行下一个token
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
     for (const tokenId of selectedTokens.value) {
       if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
-
       const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
@@ -253,7 +293,17 @@ export function createTasksStore(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
 
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -292,15 +342,108 @@ export function createTasksStore(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
     }
+
+    // 销毁连接池
+    await connectionPool.destroy();
+
+    currentRunningTokenId.value = null;
+    isRunning.value = false;
+    shouldStop.value = false;
+  };
+
+  /**
+   * 换购宝箱
+   */
+  const collection_exchange = async () => {
+    if (selectedTokens.value.length === 0) return;
+    isRunning.value = true;
+    shouldStop.value = false;
+    selectedTokens.value.forEach((id) => {
+      tokenStatus.value[id] = "waiting";
+    });
+
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
+
+      tokenStatus.value[tokenId] = "running";
+      const token = tokens.value.find((t) => t.id === tokenId);
+
+      try {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== 开始换购宝箱: ${token.name} ===`,
+          type: "info",
+        });
+
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
+          });
+          tokenStatus.value[tokenId] = "failed";
+          continue;
+        }
+
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 发送换购宝箱请求...`,
+          type: "info",
+        });
+        const result = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "collection_exchange",
+          {},
+          5000,
+        );
+
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+
+        if (result.error) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 换购宝箱失败: ${result.error}`,
+            type: "error",
+          });
+          tokenStatus.value[tokenId] = "failed";
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 换购宝箱成功`,
+            type: "success",
+          });
+          tokenStatus.value[tokenId] = "completed";
+        }
+      } catch (error) {
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 换购宝箱过程出错: ${error.message}`,
+          type: "error",
+        });
+        tokenStatus.value[tokenId] = "failed";
+      } finally {
+        await connectionPool.release(tokenId, true);
+      }
+    }
+
+    // 销毁连接池
+    await connectionPool.destroy();
 
     currentRunningTokenId.value = null;
     isRunning.value = false;
@@ -310,19 +453,27 @@ export function createTasksStore(deps) {
   /**
    * 黑市一键采购（单个Token）
    */
-  const store_purchaseForToken = async (tokenId) => {
+  const store_purchaseForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
     const token = tokens.value.find((t) => t.id === tokenId);
     if (!token) return;
 
     try {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 开始黑市采购`,
         type: "info",
       });
 
       // 获取主公等级
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 获取主公等级...`,
         type: "info",
@@ -348,7 +499,7 @@ export function createTasksStore(deps) {
         throw new Error('无法获取主公等级');
       }
 
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 主公等级: ${lordLevel}`,
         type: "info",
@@ -356,7 +507,7 @@ export function createTasksStore(deps) {
 
       if (lordLevel > 4000) {
         // 主公等级大于4000，执行原有store_purchase
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 发送黑市采购请求...`,
           type: "info",
@@ -371,14 +522,14 @@ export function createTasksStore(deps) {
         await new Promise((r) => setTimeout(r, delayConfig.action));
 
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} 黑市采购失败: ${result.error}`,
             type: "error",
           });
           throw new Error(result.error);
         } else {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} 黑市采购成功`,
             type: "success",
@@ -387,7 +538,7 @@ export function createTasksStore(deps) {
       } else {
         // 主公等级小于等于4000，执行新的采购流程
         // 1. 执行store_buy，参数goodsId: 1
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_buy goodsId:1...`,
           type: "info",
@@ -400,7 +551,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_buy goodsId:1 失败: ${result.error}`,
             type: "error",
@@ -409,7 +560,7 @@ export function createTasksStore(deps) {
         }
 
         // 2. 执行store_buy，参数goodsId: 2
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_buy goodsId:2...`,
           type: "info",
@@ -422,7 +573,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_buy goodsId:2 失败: ${result.error}`,
             type: "error",
@@ -431,7 +582,7 @@ export function createTasksStore(deps) {
         }
 
         // 3. 执行store_buy，参数goodsId: 3
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_buy goodsId:3...`,
           type: "info",
@@ -444,7 +595,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_buy goodsId:3 失败: ${result.error}`,
             type: "error",
@@ -453,7 +604,7 @@ export function createTasksStore(deps) {
         }
 
         // 4. 执行store_refresh，参数storeId: 1
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_refresh storeId:1...`,
           type: "info",
@@ -466,7 +617,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_refresh 失败: ${result.error}`,
             type: "error",
@@ -475,7 +626,7 @@ export function createTasksStore(deps) {
         }
 
         // 5. 执行store_buy，参数goodsId: 1
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_buy goodsId:1...`,
           type: "info",
@@ -488,7 +639,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_buy goodsId:1 失败: ${result.error}`,
             type: "error",
@@ -497,7 +648,7 @@ export function createTasksStore(deps) {
         }
 
         // 6. 执行store_buy，参数goodsId: 2
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_buy goodsId:2...`,
           type: "info",
@@ -510,7 +661,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_buy goodsId:2 失败: ${result.error}`,
             type: "error",
@@ -519,7 +670,7 @@ export function createTasksStore(deps) {
         }
 
         // 7. 执行store_buy，参数goodsId: 3
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 执行store_buy goodsId:3...`,
           type: "info",
@@ -532,7 +683,7 @@ export function createTasksStore(deps) {
         );
         await new Promise((r) => setTimeout(r, delayConfig.action));
         if (result.error) {
-          addLog({
+          logWithPrefix({
             time: new Date().toLocaleTimeString(),
             message: `${token.name} store_buy goodsId:3 失败: ${result.error}`,
             type: "error",
@@ -540,7 +691,7 @@ export function createTasksStore(deps) {
           throw new Error(result.error);
         }
 
-        addLog({
+        logWithPrefix({
           time: new Date().toLocaleTimeString(),
           message: `${token.name} 黑市采购成功`,
           type: "success",
@@ -548,7 +699,7 @@ export function createTasksStore(deps) {
       }
 
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 黑市采购过程出错: ${error.message}`,
         type: "error",
@@ -570,11 +721,21 @@ export function createTasksStore(deps) {
       tokenStatus.value[id] = "waiting";
     });
 
-    const taskPromises = selectedTokens.value.map(async (tokenId) => {
-      if (shouldStop.value) return;
+    // 创建连接池
+    const connectionPool = new ConnectionPoolManager(tokenStore, {
+      maxConnections: 5,
+      connectionTimeout: 3000,
+      idleTimeout: 60000,
+      queueTimeout: 120000,
+      reconnectDelay: 1000,
+      maxRetries: 3
+    });
+
+    // 顺序执行每个token
+    for (const tokenId of selectedTokens.value) {
+      if (shouldStop.value) break;
 
       tokenStatus.value[tokenId] = "running";
-
       const token = tokens.value.find((t) => t.id === tokenId);
 
       try {
@@ -584,37 +745,27 @@ export function createTasksStore(deps) {
           type: "info",
         });
 
-        await ensureConnection(tokenId);
-
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 发送黑市采购请求...`,
-          type: "info",
-        });
-        const result = await tokenStore.sendMessageWithPromise(
-          tokenId,
-          "store_purchase",
-          {},
-          5000,
-        );
-
-        await new Promise((r) => setTimeout(r, delayConfig.action));
-
-        if (result.error) {
+        // 获取连接
+        const connected = await connectionPool.acquire(tokenId);
+        if (!connected) {
           addLog({
             time: new Date().toLocaleTimeString(),
-            message: `${token.name} 黑市采购失败: ${result.error}`,
-            type: "error",
+            message: `${token.name} 连接失败，跳过`,
+            type: "warning",
           });
           tokenStatus.value[tokenId] = "failed";
-        } else {
-          addLog({
-            time: new Date().toLocaleTimeString(),
-            message: `${token.name} 黑市采购成功`,
-            type: "success",
-          });
-          tokenStatus.value[tokenId] = "completed";
+          continue;
         }
+
+        // 调用 store_purchaseForToken 执行采购逻辑
+        await store_purchaseForToken(tokenId);
+
+        tokenStatus.value[tokenId] = "completed";
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `=== ${token.name} 黑市采购完成 ===`,
+          type: "success",
+        });
       } catch (error) {
         addLog({
           time: new Date().toLocaleTimeString(),
@@ -623,21 +774,215 @@ export function createTasksStore(deps) {
         });
         tokenStatus.value[tokenId] = "failed";
       } finally {
-        tokenStore.closeWebSocketConnection(tokenId);
-        releaseConnectionSlot();
-        addLog({
-          time: new Date().toLocaleTimeString(),
-          message: `${token.name} 连接已关闭  (队列: ${connectionQueue.active}/${batchSettings.maxActive})`,
-          type: "info",
-        });
+        await connectionPool.release(tokenId, true);
       }
-    });
+    }
 
-    await Promise.all(taskPromises);
+    // 销毁连接池
+    await connectionPool.destroy();
 
     currentRunningTokenId.value = null;
     isRunning.value = false;
     shouldStop.value = false;
+  };
+
+  /**
+   * 购买四圣碎片（单个Token）
+   */
+  const legion_storebuygoodsForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) throw new Error('Token not found');
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 发送购买四圣碎片请求...`,
+        type: "info",
+      });
+      const result = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "legion_storebuygoods",
+        { id: 6 },
+        5000,
+      );
+
+      await new Promise((r) => setTimeout(r, delayConfig.action));
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 购买四圣碎片成功`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 购买四圣碎片出错: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 购买俱乐部5皮肤币（单个Token）
+   */
+  const legionStoreBuySkinCoinsForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) throw new Error('Token not found');
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 发送购买俱乐部5皮肤币请求...`,
+        type: "info",
+      });
+
+      let result = null;
+      for (let i = 0; i < 5; i++) {
+        result = await tokenStore.sendMessageWithPromise(
+          tokenId,
+          "legion_storebuygoods",
+          { id: 1 },
+          5000,
+        );
+        await new Promise((r) => setTimeout(r, delayConfig.action));
+      }
+
+      if (result && result.error) {
+        throw new Error(result.error);
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 购买俱乐部5皮肤币成功`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 购买俱乐部5皮肤币出错: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 免费领取珍宝阁每日奖励（单个Token）
+   */
+  const collection_claimfreerewardForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) throw new Error('Token not found');
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 发送珍宝阁免费领取请求...`,
+        type: "info",
+      });
+      const result = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "collection_claimfreereward",
+        {},
+        5000,
+      );
+
+      await new Promise((r) => setTimeout(r, delayConfig.action));
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 珍宝阁领取成功`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 珍宝阁领取出错: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * 换购宝箱（单个Token）
+   */
+  const collection_exchangeForToken = async (tokenId, taskName = "") => {
+    const logWithPrefix = (log) => {
+      const prefix = taskName ? `【${taskName}】` : "";
+      addLog({
+        ...log,
+        message: `${prefix}${log.message}`
+      });
+    };
+
+    const token = tokens.value.find((t) => t.id === tokenId);
+    if (!token) throw new Error('Token not found');
+
+    try {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 发送换购宝箱请求...`,
+        type: "info",
+      });
+      const result = await tokenStore.sendMessageWithPromise(
+        tokenId,
+        "collection_exchange",
+        {},
+        5000,
+      );
+
+      await new Promise((r) => setTimeout(r, delayConfig.action));
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 换购宝箱成功`,
+        type: "success",
+      });
+    } catch (error) {
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 换购宝箱出错: ${error.message}`,
+        type: "error",
+      });
+      throw error;
+    }
   };
 
   return {
@@ -646,5 +991,10 @@ export function createTasksStore(deps) {
     store_purchase,
     store_purchaseForToken,
     collection_claimfreereward,
+    collection_exchange,
+    legion_storebuygoodsForToken,
+    legionStoreBuySkinCoinsForToken,
+    collection_claimfreerewardForToken,
+    collection_exchangeForToken,
   };
 }

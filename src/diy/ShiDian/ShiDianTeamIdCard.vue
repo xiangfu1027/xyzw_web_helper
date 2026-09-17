@@ -14,13 +14,13 @@
           💡 提示：点击按钮可清空对应 TeamID
         </div>
         <CustomizedCard 
-          v-for="i in 5" 
+          v-for="i in 10" 
           :key="i"
           mode="button-with-input"
-          :name="`十殿${['一', '二', '三', '四', '五'][i-1]}`"
+          :name="`十殿${['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][i-1]}`"
           :input-value="teamIds[i-1]"
           @update:input-value="(value) => handleTeamIdChange(i-1, value)"
-          :placeholder="`输入十殿${['一', '二', '三', '四', '五'][i-1]}的 TeamID`"
+          :placeholder="`输入十殿${['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'][i-1]}的 TeamID`"
           button-text="清除"
           :disabled="!teamIds[i-1]"
           @button-click="() => clearSingleTeamId(i-1)"
@@ -30,12 +30,6 @@
           button-text="自动加入十殿"
           :disabled="!teamIds?.some(id => id) || isAutoJoinRunning"
           @button-click="autoJoinShiDian"
-        />
-        <CustomizedCard 
-          mode="button-placeholder"
-          button-text="停止"
-          :disabled="!isAutoJoinRunning"
-          @button-click="stopAutoJoinShiDian"
         />
         <CustomizedCard 
           mode="button-placeholder"
@@ -88,13 +82,19 @@
           :disabled="tokenStore.gameTokens.length === 0 || isRefreshingPillow"
           @button-click="batchRefreshPillowCount()"
         />
+        <CustomizedCard
+          mode="button-placeholder"
+          button-text="清空枕头"
+          :disabled="tokenStore.gameTokens.length === 0"
+          @button-click="clearPillowCount()"
+        />
       </CustomizedCard>
       
       <!-- 操作日志 -->
       <OperationLogCard 
         page="shidian" 
         card-type="十殿 TeamID"
-        :filter-operations="['导出资源', '批量领取', '清空十殿标签', '加入成员', '十殿 8', '刷新枕头']"
+        :filter-operations="['导出资源', '批量领取', '清空十殿标签', '加入成员', '十殿 8', '刷新枕头', '清空枕头']"
       />
     </template>
   </MyCard>
@@ -119,7 +119,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update-pillow-count', 'join-token', 'auto-join-shidian', 'clear-nightmare-labels'])
+const emit = defineEmits(['update-pillow-count', 'update-max-level', 'clear-pillow-count', 'join-token', 'auto-join-shidian', 'clear-nightmare-labels'])
 
 const tokenStore = useTokenStore()
 const message = useMessage()
@@ -140,6 +140,15 @@ const getTokenIndex = (token) => {
   })
   const index = sortedTokens.findIndex(t => t.id === token.id)
   return index >= 0 ? index + 1 : '?'
+}
+
+// 辅助函数：解析日期字符串（格式：YYYYMMDD）
+const parseDateString = (dateStr) => {
+  if (!dateStr || dateStr.length !== 8) return null
+  const year = parseInt(dateStr.substring(0, 4))
+  const month = parseInt(dateStr.substring(4, 6)) - 1 // 月份从0开始
+  const day = parseInt(dateStr.substring(6, 8))
+  return new Date(year, month, day)
 }
 
 // 辅助函数：解析执行范围（如果为空则执行全部）
@@ -195,7 +204,7 @@ const getTargetTokens = (tokenIndices) => {
 }
 
 // TeamID 相关变量
-const teamIds = ref(['', '', '', '', ''])
+const teamIds = ref(['', '', '', '', '', '', '', '', '', ''])
 const isAutoJoinRunning = ref(false)
 const stopAutoJoinFlag = ref(false)
 const isAddingMembers = ref(false)
@@ -277,7 +286,7 @@ const clearSingleTeamId = async (index) => {
 
 // 清空所有 TeamID
 const clearAllTeamIds = async () => {
-  teamIds.value = ['', '', '', '', '']
+  teamIds.value = ['', '', '', '', '', '', '', '', '', '']
   await saveDropdownSettings()
   message.success('已清空所有 TeamID')
 }
@@ -452,7 +461,7 @@ const addMembersToTeams = async () => {
 // 自动加入十殿
 const autoJoinShiDian = async () => {
   if (!teamIds.value?.some(id => id)) {
-    message.warning('请先选择十殿队伍（一到五）')
+    message.warning('请先选择十殿队伍（一到六）')
     return
   }
 
@@ -861,7 +870,7 @@ const batchClaimNightmareRewards = async () => {
   }
 }
 
-// 批量刷新枕头数量
+// 批量刷新枕头数量和最高层数
 const batchRefreshPillowCount = async () => {
   if (isRefreshingPillow.value) {
     message.warning('刷新正在进行中，请稍候...')
@@ -880,7 +889,7 @@ const batchRefreshPillowCount = async () => {
       return
     }
 
-    message.info(`开始刷新枕头数量，共${tokens.length}个Token...`)
+    message.info(`开始刷新枕头数量和最高层数，共${tokens.length}个Token...`)
 
     const results = await connectionPool.batchOperate(
       tokens,
@@ -891,19 +900,82 @@ const batchRefreshPillowCount = async () => {
           // 获取角色信息
           const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
 
-          if (roleInfo && roleInfo.role && roleInfo.role.items) {
-            const pillowItem = roleInfo.role.items['5054']
+          if (roleInfo && roleInfo.role) {
+            const pillowItem = roleInfo.role.items?.['5054']
+            const roleId = roleInfo.role.roleId
+            const pillowQuantity = pillowItem?.quantity ?? 0
 
-            if (pillowItem && pillowItem.quantity !== undefined) {
-              // 发送事件更新枕头数量
-              emit('update-pillow-count', token.id, pillowItem.quantity)
-              return { success: true, message: `枕头数量: ${pillowItem.quantity}` }
-            } else {
-              emit('update-pillow-count', token.id, 0)
-              return { success: false, message: '未找到枕头信息' }
+            // 发送事件更新枕头数量
+            emit('update-pillow-count', token.id, pillowQuantity)
+            
+            // 获取本周最高层数
+            let weekMaxLevel = 0
+            if (roleId) {
+              try {
+                const nightmareInfo = await tokenStore.sendNightmareGetRoleInfo(token.id, { roleId: parseInt(roleId) })
+                
+                if (nightmareInfo) {
+                  // 从weekAward中获取本周的maxLevel
+                  let weekAward = null
+                  
+                  // 优先从nightMareData.weekAward获取（注意大小写）
+                  const nightMareData = nightmareInfo.nightMareData || nightmareInfo.nightmareData
+                  if (nightMareData && nightMareData.weekAward) {
+                    weekAward = nightMareData.weekAward
+                  } else if (nightmareInfo.weekAward) {
+                    // 兼容旧格式：直接从nightmareInfo.weekAward获取
+                    weekAward = nightmareInfo.weekAward
+                  }
+                  
+                  if (weekAward && typeof weekAward === 'object') {
+                    // 获取当前日期
+                    const currentDate = new Date()
+                    
+                    // 获取当前周的周一日期
+                    const currentWeekStart = new Date(currentDate)
+                    const day = currentWeekStart.getDay()
+                    const diff = day === 0 ? -6 : 1 - day
+                    currentWeekStart.setDate(currentWeekStart.getDate() + diff)
+                    currentWeekStart.setHours(0, 0, 0, 0)
+                    
+                    // 获取当前周的周日日期
+                    const currentWeekEnd = new Date(currentWeekStart)
+                    currentWeekEnd.setDate(currentWeekEnd.getDate() + 6)
+                    currentWeekEnd.setHours(23, 59, 59, 999)
+                    
+                    // 检查weekAward中是否有本周的日期
+                    const dateKeys = Object.keys(weekAward)
+                    
+                    for (const dateKey of dateKeys) {
+                      const dateData = weekAward[dateKey]
+                      if (!dateData || dateData.maxLevel === undefined || dateData.maxLevel === null) {
+                        continue
+                      }
+                    
+                      // 解析日期
+                      const date = parseDateString(dateKey)
+                      if (!date) continue
+                    
+                      // 检查是否在本周范围内
+                      if (date >= currentWeekStart && date <= currentWeekEnd) {
+                        weekMaxLevel = dateData.maxLevel
+                        break
+                      }
+                    }
+                  }
+                }
+              } catch (error) {
+                console.warn(`获取Token ${token.name || token.id} 最高层数失败:`, error)
+              }
             }
+            
+            // 发送事件更新最高层数
+            emit('update-max-level', token.id, weekMaxLevel)
+            
+            return { success: true, message: `枕头数量: ${pillowQuantity}, 最高层数: ${weekMaxLevel}` }
           } else {
             emit('update-pillow-count', token.id, 0)
+            emit('update-max-level', token.id, 0)
             return { success: false, message: '未获取到角色信息' }
           }
         } catch (error) {
@@ -928,11 +1000,11 @@ const batchRefreshPillowCount = async () => {
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
 
-    message.success(`刷新枕头数量完成！成功: ${successCount}个，失败: ${failCount}个`)
+    message.success(`刷新枕头数量和最高层数完成！成功: ${successCount}个，失败: ${failCount}个`)
     logOperation('shidian', '刷新枕头', {
       cardType: '十殿 TeamID',
       status: 'success',
-      message: `【批量】刷新枕头数量完成！成功: ${successCount}个，失败: ${failCount}个`
+      message: `【批量】刷新枕头数量和最高层数完成！成功: ${successCount}个，失败: ${failCount}个`
     })
   } catch (error) {
     console.error('刷新枕头数量过程中发生错误:', error)
@@ -945,6 +1017,17 @@ const batchRefreshPillowCount = async () => {
   } finally {
     isRefreshingPillow.value = false
   }
+}
+
+// 清空枕头数量和最高层数
+const clearPillowCount = () => {
+  emit('clear-pillow-count')
+  message.success('已清空所有Token的枕头数量和最高层数')
+  logOperation('shidian', '清空枕头', {
+    cardType: '十殿 TeamID',
+    status: 'success',
+    message: '【批量】已清空所有Token的枕头数量和最高层数'
+  })
 }
 
 // 导出资源
