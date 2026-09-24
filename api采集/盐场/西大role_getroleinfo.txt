@@ -1,0 +1,187 @@
+[09:29:19] [GAME] [VERBOSE] ProtoMsg Blob消息，使用rawData: 
+{role: {…}, serverViewId: 8977}
+role
+: 
+achievement
+: 
+{1: {…}, 2: {…}, 3: {…}, 4: {…}, 5: {…}, 6: {…}, 7: {…}, 8: {…}, 9: {…}, 10: {…}, 11: {…}, 12: {…}, 13: {…}, 14: {…}, 15: {…}}
+activityRecord
+: 
+null
+addUpCharge
+: 
+{1: 1702880789, 2: 1703695347, 3: 1707880348, 4: 1714532219, 5: 1714668226, 6: 1717813603, 7: 1768974132, 8: 1768978948, 9: 1772529469, 10: 1778334548}
+areaId
+: 
+453
+arena
+: 
+{}
+heroes
+: 
+101
+: 
+{heroId: 101, level: 1, order: 0, star: 30, color: 3, …}
+118
+: 
+activeSkill
+: 
+0
+appendSkill
+: 
+(2) [{…}, {…}]
+artifactId
+: 
+11135
+attack
+: 
+620986675
+attackExt
+: 
+5.115909099578857
+attribute
+: 
+{51: 1.8340000131726266, 53: 0.4000000059604645, 54: 0.0255, 56: 0.8370000295341016, 57: 1.6540000314712524, 59: 0.8340000087022782, 61: 0.4045000059604645, 70: 0.39200000584125516, 71: 0.10080000083447, 101: 0.03, 102: 0.03, 226: 0.20000000298023224, 227: 0.1599999964237213, 229: 0.32760001192092897, 230: 0.16299999642372132, 505: 0.048000000417233}
+awakeSkill
+: 
+{0: true, 1: true, 2: true}
+battleTeamSlot
+: 
+3
+bookAttack
+: 
+0
+bookHp
+: 
+0
+bookLevel
+: 
+0
+bookStar
+: 
+30
+bookValue
+: 
+0
+color
+: 
+3
+defense
+: 
+151125908
+defenseExt
+: 
+5.115909099578857
+equipment
+: 
+1
+: 
+attack
+: 
+45492
+curQuenchId
+: 
+0
+defense
+: 
+0
+enchantUId
+: 
+0
+enchantUId2
+: 
+0
+equipId
+: 
+0
+forge
+: 
+0
+forgeExp
+: 
+0
+hp
+: 
+0
+level
+: 
+4000
+quenchAttackExt
+: 
+45492
+quenchDefenseExt
+: 
+0
+quenchHpExt
+: 
+0
+quenchTimes
+: 
+11389
+quenchTimes2
+: 
+10024
+quenches
+: 
+1
+: 
+{colorId: 5, attrId: 5, attrNum: 60, isLocked: true, allAttrNum: 0}
+2
+: 
+{colorId: 6, attrId: 9, attrNum: 88, isLocked: true, allAttrNum: 0}
+3
+: 
+{colorId: 6, attrId: 21, attrNum: 87, isLocked: true, allAttrNum: 0}
+4
+: 
+{colorId: 6, attrId: 2, attrNum: 83, isLocked: true, allAttrNum: 0}
+5
+: 
+{colorId: 6, attrId: 10, attrNum: 82, isLocked: true, allAttrNum: 0}
+[[Prototype]]
+: 
+Object
+quenches2
+: 
+1
+: 
+{colorId: 2, attrId: 18, attrNum: 10, isLocked: false, allAttrNum: 10000}
+2
+: 
+{colorId: 1, attrId: 4, attrNum: 5, isLocked: false, allAttrNum: 5000}
+3
+: 
+{colorId: 2, attrId: 10, attrNum: 9, isLocked: false, allAttrNum: 9000}
+4
+: 
+{colorId: 1, attrId: 8, attrNum: 1, isLocked: false, allAttrNum: 1000}
+5
+: 
+{colorId: 1, attrId: 20, attrNum: 3, isLocked: false, allAttrNum: 3000}
+[[Prototype]]
+: 
+Object
+seed
+: 
+0
+star
+: 
+0
+[[Prototype]]
+: 
+Object
+2
+: 
+{equipId: 0, enchantUId: 0, enchantUId2: 0, level: 4000, forgeExp: 0, …}
+3
+: 
+{equipId: 0, enchantUId: 0, enchantUId2: 0, level: 4000, forgeExp: 0, …}
+4
+: 
+{equipId: 0, enchantUId: 0, enchantUId2: 0, level: 4000, forgeExp: 0, …}
+[[Prototype]]
+: 
+Object
+forbidSNTime
+: 
+0

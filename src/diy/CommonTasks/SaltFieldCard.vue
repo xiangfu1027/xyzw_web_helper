@@ -54,6 +54,18 @@
             />
             <CustomizedCard 
               mode="button"
+              name="切换红多洗练"
+              :disabled="isRunning || !tokenStore.hasTokens"
+              @button-click="handleSwitchToMoreRed"
+            />
+            <CustomizedCard 
+              mode="button"
+              name="切换红少洗练"
+              :disabled="isRunning || !tokenStore.hasTokens"
+              @button-click="handleSwitchToLessRed"
+            />
+            <CustomizedCard 
+              mode="button"
               name="导出阵容"
               :disabled="isRunning || !tokenStore.hasTokens"
               @button-click="exportTeamFormation"
@@ -1163,6 +1175,465 @@ const exportTeamFormation = async () => {
       operation: '导出阵容',
       status: 'error',
       message: `导出阵容失败：${error.message}`
+    })
+  } finally {
+    isRunning.value = false
+  }
+}
+
+// 切换红多洗练
+const handleSwitchToMoreRed = async () => {
+  if (!tokenStore.hasTokens) {
+    message.warning('没有可用的Token')
+    return
+  }
+
+  isRunning.value = true
+  
+  try {
+    const tokenIndices = parseTokenRange(executionRange.value)
+    const targetTokens = getTargetTokens(tokenIndices)
+    
+    if (targetTokens.length === 0) {
+      message.warning('执行范围内没有有效的Token')
+      return
+    }
+    
+    const rangeText = executionRange.value ? `范围${executionRange.value}` : '全部'
+    message.info(`开始切换红多洗练（${rangeText}），共${targetTokens.length}个Token...`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '盐场',
+      operation: '切换红多洗练',
+      status: 'info',
+      message: `开始切换红多洗练，${rangeText}，共${targetTokens.length}个Token`
+    })
+    
+    let successCount = 0
+    let failCount = 0
+    
+    for (let i = 0; i < targetTokens.length; i++) {
+      const token = targetTokens[i]
+      if (!token || !token.id) continue
+      
+      try {
+        const connectionAcquired = await connectionPool.acquire(token.id)
+        
+        if (!connectionAcquired) {
+          const tokenIndex = getTokenIndex(token)
+          message.warning(`${tokenIndex}、${token.name} 连接失败`)
+          failCount++
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红多洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name} 连接失败`
+          })
+          continue
+        }
+        
+        await waitCommandDelay()
+        
+        if (tokenStore.getWebSocketStatus(token.id) !== 'connected') {
+          const tokenIndex = getTokenIndex(token)
+          message.warning(`${tokenIndex}、${token.name} WebSocket未连接`)
+          await connectionPool.release(token.id, false)
+          failCount++
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红多洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name} WebSocket未连接`
+          })
+          continue
+        }
+        
+        const tokenIndex = getTokenIndex(token)
+        message.info(`正在处理 ${tokenIndex}、${token.name} 切换红多洗练...`)
+        
+        // 获取角色信息
+        const roleInfo = await tokenStore.sendGetRoleInfo(token.id, {})
+        const heroes = roleInfo?.role?.heroes || {}
+        
+        let switchCount = 0
+        
+        // 遍历所有武将
+        for (const heroIdStr in heroes) {
+          const hero = heroes[heroIdStr]
+          const heroId = parseInt(heroIdStr)
+          const equipment = hero.equipment || {}
+          
+          // 遍历装备部位 1-4
+          for (let part = 1; part <= 4; part++) {
+            const equip = equipment[part]
+            if (!equip) continue
+            
+            // 检查 quenchTimes 和 quenchTimes2 是否都大于 10000
+            if (equip.quenchTimes <= 10000 || equip.quenchTimes2 <= 10000) {
+              continue
+            }
+            
+            const quenches = equip.quenches || {}
+            const quenches2 = equip.quenches2 || {}
+            const curQuenchId = equip.curQuenchId || 0
+            
+            // 统计红洗练数量（colorId: 6）
+            let redCountQuenches = 0
+            let redCountQuenches2 = 0
+            
+            for (const slotStr in quenches) {
+              if (quenches[slotStr].colorId === 6) {
+                redCountQuenches++
+              }
+            }
+            
+            for (const slotStr in quenches2) {
+              if (quenches2[slotStr].colorId === 6) {
+                redCountQuenches2++
+              }
+            }
+            
+            // 确定哪个是红多，哪个是红少
+            let moreRedQuenches = null
+            let moreRedQuenchId = -1
+            
+            if (redCountQuenches > redCountQuenches2) {
+              moreRedQuenches = quenches
+              moreRedQuenchId = 0
+            } else if (redCountQuenches2 > redCountQuenches) {
+              moreRedQuenches = quenches2
+              moreRedQuenchId = 1
+            } else {
+              // 红洗练数量相同，跳过
+              continue
+            }
+            
+            // 如果当前已经是红多，跳过该部位
+            if (curQuenchId === moreRedQuenchId) {
+              continue
+            }
+            
+            // 切换到红多
+            try {
+              await tokenStore.sendEquipmentChangeQuench(token.id, {
+                heroId: heroId,
+                part: part,
+                quenchId: moreRedQuenchId,
+                quenches: moreRedQuenches,
+                seed: equip.seed || 0,
+                skipOrange: false
+              })
+              switchCount++
+              await waitCommandDelay()
+            } catch (err) {
+              console.error(`切换装备失败 heroId:${heroId} part:${part}:`, err)
+            }
+          }
+        }
+        
+        await connectionPool.release(token.id, false)
+        
+        if (switchCount > 0) {
+          message.success(`${tokenIndex}、${token.name || token.id} 切换红多洗练成功，共切换${switchCount}个装备`)
+          successCount++
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红多洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id} 切换红多洗练成功，共切换${switchCount}个装备`
+          })
+        } else {
+          message.info(`${tokenIndex}、${token.name || token.id} 无需切换`)
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红多洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'info',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id} 无需切换`
+          })
+        }
+      } catch (error) {
+        console.error(`${token.name} 切换红多洗练失败:`, error)
+        const tokenIndex = getTokenIndex(token)
+        message.error(`${tokenIndex}、${token.name || token.id} 切换红多洗练失败：${error.message}`)
+        failCount++
+        logStore.addLog({
+          page: 'fish-helper',
+          cardType: '盐场',
+          operation: '切换红多洗练',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'error',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id} 切换红多洗练失败：${error.message}`
+        })
+        try {
+          await connectionPool.release(token.id, false)
+        } catch (releaseError) {
+          console.error('释放连接失败:', releaseError)
+        }
+      }
+      
+      if (i < targetTokens.length - 1) {
+        await waitCommandDelay()
+      }
+    }
+    
+    message.success(`切换红多洗练完成！成功: ${successCount}，失败: ${failCount}`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '盐场',
+      operation: '切换红多洗练',
+      status: 'success',
+      message: `切换红多洗练完成（${rangeText}），成功: ${successCount}，失败: ${failCount}`
+    })
+  } catch (error) {
+    console.error('切换红多洗练失败:', error)
+    message.error(`切换红多洗练失败：${error.message || '未知错误'}`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '盐场',
+      operation: '切换红多洗练',
+      status: 'error',
+      message: `切换红多洗练失败：${error.message}`
+    })
+  } finally {
+    isRunning.value = false
+  }
+}
+
+// 切换红少洗练
+const handleSwitchToLessRed = async () => {
+  if (!tokenStore.hasTokens) {
+    message.warning('没有可用的Token')
+    return
+  }
+
+  isRunning.value = true
+  
+  try {
+    const tokenIndices = parseTokenRange(executionRange.value)
+    const targetTokens = getTargetTokens(tokenIndices)
+    
+    if (targetTokens.length === 0) {
+      message.warning('执行范围内没有有效的Token')
+      return
+    }
+    
+    const rangeText = executionRange.value ? `范围${executionRange.value}` : '全部'
+    message.info(`开始切换红少洗练（${rangeText}），共${targetTokens.length}个Token...`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '盐场',
+      operation: '切换红少洗练',
+      status: 'info',
+      message: `开始切换红少洗练，${rangeText}，共${targetTokens.length}个Token`
+    })
+    
+    let successCount = 0
+    let failCount = 0
+    
+    for (let i = 0; i < targetTokens.length; i++) {
+      const token = targetTokens[i]
+      if (!token || !token.id) continue
+      
+      try {
+        const connectionAcquired = await connectionPool.acquire(token.id)
+        
+        if (!connectionAcquired) {
+          const tokenIndex = getTokenIndex(token)
+          message.warning(`${tokenIndex}、${token.name} 连接失败`)
+          failCount++
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红少洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name} 连接失败`
+          })
+          continue
+        }
+        
+        await waitCommandDelay()
+        
+        if (tokenStore.getWebSocketStatus(token.id) !== 'connected') {
+          const tokenIndex = getTokenIndex(token)
+          message.warning(`${tokenIndex}、${token.name} WebSocket未连接`)
+          await connectionPool.release(token.id, false)
+          failCount++
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红少洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name} WebSocket未连接`
+          })
+          continue
+        }
+        
+        const tokenIndex = getTokenIndex(token)
+        message.info(`正在处理 ${tokenIndex}、${token.name} 切换红少洗练...`)
+        
+        // 获取角色信息
+        const roleInfo = await tokenStore.sendGetRoleInfo(token.id, {})
+        const heroes = roleInfo?.role?.heroes || {}
+        
+        let switchCount = 0
+        
+        // 遍历所有武将
+        for (const heroIdStr in heroes) {
+          const hero = heroes[heroIdStr]
+          const heroId = parseInt(heroIdStr)
+          const equipment = hero.equipment || {}
+          
+          // 遍历所有装备部位
+          for (const partStr in equipment) {
+            const equip = equipment[partStr]
+            const part = parseInt(partStr)
+            
+            // 检查 quenchTimes 和 quenchTimes2 是否都大于 10000
+            if (equip.quenchTimes <= 10000 || equip.quenchTimes2 <= 10000) {
+              continue
+            }
+            
+            const quenches = equip.quenches || {}
+            const quenches2 = equip.quenches2 || {}
+            const curQuenchId = equip.curQuenchId || 0
+            
+            // 统计红洗练数量（colorId: 6）
+            let redCountQuenches = 0
+            let redCountQuenches2 = 0
+            
+            for (const slotStr in quenches) {
+              if (quenches[slotStr].colorId === 6) {
+                redCountQuenches++
+              }
+            }
+            
+            for (const slotStr in quenches2) {
+              if (quenches2[slotStr].colorId === 6) {
+                redCountQuenches2++
+              }
+            }
+            
+            // 确定哪个是红多，哪个是红少
+            let lessRedQuenches = null
+            let lessRedQuenchId = -1
+            
+            if (redCountQuenches < redCountQuenches2) {
+              lessRedQuenches = quenches
+              lessRedQuenchId = 0
+            } else if (redCountQuenches2 < redCountQuenches) {
+              lessRedQuenches = quenches2
+              lessRedQuenchId = 1
+            } else {
+              // 红洗练数量相同，跳过
+              continue
+            }
+            
+            // 如果当前不是红少，则切换到红少
+            if (curQuenchId !== lessRedQuenchId) {
+              try {
+                await tokenStore.sendEquipmentChangeQuench(token.id, {
+                  heroId: heroId,
+                  part: part,
+                  quenchId: lessRedQuenchId,
+                  quenches: lessRedQuenches,
+                  seed: equip.seed || 0,
+                  skipOrange: false
+                })
+                switchCount++
+                await waitCommandDelay()
+              } catch (err) {
+                console.error(`切换装备失败 heroId:${heroId} part:${part}:`, err)
+              }
+            }
+          }
+        }
+        
+        await connectionPool.release(token.id, false)
+        
+        if (switchCount > 0) {
+          message.success(`${tokenIndex}、${token.name || token.id} 切换红少洗练成功，共切换${switchCount}个装备`)
+          successCount++
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红少洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id} 切换红少洗练成功，共切换${switchCount}个装备`
+          })
+        } else {
+          message.info(`${tokenIndex}、${token.name || token.id} 无需切换`)
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '盐场',
+            operation: '切换红少洗练',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'info',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id} 无需切换`
+          })
+        }
+      } catch (error) {
+        console.error(`${token.name} 切换红少洗练失败:`, error)
+        const tokenIndex = getTokenIndex(token)
+        message.error(`${tokenIndex}、${token.name || token.id} 切换红少洗练失败：${error.message}`)
+        failCount++
+        logStore.addLog({
+          page: 'fish-helper',
+          cardType: '盐场',
+          operation: '切换红少洗练',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'error',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id} 切换红少洗练失败：${error.message}`
+        })
+        try {
+          await connectionPool.release(token.id, false)
+        } catch (releaseError) {
+          console.error('释放连接失败:', releaseError)
+        }
+      }
+      
+      if (i < targetTokens.length - 1) {
+        await waitCommandDelay()
+      }
+    }
+    
+    message.success(`切换红少洗练完成！成功: ${successCount}，失败: ${failCount}`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '盐场',
+      operation: '切换红少洗练',
+      status: 'success',
+      message: `切换红少洗练完成（${rangeText}），成功: ${successCount}，失败: ${failCount}`
+    })
+  } catch (error) {
+    console.error('切换红少洗练失败:', error)
+    message.error(`切换红少洗练失败：${error.message || '未知错误'}`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '盐场',
+      operation: '切换红少洗练',
+      status: 'error',
+      message: `切换红少洗练失败：${error.message}`
     })
   } finally {
     isRunning.value = false

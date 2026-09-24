@@ -1,0 +1,1699 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/17 18:46:40
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789479256621.00-%E9%94%A6%E8%A1%A3-%E2%98%81%EF%B8%8F%E9%BB%AF%E6%B6%A993.bin&fromManager=true&windowId=game-window-1789641930194&isMaster=false&syncEnabled=true
+记录数量: 2
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/9/17 18:46:37
+服务: ClubService
+方法: taskClaim
+参数: [{"confId":1}]
+结果:
+{
+  "_raw": {
+    "seq": 55,
+    "ack": 0,
+    "time": 1789641998107,
+    "resp": 55,
+    "cmd": "club_taskclaimresp",
+    "body": {
+      "role": {
+        "items": {
+          "41004": {
+            "quantity": 65
+          }
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 41004,
+          "value": 1,
+          "ext": 0
+        }
+      ],
+      "siege": {
+        "taskClaimedMap": {
+          "1": 1789641998
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 46
+}
+异步: 是
+调用ID: call_1789641997332_xsl28ri1p
+
+记录 #2:
+----------------------------------------
+时间: 2026/9/17 18:46:34
+服务: ClubService
+方法: getInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 54,
+    "ack": 0,
+    "time": 1789641995317,
+    "resp": 54,
+    "cmd": "club_getinforesp",
+    "body": {
+      "club": {
+        "legionId": 2781636,
+        "power": 172064185687,
+        "phase": "260914",
+        "dan": 5,
+        "lastDan": 0,
+        "weekScore": 635,
+        "dayScore": 307,
+        "scoreMap": {
+          "2": 186,
+          "3": 142,
+          "4": 307
+        },
+        "members": {
+          "1": {
+            "roleId": 460348782,
+            "name": "相符43-3",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 20,
+            "lordSkinId": 0,
+            "petId": 603,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "2": {
+            "roleId": 199148453,
+            "name": "关小涩",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q3auHgzwzM70r0D6iaKiaHdRu4DGQhamMBKFeFJOK99f7ZXgDuMDjwB0hSQzhXg9CY8JiaNDo6BuSVU8FFuIvydTw/132",
+            "score": 30,
+            "lordSkinId": 2,
+            "petId": 604,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "3": {
+            "roleId": 453028474,
+            "name": "神舟丶小布",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/p10DkNBFPiaQ465SmZrODSZsrqNiaGFuBGE9ibYgLLrWsoFE4qEQdxJWsoicXvYhiakscC4Rmd4O4YxUEBxzW90WzgZWq4xEfjVd8Y4koszvTicQ8/132",
+            "score": 32,
+            "lordSkinId": 1,
+            "petId": 502,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 1,
+            "mirror": false
+          },
+          "4": {
+            "roleId": 636922458,
+            "name": "仁72阿瑟",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q3auHgzwzM70r0D6iaKiaHdRu4DGQhamMBKFeFJOK99f7ZXgDuMDjwB0hSQzhXg9CY8JiaNDo6BuSVU8FFuIvydTw/132",
+            "score": 33,
+            "lordSkinId": 0,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "5": {
+            "roleId": 115719789,
+            "name": "相符43-1",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 30,
+            "lordSkinId": 0,
+            "petId": 502,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "6": {
+            "roleId": 438241986,
+            "name": "相符42-2",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 34,
+            "lordSkinId": 0,
+            "petId": 601,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "7": {
+            "roleId": 115685052,
+            "name": "相符41-1",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 33,
+            "lordSkinId": 0,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "8": {
+            "roleId": 460379015,
+            "name": "相符42-3",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 40,
+            "lordSkinId": 0,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "9": {
+            "roleId": 115789831,
+            "name": "相符50-1",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 15,
+            "lordSkinId": 0,
+            "petId": 403,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "10": {
+            "roleId": 115869905,
+            "name": "相符60-1",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 19,
+            "lordSkinId": 0,
+            "petId": 0,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "11": {
+            "roleId": 460009897,
+            "name": "相符60-2",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 21,
+            "lordSkinId": 0,
+            "petId": 0,
+            "petEvo": 0,
+            "defeated": true,
+            "failCnt": 0,
+            "challengeCnt": 5,
+            "mirror": false
+          },
+          "12": {
+            "roleId": 440406840,
+            "name": "黯涩小9-3",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q3auHgzwzM70r0D6iaKiaHdRu4DGQhamMBKFeFJOK99f7ZXgDuMDjwB0hSQzhXg9CY8JiaNDo6BuSVU8FFuIvydTw/132",
+            "score": 44,
+            "lordSkinId": 0,
+            "petId": 603,
+            "petEvo": 0,
+            "defeated": true,
+            "failCnt": 10,
+            "challengeCnt": 15,
+            "mirror": false
+          },
+          "13": {
+            "roleId": 638647392,
+            "name": "神州、南良",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/CED6Q8VjibXaWT3I0iaJKPO6WHClWe2WaEBAWDLJ0kicOicKFT9jGvNsgxpgye6NZH5HQmwKJDxv8gVexLe1rafX5A/132",
+            "score": 40,
+            "lordSkinId": 0,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": true,
+            "failCnt": 5,
+            "challengeCnt": 10,
+            "mirror": false
+          },
+          "14": {
+            "roleId": 438230729,
+            "name": "相符41-3",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 39,
+            "lordSkinId": 0,
+            "petId": 603,
+            "petEvo": 0,
+            "defeated": true,
+            "failCnt": 3,
+            "challengeCnt": 8,
+            "mirror": false
+          },
+          "15": {
+            "roleId": 460394822,
+            "name": "相符50-3",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 12,
+            "lordSkinId": 0,
+            "petId": 0,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 4,
+            "mirror": false
+          },
+          "16": {
+            "roleId": 438280542,
+            "name": "相符50-2",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 12,
+            "lordSkinId": 0,
+            "petId": 0,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 4,
+            "mirror": false
+          },
+          "17": {
+            "roleId": 460025209,
+            "name": "相符60-3",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 24,
+            "lordSkinId": 0,
+            "petId": 0,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 4,
+            "mirror": false
+          },
+          "18": {
+            "roleId": 438230701,
+            "name": "相符41-2",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 33,
+            "lordSkinId": 0,
+            "petId": 601,
+            "petEvo": 0,
+            "defeated": true,
+            "failCnt": 2,
+            "challengeCnt": 7,
+            "mirror": false
+          },
+          "22": {
+            "roleId": 438246984,
+            "name": "相符43-2",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 38,
+            "lordSkinId": 0,
+            "petId": 603,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "23": {
+            "roleId": 112007511,
+            "name": "牛易勃",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/6tJXsPnFmTWYfo2u09ccRj7te57h6lHeq3hjfXicHMAzqs0r5anLNlHTiaZGKJEM22JDsrQxt0BDXDWr9AOKTQ9g/132",
+            "score": 13,
+            "lordSkinId": 2,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "24": {
+            "roleId": 115708264,
+            "name": "相符42-1",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/DYAIOgq83erZ8zgvv1MIGK0ibia5gF4pYs2zLc5qJ2jjDdnQGuHM5lGI4mv9YLHB7YIbj77DK9CSUj2Hick4a5RBQ/132",
+            "score": 35,
+            "lordSkinId": 0,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          },
+          "28": {
+            "roleId": 597010243,
+            "name": "☁黯涩71",
+            "headImg": "",
+            "score": 38,
+            "lordSkinId": 0,
+            "petId": 602,
+            "petEvo": 0,
+            "defeated": false,
+            "failCnt": 0,
+            "challengeCnt": 0,
+            "mirror": false
+          }
+        },
+        "oppoMap": {
+          "2": {
+            "legionId": 6264140,
+            "viewId": 22216,
+            "logo": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEKmPYSpEgwabKSMpzKRSaC8gGSb4O5b0JtOf0bR6iaQ844EkoLDHM0NvWwKQbrstNiaq0RNr263HThsmGrUUbgpqYMA6uNSJG3s5PCpkLZ4aUyQ/132",
+            "name": "天桃",
+            "power": 261565812540,
+            "mirror": false,
+            "dayScore": 0,
+            "defenders": {
+              "1": {
+                "roleId": 532299291,
+                "name": "我暴击呢",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJolYIiazbzPBXjFMuTItg0NXlm8cmcYibdDsaZTmqcMiaficsYApcv2ZMmOFGb2BMI87zddkNm8VyN5Rf2Yiag3jsgl8jSlyT9fdQaKicchicMpdqTQ/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 502,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "2": {
+                "roleId": 650707222,
+                "name": "火神曹雉京",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/650707222/1778811671.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "3": {
+                "roleId": 495468002,
+                "name": "苏苏",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/sjgIKj34cGTXZYTduROicrlmqF9SIGTXQ9fHB2eWSEHpWLbGA8vaaibQbNiaGkUriaVk0CJbhia3NiaMroeLdaB0RliaxLsqnXN7yDickI6puXiaYj94/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "4": {
+                "roleId": 507505311,
+                "name": "楚风",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/YZz46nT5U58ibzoSnPnqhLXAEsGVoiceB2HFFQ1wXvxbDWJbrMqjSO8mo9BJQocMePHQ2wdNZ5eUm1iagx6h6PeMGEF37iakVhKSicX5SjJ1Vzcg/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 403,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "5": {
+                "roleId": 695862540,
+                "name": "3兵",
+                "headImg": "https://thirdqq.qlogo.cn/qqapp/1112173744/712F811498F98D81D7A2A722345DF1A0/100",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "6": {
+                "roleId": 489050272,
+                "name": "带投大哥",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/G4v8xV3SXTK2DCH5hq73CaiaTGB8dSVNdCI35e6ZKWpFvAn4icic3Hazs9CFJegibQlc2YSV8CiaA1lLwOic4ApWeKibKFzNqsTeut5CvoBTP8ddwU/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "7": {
+                "roleId": 690588649,
+                "name": "泡泡泡",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELT6Gktb7DmLlP2MtJIPT6bk4Wib1DsNYGap7VBmgp67s5SMY2F5GoMAKOOnkicsoLTgibDFjkYuIHlllS1GnsR86fgV67xjOEP0UfO2NlC7vxcA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "8": {
+                "roleId": 495735228,
+                "name": "黎",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJzo8SicusP8Q6LKzPPnudnWo4t43zJLkyJKAQH9HNN8icpUS4Qiajbp6fcBX5wEqPoBT6ZqEibEqbVPpSKqLibmFNoVpwtGVkDibVMme2EFUvWntCw/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 501,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "9": {
+                "roleId": 509427654,
+                "name": "天下丨孙策",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJ51iaoI47hu8v6OwWXPqicXv7hbFBp4pU7VpVVVRXFZo0Dw4FnQ04TLl4ibScDWQRIuR8IdW0qJAEZld8DdmvSsKuFVkVMdrlqMapRjwfzfGZCQ/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "10": {
+                "roleId": 495463477,
+                "name": "我破甲呢",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJolYIiazbzPBXjFMuTItg0NXlm8cmcYibdDsaZTmqcMiaficsYApcv2ZMmOFGb2BMI87zddkNm8VyN5Rf2Yiag3jsgl8jSlyT9fdQaKicchicMpdqTQ/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 502,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "11": {
+                "roleId": 691440447,
+                "name": "2兵",
+                "headImg": "https://thirdqq.qlogo.cn/qqapp/1112173744/712F811498F98D81D7A2A722345DF1A0/100",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "12": {
+                "roleId": 492815586,
+                "name": "将",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELT6Gktb7DmLlP2MtJIPT6bk4Wib1DsNYGap7VBmgp67s5SMY2F5GoMAKOOnkicsoLTgibDFjkYuIHlllS1GnsR86fgV67xjOEP0UfO2NlC7vxcA/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "13": {
+                "roleId": 495473203,
+                "name": "孤²³⁰",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/495473203/1756198812.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "14": {
+                "roleId": 495463803,
+                "name": "航",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/ianmhUyXN1tLmrnQjveRBw0ibWjmiaLQzH7ZhjnKd23Oo9ic91Sew3q4jKiaDMHLQhEicNLG1KVKxjPIfqWbm48jdEiavMH4EKibRy9AFRv69YXqFlk/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "15": {
+                "roleId": 690586580,
+                "name": "炮（杀关）",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELT6Gktb7DmLlP2MtJIPT6bk4Wib1DsNYGap7VBmgp67s5SMY2F5GoMAKOOnkicsoLTgibDFjkYuIHlllS1GnsR86fgV67xjOEP0UfO2NlC7vxcA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "16": {
+                "roleId": 696501636,
+                "name": "3马",
+                "headImg": "https://thirdqq.qlogo.cn/qqapp/1112173744/712F811498F98D81D7A2A722345DF1A0/100",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "17": {
+                "roleId": 696482503,
+                "name": "2马",
+                "headImg": "https://thirdqq.qlogo.cn/qqapp/1112173744/712F811498F98D81D7A2A722345DF1A0/100",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "18": {
+                "roleId": 495469241,
+                "name": "H",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VoA2OF9TVibWpPtEJOCiaEjMxIYrXib4kW1JFdRlDLB0vJ1j6Q1AbP0QQ5jA6LqS2WMYc7icpqNCAOcK7oLPyZr5t7iaZUFDSXkcPVFjm1BAXCV8/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "19": {
+                "roleId": 492429962,
+                "name": "1马（杀关）",
+                "headImg": "https://thirdqq.qlogo.cn/qqapp/1112173744/712F811498F98D81D7A2A722345DF1A0/100",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "20": {
+                "roleId": 690971405,
+                "name": "乜",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEKH7IItbolIkD1OmvmAJxX2VAoMMXiaIgKRy8kQMzAYoq21RAq8q79zib5E4fKeRBlqdicia3YHdAe4FFFib5UPeB3HfeJ565Ko1FcdjDmWX0cDK0g/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 501,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "21": {
+                "roleId": 533998878,
+                "name": "黎2²³⁰",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/WoBPvBsYwv1TzkFpCqiap5MxKib9M9teZNRGSpQQo4KPgMzhmbqHlibgIcECGNiaHYSkdgSTvIGytriaumNBYCPSHWlV9ddy88BomibmlJae9MKF4/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 401,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "22": {
+                "roleId": 511493683,
+                "name": "我技伤呢",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJolYIiazbzPBXjFMuTItg0NXlm8cmcYibdDsaZTmqcMiaficsYApcv2ZMmOFGb2BMI87zddkNm8VyN5Rf2Yiag3jsgl8jSlyT9fdQaKicchicMpdqTQ/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "23": {
+                "roleId": 530265988,
+                "name": "黎",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJzo8SicusP8Q6LKzPPnudnWo4t43zJLkyJKAQH9HNN8icpUS4Qiajbp6fcBX5wEqPoBT6ZqEibEqbVPpSKqLibmFNoVpwtGVkDibVMme2EFUvWntCw/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "24": {
+                "roleId": 672347512,
+                "name": "1兵（杀关）",
+                "headImg": "https://thirdqq.qlogo.cn/qqapp/1112173744/712F811498F98D81D7A2A722345DF1A0/100",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "25": {
+                "roleId": 533490275,
+                "name": "黎3²³⁰",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/shCw3VpCGfxVqMYnRmXDexwx7kUDvQmnbq1uwF88l1RsclNEqqueK3hStsddTEGpqgyicIdOvye7p01FeU2reORr870wI5OyNd0mlYVLR1N4/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 502,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "26": {
+                "roleId": 720442934,
+                "name": "桃ovo张角",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/ibYhMx2ic0znbW1HZo8hOBsPShQe1T0BJia3S8dvedl1nJKPZliakvCX4MXcoL38fjciaaDFbMgIJ9nDib6urrCiaSFF9YNocpTP6BoVbZzQFiaNNicY/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "27": {
+                "roleId": 721146282,
+                "name": "桃ovo关羽",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEL63jvX1wJ2JCk1xVKwZ1kPc3rkdb5AdtP2XVTEQYnZndW3UTwLmy8KVCkxSiapnoe4LiafVPHnmFDrKmMKg9ekQX3IHtgOAalaLf7nkdbTQgqw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "28": {
+                "roleId": 691449042,
+                "name": "炮炮",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELT6Gktb7DmLlP2MtJIPT6bk4Wib1DsNYGap7VBmgp67s5SMY2F5GoMAKOOnkicsoLTgibDFjkYuIHlllS1GnsR86fgV67xjOEP0UfO2NlC7vxcA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "29": {
+                "roleId": 720140804,
+                "name": "桃ovo赵云",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/ibYhMx2ic0znbW1HZo8hOBsPShQe1T0BJia3S8dvedl1nJKPZliakvCX4MXcoL38fjciaaDFbMgIJ9nDib6urrCiaSFF9YNocpTP6BoVbZzQFiaNNicY/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "30": {
+                "roleId": 532299291,
+                "name": "我暴击呢",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJolYIiazbzPBXjFMuTItg0NXlm8cmcYibdDsaZTmqcMiaficsYApcv2ZMmOFGb2BMI87zddkNm8VyN5Rf2Yiag3jsgl8jSlyT9fdQaKicchicMpdqTQ/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 502,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              }
+            },
+            "scoreMap": {
+              "2": 364,
+              "3": 352,
+              "4": 237
+            }
+          },
+          "3": {
+            "legionId": 2268914,
+            "viewId": 19873,
+            "logo": "https://thirdwx.qlogo.cn/mmopen/vi_32/kMVKEVpM4xZKpnnsccy8Ze1CIHze6IcnfFRXk2rWu5Uia1Pib72Ro6RMUNNZzsdCCInPtiaZFibdxk34I8gUV4Gr0td7pYLFswJonibvhL8xbQPc/132",
+            "name": "⁤仙",
+            "power": 331914318511,
+            "mirror": false,
+            "dayScore": 0,
+            "defenders": {
+              "1": {
+                "roleId": 407453473,
+                "name": "仙✨冰淇淋",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/xJgvS5vlicmkujQ41GaX5Z9AK6zp5zdpAGmAHNNVtdf0r6IAdlZCM1LRXpSvemph5MN8ItQ5BvsglxgbExkUmRicibded7IyXicyPuZxiauLVgZQ/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "2": {
+                "roleId": 382031551,
+                "name": "仙✨龍年",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/382031551/1775138879.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "3": {
+                "roleId": 392160920,
+                "name": "仙✨可乐",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/392160920/1788599364.jpg",
+                "score": 0,
+                "lordSkinId": 5105,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "4": {
+                "roleId": 392142309,
+                "name": "仙✨袁华",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/392142309/1788083616.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "5": {
+                "roleId": 390921122,
+                "name": "仙✨张自在",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/390921122/1788249564.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "6": {
+                "roleId": 394289524,
+                "name": "仙✨玄剑",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELS1Rkt7mhpbDTkoeibRGWOejKpV6Q9TQ5zClnpX9pB2dPSBib7lXtln2HUI2rbmnLKNKsQR1nO6EBHSNVrN995HuoBibIlZ5BKd5PHtzEibK4C4w/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "7": {
+                "roleId": 394337272,
+                "name": "仙✨雪碧",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEISlGSeGC50IYBqqL5LLPXic244ybDfQPamx7p2IdyI0jbK9XUQF4FS4H1pPQAY24VeKJNVRWXPl6a3GuqVe8Yu7tEZwx0amvmJdoN3uznujxQ/132",
+                "score": 0,
+                "lordSkinId": 5104,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 4,
+                "mirror": false
+              },
+              "8": {
+                "roleId": 381909072,
+                "name": "仙✨好运来",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/473IsvHicawXkgkehdtOQG3jjh21v0TkSIEicEJxLGohVIqTQgt71m3PAqRy3xSs39UKNtN4knA7BPBT00JcNfGOUPVN1wa7GO1veCzL7mZos/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "9": {
+                "roleId": 394363376,
+                "name": "仙✨张自在",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/ueicd0xLhNiaEAlELO4dISQUpsJArJXnY4K9bHjBPmVOFspVK0MibYKUnCV5RWt8su4uSvJKNZylMibrIv5ptnUHXrp89X24qnTYoYGy9Cq702g/132",
+                "score": 0,
+                "lordSkinId": -1,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "10": {
+                "roleId": 384571554,
+                "name": "why",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/384571554/1785040562.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "11": {
+                "roleId": 384685239,
+                "name": "仙✨一一",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEKtYxjx2xQiatZrgDv28NtPYIuDoJ8WxAVNCXqlhsR1hDx14GITxw253Iw7XAicacmib1VR49PQZIpG68qLxHLnmjBT5cpia9JAIb5FVxs1TnJaWw/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 501,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 4,
+                "mirror": false
+              },
+              "12": {
+                "roleId": 446281672,
+                "name": "仙✨期天",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELA61IoSBmSZfmQ2a8UC4lPBOUKBsJ8f8UvhRonq9mgewOEMPd1jZV1XrhxKl1ibMHH6C0sPicQl80Gpjcn4wdiad8B4kYSbZXl8EOPgbrXlefVA/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "13": {
+                "roleId": 394285684,
+                "name": "仙✨张自在",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/394285684/1774522899.jpg",
+                "score": 0,
+                "lordSkinId": -1,
+                "petId": 702,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "14": {
+                "roleId": 380583372,
+                "name": "仙✨红尘",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/gjFic7hPk2icb1T4wglMmHFtic6ibQI6rfVzHgIJeDbpfTtibqxXjFsicWlRVJ8QPBIyWDlu4lAGA14fCvNyUGOJRBJS0jCPSK2gxjTE6yOZohluI/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "15": {
+                "roleId": 661336614,
+                "name": "仙✨雾遥",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/hS3XxFOZPkvvHg8ssYCGMKnicYPajALiamWMjJTmdNZQHhibw8JV49D9hMEXC8PKg5NxfgzGZlzmPC0EaLuSfKb2hrP8rX0TCHXZLrujaYKd7c/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 4,
+                "mirror": false
+              },
+              "16": {
+                "roleId": 396164428,
+                "name": "仙✨长乐",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/396164428/1728920789.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "17": {
+                "roleId": 438579989,
+                "name": " 仙✨肉夹馍",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/wGegVjkZfko4OxFeaibRsKraB536mw8WwFFR249O0uH43mo8YhrfYIsVTj3tYS0e8Z5wZPQ8jbvG2u3Kiapth9Licddlfs27fhHPKfR7hl0VRc/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 3,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "18": {
+                "roleId": 381104349,
+                "name": "仙✨锦川",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/381104349/1788877951.jpg",
+                "score": 0,
+                "lordSkinId": 5105,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "19": {
+                "roleId": 384677610,
+                "name": "仙✨凪卄",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/byk9mvYJ8SxsqqyClPxiaLhY3QhBYxmoYIibzwPWXjgxy2ibvAJ1G9ianruwibZetBvxEqWsQ2gvyPTX5fmMicjVz376YxsaOiaQHiaxb3ZU3JFI3os/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "20": {
+                "roleId": 382018533,
+                "name": "仙✨·？",
+                "headImg": "https://p3-novel.byteimg.com/img/novel-static/51cdc818263941cb8985f97b486ddd11~tplv-obj.image",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "21": {
+                "roleId": 407453473,
+                "name": "仙✨冰淇淋",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/xJgvS5vlicmkujQ41GaX5Z9AK6zp5zdpAGmAHNNVtdf0r6IAdlZCM1LRXpSvemph5MN8ItQ5BvsglxgbExkUmRicibded7IyXicyPuZxiauLVgZQ/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              },
+              "22": {
+                "roleId": 390923425,
+                "name": "仙✨斌清扬",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJZfooD8EYHyktfiaTTVKz0ItLibNTUpIBAr8VZXREjBhS1buwiaQbD6rqVDQtU6MCvLjRujicgGbDWIyt2jlxKiaZ2fdGe3ibXiaThbibtjNfEFBCwFw/132",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "23": {
+                "roleId": 394543285,
+                "name": "仙✨张自在",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/394543285/1774697612.jpg",
+                "score": 0,
+                "lordSkinId": -1,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "24": {
+                "roleId": 382036807,
+                "name": "仙✨等风",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/J8K3ZPDQANQL4JcaIDtkPibwLZ1vdPD2aBOcDcX8KC6Bx7PlI6Iql3sD6CQuxOU03mnA0xf4kVEmXaRg48Kriblz5RicASjic2XibwRyXIp48QPE/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "25": {
+                "roleId": 390921122,
+                "name": "仙✨张自在",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/390921122/1788249564.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              },
+              "26": {
+                "roleId": 394289524,
+                "name": "仙✨玄剑",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaELS1Rkt7mhpbDTkoeibRGWOejKpV6Q9TQ5zClnpX9pB2dPSBib7lXtln2HUI2rbmnLKNKsQR1nO6EBHSNVrN995HuoBibIlZ5BKd5PHtzEibK4C4w/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              },
+              "27": {
+                "roleId": 394337272,
+                "name": "仙✨雪碧",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEISlGSeGC50IYBqqL5LLPXic244ybDfQPamx7p2IdyI0jbK9XUQF4FS4H1pPQAY24VeKJNVRWXPl6a3GuqVe8Yu7tEZwx0amvmJdoN3uznujxQ/132",
+                "score": 0,
+                "lordSkinId": 5104,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              },
+              "28": {
+                "roleId": 381101707,
+                "name": "仙✨牛来",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/381101707/1787542064.jpg",
+                "score": 0,
+                "lordSkinId": 1,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 2,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "29": {
+                "roleId": 394363376,
+                "name": "仙✨张自在",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/ueicd0xLhNiaEAlELO4dISQUpsJArJXnY4K9bHjBPmVOFspVK0MibYKUnCV5RWt8su4uSvJKNZylMibrIv5ptnUHXrp89X24qnTYoYGy9Cq702g/132",
+                "score": 0,
+                "lordSkinId": -1,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              },
+              "30": {
+                "roleId": 384571554,
+                "name": "why",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/384571554/1785040562.jpg",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": true
+              }
+            },
+            "scoreMap": {
+              "2": 513,
+              "3": 517,
+              "4": 489
+            }
+          },
+          "4": {
+            "legionId": 4865772,
+            "viewId": 2100,
+            "logo": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+            "name": "零氪天堂",
+            "power": 163385770958,
+            "mirror": false,
+            "dayScore": 243,
+            "defenders": {
+              "1": {
+                "roleId": 34257490,
+                "name": "咸鱼无双",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "2": {
+                "roleId": 217960810,
+                "name": "陈第四",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "3": {
+                "roleId": 479776960,
+                "name": "七匹狼",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "4": {
+                "roleId": 213835696,
+                "name": "吕奉先",
+                "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/213835696/1744801818.jpg",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 602,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "5": {
+                "roleId": 388329773,
+                "name": "无畏",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "6": {
+                "roleId": 387756118,
+                "name": "无恨",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 504,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "7": {
+                "roleId": 702461183,
+                "name": "魚",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Rcibbk5Lr3cR2UsQfdZ5AGH2uzo11iahicQ5gmQjcWRQ5YuvDKjAaXLlpVyaibkEg4MGwfLOCIIb2B93Y5b6QYwxcg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "8": {
+                "roleId": 524694417,
+                "name": "无法",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "9": {
+                "roleId": 34084314,
+                "name": "咸鱼小汉堡",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "10": {
+                "roleId": 389570404,
+                "name": "队长一号",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VHiaDQ8Lic7JoPp0icv98811E4wf6j9VNdEpibZfyuBoswtGOymXvSCIicic7M8BM0FlKVshicx1XdZ3JBme9DnYjO1Bg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "11": {
+                "roleId": 524725449,
+                "name": "无敌",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "12": {
+                "roleId": 524723603,
+                "name": "无天",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "13": {
+                "roleId": 302633464,
+                "name": "陈第五",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VHiaDQ8Lic7JoPp0icv98811E4wf6j9VNdEpibZfyuBoswtGOymXvSCIicic7M8BM0FlKVshicx1XdZ3JBme9DnYjO1Bg/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "14": {
+                "roleId": 389722982,
+                "name": "无心",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VHiaDQ8Lic7JoPp0icv98811E4wf6j9VNdEpibZfyuBoswtGOymXvSCIicic7M8BM0FlKVshicx1XdZ3JBme9DnYjO1Bg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "15": {
+                "roleId": 21783971,
+                "name": "无所谓",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "16": {
+                "roleId": 31704811,
+                "name": "咸鱼茄子",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUBEc8jXiaKeaQl3v33uJ31rA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "17": {
+                "roleId": 440025427,
+                "name": "无聊",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VHiaDQ8Lic7JoPp0icv98811E4wf6j9VNdEpibZfyuBoswtGOymXvSCIicic7M8BM0FlKVshicx1XdZ3JBme9DnYjO1Bg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 601,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "18": {
+                "roleId": 387864799,
+                "name": "晨晨一一",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VHiaDQ8Lic7JoPp0icv98811E4wf6j9VNdEpibZfyuBoswtGOymXvSCIicic7M8BM0FlKVshicx1XdZ3JBme9DnYjO1Bg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "19": {
+                "roleId": 689376817,
+                "name": "💦鈅&華💦",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJ7YVIdP5QLNyJyEFmhcf9piapxKnY4hcbsM32aPH3eefuwgacibY7lkmKhHC7YzdibBcv8oHdke60nFHL0sjL3c3Bkbtdl2AYmOYB7npo1v9LZg/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "20": {
+                "roleId": 33968969,
+                "name": "盐焗咸鱼",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "21": {
+                "roleId": 34149107,
+                "name": "鲱鱼罐头",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUBEc8jXiaKeaQl3v33uJ31rA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "22": {
+                "roleId": 524725492,
+                "name": "队长二号",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": true,
+                "failCnt": 0,
+                "challengeCnt": 5,
+                "mirror": false
+              },
+              "23": {
+                "roleId": 480159906,
+                "name": "八匹狼",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 2,
+                "petId": 503,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "24": {
+                "roleId": 658266947,
+                "name": "无趣",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/VHiaDQ8Lic7JoPp0icv98811E4wf6j9VNdEpibZfyuBoswtGOymXvSCIicic7M8BM0FlKVshicx1XdZ3JBme9DnYjO1Bg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 603,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 1,
+                "challengeCnt": 1,
+                "mirror": false
+              },
+              "25": {
+                "roleId": 34186057,
+                "name": "小号",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "26": {
+                "roleId": 34131528,
+                "name": "咸鱼罐头",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUBEc8jXiaKeaQl3v33uJ31rA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 3,
+                "mirror": false
+              },
+              "27": {
+                "roleId": 481456397,
+                "name": "",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 2,
+                "mirror": false
+              },
+              "28": {
+                "roleId": 387873603,
+                "name": "无惧",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTLwxNwUicYqcQwApmDLib0b9wfsG4mSp9umffUOvreicdqhEzIPddlyA9KwvJXRmE7mEt5LAYcQYbpPw/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 604,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": false
+              },
+              "29": {
+                "roleId": 478782817,
+                "name": "",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUDlSqqtodkufFLYsJ5FE0Rg/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": false
+              },
+              "30": {
+                "roleId": 34026838,
+                "name": "",
+                "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTKPA0fdrHkicBV7YEwQoSTtnp56dSyCbLlA3Tx0XDVxlWzLTh6ClpqgUBEc8jXiaKeaQl3v33uJ31rA/132",
+                "score": 0,
+                "lordSkinId": 0,
+                "petId": 0,
+                "petEvo": 0,
+                "defeated": false,
+                "failCnt": 0,
+                "challengeCnt": 0,
+                "mirror": false
+              }
+            },
+            "scoreMap": {
+              "2": 233,
+              "3": 318,
+              "4": 243
+            }
+          }
+        },
+        "groupId": 5311,
+        "settleTime": 0,
+        "danUpdateAt": 1789315260
+      },
+      "siege": {
+        "roleId": 440406840,
+        "seasonId": 1,
+        "level": 0,
+        "exp": 0,
+        "score": 130,
+        "levelReward": {},
+        "attackMap": {
+          "260901": {
+            "attackCnt": 3,
+            "aSuccessCnt": 3
+          },
+          "260902": {
+            "attackCnt": 6,
+            "aSuccessCnt": 3
+          },
+          "260903": {
+            "attackCnt": 3,
+            "aSuccessCnt": 3
+          },
+          "260908": {
+            "attackCnt": 8,
+            "aSuccessCnt": 3
+          },
+          "260909": {
+            "attackCnt": 4,
+            "aSuccessCnt": 3
+          },
+          "260910": {
+            "attackCnt": 6,
+            "aSuccessCnt": 3
+          },
+          "260915": {
+            "attackCnt": 4,
+            "aSuccessCnt": 3
+          },
+          "260916": {
+            "attackCnt": 6,
+            "aSuccessCnt": 3
+          },
+          "260917": {
+            "attackCnt": 3,
+            "aSuccessCnt": 3
+          }
+        },
+        "settleTime": 0,
+        "boxId": 1,
+        "poolRewards": [
+          {
+            "type": 3,
+            "itemId": 3008,
+            "value": 4,
+            "ext": 0
+          },
+          {
+            "type": 3,
+            "itemId": 3009,
+            "value": 5,
+            "ext": 0
+          },
+          {
+            "type": 3,
+            "itemId": 1001,
+            "value": 3,
+            "ext": 0
+          }
+        ],
+        "talentResetTime": 1787846400,
+        "taskProgress": {
+          "4": 3,
+          "5": 0,
+          "6": 0,
+          "7": 0,
+          "8": 0,
+          "9": 0,
+          "10": 0,
+          "11": 0,
+          "12": 0,
+          "13": 0
+        },
+        "taskClaimedMap": {},
+        "taskResetTime": 1789574400,
+        "signUpMap": {
+          "260831": 2781636,
+          "260907": 2781636,
+          "260914": 2781636
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 38
+}
+异步: 是
+调用ID: call_1789641994551_w9t2p3c4m
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

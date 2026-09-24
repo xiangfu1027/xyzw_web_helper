@@ -1,0 +1,255 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/18 20:40:32
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789479012220.A-8964%E6%9C%8D-1-687388838-%E7%9B%B8%E7%AC%A664-2.bin&fromManager=true&windowId=game-window-1789735093327&isMaster=false&syncEnabled=true
+记录数量: 2
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/9/18 20:40:14
+服务: HeroService
+方法: batchSetLevel
+参数: [{"levelMap":{}}]
+结果:
+{
+  "_raw": {
+    "seq": 49,
+    "ack": 0,
+    "time": 1789735215235,
+    "resp": 49,
+    "cmd": "syncrewardresp",
+    "body": {
+      "role": {
+        "gold": 35178538084,
+        "power": 2717112059,
+        "heroes": {
+          "104": {
+            "level": 3600,
+            "order": 14,
+            "power": 312930011,
+            "attack": 65395698,
+            "defense": 7459863,
+            "hp": 1151737257,
+            "speed": 12856,
+            "attackExt": 2.7974982261657715,
+            "defenseExt": 2.7974982261657715,
+            "hpExt": 2.7974982261657715,
+            "attribute": {
+              "53": 0.15000000596046448,
+              "57": 0.4000000059604645,
+              "59": 0.4000000059604645,
+              "61": 0.4000000059604645
+            }
+          }
+        },
+        "items": {
+          "1003": {
+            "quantity": 47034
+          }
+        },
+        "achievement": {
+          "7": {
+            "completeValue": 22400
+          }
+        },
+        "statistics": {
+          "task:complete:22": 2717112059,
+          "task:complete:10": 22400
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 42
+}
+异步: 是
+调用ID: call_1789735214280_2xwr0l30j
+
+记录 #2:
+----------------------------------------
+时间: 2026/9/18 20:40:13
+服务: HeroService
+方法: simulation
+参数: [{"heroId":104,"level":2300,"order":7}]
+结果:
+{
+  "_raw": {
+    "seq": 48,
+    "ack": 0,
+    "time": 1789735214166,
+    "resp": 48,
+    "cmd": "hero_simulationresp",
+    "body": {
+      "result": {
+        "heroId": 104,
+        "level": 3600,
+        "order": 14,
+        "star": 20,
+        "color": 3,
+        "power": 312930011,
+        "attack": 65395698,
+        "defense": 7459863,
+        "hp": 1151737257,
+        "speed": 12856,
+        "artifactId": -1,
+        "pearlId": 0,
+        "trumpId": 0,
+        "transTrumpId": 0,
+        "trumpId2": 0,
+        "attackExt": 2.7974982261657715,
+        "defenseExt": 2.7974982261657715,
+        "hpExt": 2.7974982261657715,
+        "attribute": {
+          "53": 0.15000000596046448,
+          "54": 1,
+          "57": 0.4000000059604645,
+          "59": 0.4000000059604645,
+          "61": 0.4000000059604645,
+          "66": 9,
+          "101": 0,
+          "102": 0
+        },
+        "equipment": {
+          "1": {
+            "equipId": 0,
+            "enchantUId": 0,
+            "enchantUId2": 0,
+            "level": 1,
+            "forgeExp": 0,
+            "forge": 0,
+            "star": 0,
+            "attack": 9,
+            "defense": 0,
+            "hp": 0,
+            "curQuenchId": 0,
+            "quenchTimes": 0,
+            "quenches": null,
+            "quenchTimes2": 0,
+            "quenches2": null,
+            "quenchAttackExt": 0,
+            "quenchDefenseExt": 0,
+            "quenchHpExt": 0,
+            "seed": 0
+          },
+          "2": {
+            "equipId": 0,
+            "enchantUId": 0,
+            "enchantUId2": 0,
+            "level": 1,
+            "forgeExp": 0,
+            "forge": 0,
+            "star": 0,
+            "attack": 0,
+            "defense": 0,
+            "hp": 37,
+            "curQuenchId": 0,
+            "quenchTimes": 0,
+            "quenches": null,
+            "quenchTimes2": 0,
+            "quenches2": null,
+            "quenchAttackExt": 0,
+            "quenchDefenseExt": 0,
+            "quenchHpExt": 0,
+            "seed": 0
+          },
+          "3": {
+            "equipId": 0,
+            "enchantUId": 0,
+            "enchantUId2": 0,
+            "level": 1,
+            "forgeExp": 0,
+            "forge": 0,
+            "star": 0,
+            "attack": 0,
+            "defense": 10,
+            "hp": 0,
+            "curQuenchId": 0,
+            "quenchTimes": 0,
+            "quenches": null,
+            "quenchTimes2": 0,
+            "quenches2": null,
+            "quenchAttackExt": 0,
+            "quenchDefenseExt": 0,
+            "quenchHpExt": 0,
+            "seed": 0
+          },
+          "4": {
+            "equipId": 0,
+            "enchantUId": 0,
+            "enchantUId2": 0,
+            "level": 1,
+            "forgeExp": 0,
+            "forge": 0,
+            "star": 0,
+            "attack": 0,
+            "defense": 0,
+            "hp": 35,
+            "curQuenchId": 0,
+            "quenchTimes": 0,
+            "quenches": null,
+            "quenchTimes2": 0,
+            "quenches2": null,
+            "quenchAttackExt": 0,
+            "quenchDefenseExt": 0,
+            "quenchHpExt": 0,
+            "seed": 0
+          }
+        },
+        "battleTeamSlot": 3,
+        "isActive": false,
+        "skill": [
+          {
+            "skillId": 7002,
+            "level": 1,
+            "active": true,
+            "affiliated": 0
+          },
+          {
+            "skillId": 7003,
+            "level": 1,
+            "active": true,
+            "affiliated": 0
+          },
+          {
+            "skillId": 7004,
+            "level": 1,
+            "active": true,
+            "affiliated": 0
+          }
+        ],
+        "activeSkill": 0,
+        "awakeSkill": null,
+        "appendSkill": [],
+        "useSkin": 0,
+        "skin": {},
+        "bookStar": 20,
+        "bookLevel": 0,
+        "bookValue": 0,
+        "bookAttack": 0,
+        "bookHp": 0,
+        "recordFlag": false,
+        "forbidSNTime": 0,
+        "hB": null
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 37
+}
+异步: 是
+调用ID: call_1789735213216_73ac8bfo6
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

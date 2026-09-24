@@ -369,13 +369,13 @@ const addMembersToTeams = async () => {
     message.info('开始加入成员...')
     
     const gameTokens = toRaw(tokenStore.gameTokens)
-    const dianLabels = ['一', '二', '三', '四', '五']
+    const dianLabels = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
     
     // 记录已分配的 token ID，避免重复分配
     const assignedTokenIds = new Set()
     
     // 为每个十殿队伍添加成员
-    for (let teamIdx = 0; teamIdx < 5; teamIdx++) {
+    for (let teamIdx = 0; teamIdx < 10; teamIdx++) {
       const currentTeamId = teamIds.value[teamIdx]
       if (!currentTeamId) continue
       
@@ -386,7 +386,7 @@ const addMembersToTeams = async () => {
         const name = t.name || ''
         // 排除已分配的 token，以及 remark 中包含任何殿标签的 token
         if (assignedTokenIds.has(t.id)) return false
-        if (t.remark && /殿[一二三四五]/.test(t.remark)) return false
+        if (t.remark && /殿[一二三四五六七八九十]/.test(t.remark)) return false
         return name.startsWith('02')
       })
       
@@ -394,7 +394,7 @@ const addMembersToTeams = async () => {
         const name = t.name || ''
         // 排除已分配的 token，以及 remark 中包含任何殿标签的 token
         if (assignedTokenIds.has(t.id)) return false
-        if (t.remark && /殿[一二三四五]/.test(t.remark)) return false
+        if (t.remark && /殿[一二三四五六七八九十]/.test(t.remark)) return false
         return name.startsWith('05')
       })
       
@@ -443,7 +443,7 @@ const addMembersToTeams = async () => {
         }
       }
       
-      if (teamIdx < 4) {
+      if (teamIdx < 9) {
         await waitCommandDelay()
       }
     }
@@ -461,7 +461,7 @@ const addMembersToTeams = async () => {
 // 自动加入十殿
 const autoJoinShiDian = async () => {
   if (!teamIds.value?.some(id => id)) {
-    message.warning('请先选择十殿队伍（一到六）')
+    message.warning('请先选择十殿队伍（一到十）')
     return
   }
 

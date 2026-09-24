@@ -2108,31 +2108,45 @@ const handleBatchGacha = async () => {
           })
           
           const gachaCount = parseInt(batchGachaCount.value) || 1
-          for (let i = 0; i < gachaCount; i++) {
-            await tokenStore.sendGachaDrawReward(token.id, {})
-            await new Promise(resolve => setTimeout(resolve, 500))
+          try {
+            for (let i = 0; i < gachaCount; i++) {
+              await tokenStore.sendGachaDrawReward(token.id, {})
+              await new Promise(resolve => setTimeout(resolve, 500))
+            }
+          } catch (drawErr) {
+            logStore.addLog({
+              page: 'fish-helper',
+              cardType: '梦境助手',
+              operation: '批量扭蛋',
+              tokenId: token.id,
+              tokenName: token.name,
+              status: 'warning',
+              message: `[序号${tokenIndex}] 抽奖失败: ${drawErr.message}，继续领取阶段奖励`
+            })
           }
 
           // 获取扭蛋信息，领取未领取的阶段奖励
           try {
             const gachaInfo = await tokenStore.sendGachaGetInfo(token.id, {})
-            const claimedMap = gachaInfo?.body?.roleGacha?.claimedStageIdMap
-            if (claimedMap) {
-              for (const [stageId, claimed] of Object.entries(claimedMap)) {
-                if (!claimed) {
-                  await tokenStore.sendGachaClaimStageReward(token.id, { stageId: parseInt(stageId) })
-                  logStore.addLog({
-                    page: 'fish-helper',
-                    cardType: '梦境助手',
-                    operation: '批量扭蛋',
-                    tokenId: token.id,
-                    tokenName: token.name,
-                    status: 'success',
-                    message: `[序号${tokenIndex}] 领取扭蛋阶段奖励 stageId=${stageId}`
-                  })
-                  await new Promise(resolve => setTimeout(resolve, 500))
-                }
-              }
+            const roleGacha = gachaInfo?.roleGacha
+            const claimedMap = roleGacha?.claimedStageIdMap || {}
+            const stageGachaCnt = roleGacha?.stageGachaCnt || 0
+            // 每10次抽奖解锁一个阶段，计算已解锁的最大stageId
+            const maxStageId = Math.floor(stageGachaCnt / 10)
+            for (let stageId = 1; stageId <= maxStageId; stageId++) {
+              // 跳过已领取的阶段
+              if (claimedMap[stageId] === true) continue
+              await tokenStore.sendGachaClaimStageReward(token.id, { stageId })
+              logStore.addLog({
+                page: 'fish-helper',
+                cardType: '梦境助手',
+                operation: '批量扭蛋',
+                tokenId: token.id,
+                tokenName: token.name,
+                status: 'success',
+                message: `[序号${tokenIndex}] 领取扭蛋阶段奖励 stageId=${stageId}`
+              })
+              await new Promise(resolve => setTimeout(resolve, 500))
             }
           } catch (stageErr) {
             logStore.addLog({

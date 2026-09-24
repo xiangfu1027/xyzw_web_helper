@@ -244,7 +244,7 @@ const selectedTokenId = ref(null)
 const connectingTokens = ref(new Set())
 const refreshingTokens = ref(new Set())
 const teamId = ref('')
-const teamIds = ref(['', '', '', '', '']) // 五个十殿的 teamId
+const teamIds = ref(['', '', '', '', '', '', '', '', '', '']) // 十个十殿的 teamId
 const shidianInfoCardRef = ref(null)
 const commandDelay = ref(800) // 执行间隔（毫秒）
 
@@ -269,19 +269,18 @@ const getTokenNightmareTeamValue = (tokenId) => {
   return value
 }
 
-// 十殿队伍选项（一到五 + 空 + 已打）
+// 十殿名称（一到十）
+const DIAN_LABELS = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
+
+// 十殿队伍选项（一到十 + 空 + 已打）
 const nightmareTeamOptions = [
   { label: '空', value: null },
   { label: '已打', value: 0 },
-  { label: '一', value: 1 },
-  { label: '二', value: 2 },
-  { label: '三', value: 3 },
-  { label: '四', value: 4 },
-  { label: '五', value: 5 }
+  ...DIAN_LABELS.map((label, index) => ({ label, value: index + 1 }))
 ]
 
 // 每个 token 的下拉框选择值
-const tokenNightmareTeam = ref({}) // tokenId -> nightmareTeam (1-5)
+const tokenNightmareTeam = ref({}) // tokenId -> nightmareTeam (1-10)
 const tokenPillowCount = ref({}) // tokenId -> pillowCount (十殿枕头数量，保存到 localStorage)
 const tokenMaxLevel = ref({}) // tokenId -> maxLevel (本周最高层数，保存到 localStorage)
 const pillowCount = ref(0) // 十殿枕头数量
@@ -748,10 +747,10 @@ const parseRemarkToDropdowns = () => {
     if (token.remark) {
       const remark = token.remark.trim()
       
-      // 解析十殿队伍标签（格式：殿一、殿二、殿三、殿四、殿五）
-      const teamMatch = remark.match(/殿 ([一二三四五])/)
+      // 解析十殿队伍标签（格式：殿一、殿二、…、殿十）
+      const teamMatch = remark.match(/殿 ([一二三四五六七八九十])/)
       if (teamMatch) {
-        const teamMap = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5 }
+        const teamMap = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10 }
         tokenNightmareTeam.value[token.id] = teamMap[teamMatch[1]]
       }
     }
@@ -871,7 +870,7 @@ const joinShiDian = async (token, teamIndex = null) => {
   const teamIdx = teamIndex || tokenNightmareTeam.value[token.id]
   
   if (!teamIdx) {
-    message.warning('请先选择十殿队伍（一到五）')
+    message.warning('请先选择十殿队伍（一到十）')
     return
   }
 
@@ -892,7 +891,7 @@ const joinShiDian = async (token, teamIndex = null) => {
   }
   
   if (!currentTeamId) {
-    message.warning(`请先在十殿 TeamID 卡片中输入十殿${['一', '二', '三', '四', '五'][teamIdx - 1]}的 TeamID`)
+    message.warning(`请先在十殿 TeamID 卡片中输入十殿${DIAN_LABELS[teamIdx - 1]}的 TeamID`)
     return
   }
 
@@ -923,7 +922,7 @@ const clearAllNightmareLabels = async () => {
   try {
     await dialog.warning({
       title: '确认清空',
-      content: '确定要清空所有 Token 的十殿标签（一、二、三、四、五、已打）吗？此操作不可恢复。',
+      content: '确定要清空所有 Token 的十殿标签（一 ~ 十、已打）吗？此操作不可恢复。',
       positiveText: '确定',
       negativeText: '取消',
       onPositiveClick: async () => {
@@ -1063,7 +1062,7 @@ const autoJoinShiDian = async (executionRange = '') => {
         const tokenName = token.name || ''
         if (tokenName.includes('十殿')) continue
         
-        // 跳过十殿状态为"一"到"五"(1-5)和"已打"(0)的 token，防止重复检查枕头
+        // 跳过十殿状态为"一"到"十"(1-10)和"已打"(0)的 token，防止重复检查枕头
         const currentTeam = tokenNightmareTeam.value[token.id]
         if (currentTeam !== null && currentTeam !== undefined) continue
         
@@ -1110,9 +1109,10 @@ const autoJoinShiDian = async (executionRange = '') => {
             currentWeekEnd.setDate(currentWeekEnd.getDate() + 6)
             currentWeekEnd.setHours(23, 59, 59, 999)
             
-            // 检查weekAward中是否有本周的日期
+            // 检查weekAward中是否有本周的日期，并取本周最高层数
             const dateKeys = Object.keys(weekAward)
             let hasPlayedThisWeek = false
+            let weekMaxLevel = 0
             
             for (const dateKey of dateKeys) {
               const dateData = weekAward[dateKey]
@@ -1130,13 +1130,16 @@ const autoJoinShiDian = async (executionRange = '') => {
                 // 检查是否在本周范围内
                 if (date >= currentWeekStart && date <= currentWeekEnd) {
                   hasPlayedThisWeek = true
+                  weekMaxLevel = dateData.maxLevel
                   break
                 }
               }
             }
             
-            if (hasPlayedThisWeek) {
-              console.log(`Token ${token.name} 本周已打过十殿，跳过`)
+            // 本周已打过，或本周最高层数为 8 的 token 跳过
+            if (hasPlayedThisWeek || weekMaxLevel === 8) {
+              const reason = weekMaxLevel === 8 ? '本周最高层数为 8' : '本周已打过十殿'
+              console.log(`Token ${token.name} ${reason}，跳过`)
               await connectionPool.release(token.id, true)
               continue
             }
@@ -1189,11 +1192,11 @@ const autoJoinShiDian = async (executionRange = '') => {
         message.warning(`枕头=5的token数量不足！需要${requiredTokensCount}个，只找到${tokensWithPillow5.length}个，部分殿可能无法分配满3个`)
       }
       
-      // 将枕头=5 的 token 分配到各殿（按殿一到殿五的顺序，token序号从前向后）
+      // 将枕头=5 的 token 分配到各殿（按殿一到殿十的顺序，token序号从前向后）
       const allTokensToProcess = []
       let tokenIndex = 0
       
-      for (let teamIdx = 1; teamIdx <= 5; teamIdx++) {
+      for (let teamIdx = 1; teamIdx <= 10; teamIdx++) {
         if (!teamIds.value[teamIdx - 1]) continue
         
         // 每殿分配 3 个 token
@@ -1242,7 +1245,7 @@ const autoJoinShiDian = async (executionRange = '') => {
             // 更新 tokenNightmareTeam
             tokenNightmareTeam.value[token.id] = teamIdx
             
-            return { success: true, message: `已加入十殿${['一', '二', '三', '四', '五'][teamIdx - 1]}` }
+            return { success: true, message: `已加入十殿${DIAN_LABELS[teamIdx - 1]}` }
           } catch (error) {
             return { success: false, error: error.message }
           }
@@ -1311,7 +1314,7 @@ const processNightmareTeam = async (teamIndex, direction) => {
   const teamId = teamIds.value[teamIndex - 1]
   if (!teamId) return
   
-  message.info(`开始处理十殿${['一', '二', '三', '四', '五'][teamIndex - 1]}...`)
+  message.info(`开始处理十殿${DIAN_LABELS[teamIndex - 1]}...`)
   
   // 获取所有 token，根据方向排序
   const tokens = direction === 'forward' 
@@ -1384,7 +1387,7 @@ const processNightmareTeam = async (teamIndex, direction) => {
       
       console.log(`Token ${token.name || token.id} 枕头数量：${pillowCount}`)
       
-      // 所有十殿（包括一到五）都需要枕头=5
+      // 所有十殿（包括一到十）都需要枕头=5
       if (pillowCount !== 5) {
         console.log(`Token ${token.name || token.id} 枕头数量不为 5，跳过`)
         continue // 跳过枕头数量不为 5 的 token
@@ -1400,7 +1403,7 @@ const processNightmareTeam = async (teamIndex, direction) => {
       console.log(`调用 joinShiDian, token:`, token, 'teamIndex:', teamIndex)
       await joinShiDian(token, teamIndex)
       joinedCount++
-      message.success(`Token ${token.name || token.id} 已加入十殿${['一', '二', '三', '四', '五'][teamIndex - 1]}`)
+      message.success(`Token ${token.name || token.id} 已加入十殿${DIAN_LABELS[teamIndex - 1]}`)
       
       // 等待一下，避免过快
       await new Promise(resolve => setTimeout(resolve, 500))
@@ -1410,7 +1413,7 @@ const processNightmareTeam = async (teamIndex, direction) => {
     }
   }
   
-  message.info(`十殿${['一', '二', '三', '四', '五'][teamIndex - 1]}完成，加入 ${joinedCount}/${maxJoinCount} 个 Token`)
+  message.info(`十殿${DIAN_LABELS[teamIndex - 1]}完成，加入 ${joinedCount}/${maxJoinCount} 个 Token`)
 }
 
 // 处理从十殿 TeamID 卡片触发的加入十殿请求

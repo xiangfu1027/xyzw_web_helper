@@ -2639,25 +2639,35 @@ export function createTasksItem(deps) {
         }
 
         // 执行1次扭蛋
-        await tokenStore.sendGachaDrawReward(tokenId, {});
-        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          await tokenStore.sendGachaDrawReward(tokenId, {});
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (drawErr) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 抽奖失败: ${drawErr.message}，继续领取阶段奖励`,
+            type: "warning",
+          });
+        }
 
         // 获取扭蛋信息，领取未领取的阶段奖励
         try {
           const gachaInfo = await tokenStore.sendGachaGetInfo(tokenId, {});
-          const claimedMap = gachaInfo?.body?.roleGacha?.claimedStageIdMap;
-          if (claimedMap) {
-            for (const [stageId, claimed] of Object.entries(claimedMap)) {
-              if (!claimed) {
-                await tokenStore.sendGachaClaimStageReward(tokenId, { stageId: parseInt(stageId) });
-                addLog({
-                  time: new Date().toLocaleTimeString(),
-                  message: `${token.name} 领取扭蛋阶段奖励 stageId=${stageId}`,
-                  type: "success",
-                });
-                await new Promise(resolve => setTimeout(resolve, 500));
-              }
-            }
+          const roleGacha = gachaInfo?.roleGacha;
+          const claimedMap = roleGacha?.claimedStageIdMap || {};
+          const stageGachaCnt = roleGacha?.stageGachaCnt || 0;
+          // 每10次抽奖解锁一个阶段，计算已解锁的最大stageId
+          const maxStageId = Math.floor(stageGachaCnt / 10);
+          for (let stageId = 1; stageId <= maxStageId; stageId++) {
+            // 跳过已领取的阶段
+            if (claimedMap[stageId] === true) continue;
+            await tokenStore.sendGachaClaimStageReward(tokenId, { stageId });
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 领取扭蛋阶段奖励 stageId=${stageId}`,
+              type: "success",
+            });
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         } catch (stageErr) {
           addLog({
@@ -2717,25 +2727,35 @@ export function createTasksItem(deps) {
       });
 
       // 执行1次扭蛋
-      await tokenStore.sendGachaDrawReward(tokenId, {});
-      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        await tokenStore.sendGachaDrawReward(tokenId, {});
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (drawErr) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 抽奖失败: ${drawErr.message}，继续领取阶段奖励`,
+          type: "warning",
+        });
+      }
 
       // 获取扭蛋信息，领取未领取的阶段奖励
       try {
         const gachaInfo = await tokenStore.sendGachaGetInfo(tokenId, {});
-        const claimedMap = gachaInfo?.body?.roleGacha?.claimedStageIdMap;
-        if (claimedMap) {
-          for (const [stageId, claimed] of Object.entries(claimedMap)) {
-            if (!claimed) {
-              await tokenStore.sendGachaClaimStageReward(tokenId, { stageId: parseInt(stageId) });
-              logWithPrefix({
-                time: new Date().toLocaleTimeString(),
-                message: `${token.name} 领取扭蛋阶段奖励 stageId=${stageId}`,
-                type: "success",
-              });
-              await new Promise(resolve => setTimeout(resolve, 500));
-            }
-          }
+        const roleGacha = gachaInfo?.roleGacha;
+        const claimedMap = roleGacha?.claimedStageIdMap || {};
+        const stageGachaCnt = roleGacha?.stageGachaCnt || 0;
+        // 每10次抽奖解锁一个阶段，计算已解锁的最大stageId
+        const maxStageId = Math.floor(stageGachaCnt / 10);
+        for (let stageId = 1; stageId <= maxStageId; stageId++) {
+          // 跳过已领取的阶段
+          if (claimedMap[stageId] === true) continue;
+          await tokenStore.sendGachaClaimStageReward(tokenId, { stageId });
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 领取扭蛋阶段奖励 stageId=${stageId}`,
+            type: "success",
+          });
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
       } catch (stageErr) {
         logWithPrefix({
@@ -2952,124 +2972,460 @@ export function createTasksItem(deps) {
         const oppoData = oppoMap[oppoKey];
         if (!oppoData) throw new Error(`未找到星期${dayOfWeek}对应的对手`);
 
-        const defenders = oppoData.defenders || {};
-        const defenderList = [];
+        // 获取 siege 信息
+        const siegeData = clubInfo?.siege || {};
+        const attackMap = siegeData.attackMap || {};
+        const todayAttackData = attackMap[oppoKey] || {};
+        const aSuccessCnt = todayAttackData.aSuccessCnt || 0;
+        
+        const taskProgress = siegeData.taskProgress || {};
+        const taskClaimedMap = siegeData.taskClaimedMap || {};
 
-        // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前10个），并存入缓存
-        for (const [nodeId, def] of Object.entries(defenders)) {
-          if (def.challengeCnt < 5) {
-            defenderList.push({
-              nodeId: parseInt(nodeId),
-              roleId: def.roleId,
-              challengeCnt: def.challengeCnt || 0,
-              failCnt: def.failCnt || 0,
-              name: def.name || ''
-            });
+        // 判断是否跳过步骤7（所有已完成任务的奖励都已领取）
+        // taskProgress[4] 对应 taskClaimedMap[1]，taskProgress[5-13] 对应 taskClaimedMap[5-13]
+        let skipStep7 = true;
+        const taskMapping = { 4: 1, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, 12: 12, 13: 13 };
+        for (const [taskKey, claimedKey] of Object.entries(taskMapping)) {
+          const taskValue = taskProgress[taskKey] || 0;
+          const claimedValue = taskClaimedMap[claimedKey];
+          // 任务已完成（值不为0）但奖励未领取（taskClaimedMap中无对应值）
+          if (taskValue !== 0 && !claimedValue) {
+            skipStep7 = false;
+            break;
           }
         }
 
-        // 按 failCnt 升序排序，取前10个
-        defenderList.sort((a, b) => a.failCnt - b.failCnt);
-        const defenderCache = defenderList.slice(0, 10);
+        addLog({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 步骤2：成功挑战${aSuccessCnt}次，skipStep7=${skipStep7}`,
+          type: "info",
+        });
 
-        // 步骤4：fight_startlevel 获取当前阵容
-        const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
-        const battleData = fightResult?.battleData?.leftTeam;
-        if (!battleData) throw new Error('未获取到战斗数据');
-
-        const team = battleData.team || {};
-        const weaponId = battleData.weaponId;
-        const petUId = battleData.petUId;
-        const battleTeam = {};
-        for (let pos = 0; pos <= 4; pos++) {
-          if (team[pos]) {
-            battleTeam[pos] = team[pos].id;
-          }
+        // 判断是否跳过步骤3-5（成功挑战次数>=3）
+        const skipBattle = aSuccessCnt >= 3;
+        if (skipBattle) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 今日已成功挑战${aSuccessCnt}次，跳过步骤3-5`,
+            type: "info",
+          });
         }
-        await new Promise(resolve => setTimeout(resolve, 800));
 
-        // 步骤5：循环挑战（最多10次），累计失败7次执行空投，清空缓存
+        let battleTeam = null;
+        let weaponId = null;
+        let petUId = null;
         let challengeCount = 0;
-        const maxChallenges = 10;
-        let failCount = 0;
-        const maxFailCount = 7;
-        let challengeLimitReached = false;
 
-        while (challengeCount < maxChallenges && defenderCache.length > 0) {
-          const target = defenderCache[0];
-          const defenderWithNodeId = defenderList.find(d => d.roleId === target.roleId);
-          if (!defenderWithNodeId) {
-            defenderCache.shift();
-            continue;
+        // 步骤3-5：只在未跳过时执行
+        if (!skipBattle) {
+          const defenders = oppoData.defenders || {};
+          const defenderList = [];
+
+          // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前10个），并存入缓存
+          for (const [nodeId, def] of Object.entries(defenders)) {
+            if (def.challengeCnt < 5) {
+              defenderList.push({
+                nodeId: parseInt(nodeId),
+                roleId: def.roleId,
+                challengeCnt: def.challengeCnt || 0,
+                failCnt: def.failCnt || 0,
+                name: def.name || ''
+              });
+            }
           }
 
-          try {
-            const attackResult = await tokenStore.sendClubAttack(tokenId, {
-              nodeId: defenderWithNodeId.nodeId,
-              targetId: target.roleId,
-              challengeCnt: target.challengeCnt,
-              failCnt: target.failCnt,
-              useItem: false,
-              teamSetParams: {
-                lordWeaponId: weaponId,
-                petUId: petUId,
-                battleTeam: battleTeam
-              }
-            });
+          defenderList.sort((a, b) => a.failCnt - b.failCnt);
+          const defenderCache = defenderList.slice(0, 3);
 
-            challengeCount++;
-            const resultStr = JSON.stringify(attackResult || {});
-            
-            if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
-              challengeLimitReached = true;
-              break;
+          // 步骤4：fight_startlevel 获取当前阵容
+          const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
+          const battleData = fightResult?.battleData?.leftTeam;
+          if (!battleData) throw new Error('未获取到战斗数据');
+
+          const team = battleData.team || {};
+          weaponId = battleData.weaponId;
+          petUId = battleData.petUId;
+          battleTeam = {};
+          for (let pos = 0; pos <= 4; pos++) {
+            if (team[pos]) {
+              battleTeam[pos] = team[pos].id;
             }
+          }
+          await new Promise(resolve => setTimeout(resolve, 800));
 
-            if (resultStr.includes('failCnt')) {
-              failCount++;
-              if (failCount >= maxFailCount) {
+          // 步骤5：循环挑战（最多3次），最多跳转1次
+          const maxChallenges = 3;
+          const maxJump = 1;
+          let jumpCount = 0;
+          let stopChallenge = false; // 遇到"今日成功挑战次数已用完"
+          let needAttackMonster = false; // 遇到"今日挑战次数已用完"
+
+          // 封装循环挑战逻辑
+          const runChallengeLoop = async () => {
+            let count = 0;
+            while (count < maxChallenges && defenderCache.length > 0 && !stopChallenge && !needAttackMonster) {
+              const target = defenderCache[0];
+              const defenderWithNodeId = defenderList.find(d => d.roleId === target.roleId);
+              if (!defenderWithNodeId) {
                 defenderCache.shift();
-                break;
+                continue;
+              }
+
+              try {
+                const attackResult = await tokenStore.sendClubAttack(tokenId, {
+                  nodeId: defenderWithNodeId.nodeId,
+                  targetId: target.roleId,
+                  challengeCnt: target.challengeCnt,
+                  failCnt: target.failCnt,
+                  useItem: false,
+                  teamSetParams: {
+                    lordWeaponId: weaponId,
+                    petUId: petUId,
+                    battleTeam: battleTeam
+                  }
+                });
+
+                count++;
+                const resultStr = JSON.stringify(attackResult || {});
+
+                // 检查是否"今日成功挑战次数已用完"
+                if (resultStr.includes('今日成功挑战次数已用完')) {
+                  stopChallenge = true;
+                  break;
+                }
+
+                // 检查是否"今日挑战次数已用完"
+                if (resultStr.includes('今日挑战次数已用完')) {
+                  needAttackMonster = true;
+                  break;
+                }
+
+                defenderCache.shift();
+                await new Promise(resolve => setTimeout(resolve, 800));
+              } catch (e) {
+                const errorMsg = e.message || String(e);
+                // 检查是否"今日成功挑战次数已用完"
+                if (errorMsg.includes('13000090') || errorMsg.includes('今日成功挑战次数已用完')) {
+                  stopChallenge = true;
+                  break;
+                }
+                // 检查是否"今日挑战次数已用完"
+                if (errorMsg.includes('今日挑战次数已用完')) {
+                  needAttackMonster = true;
+                  break;
+                }
+                addLog({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} 挑战${target.name}异常: ${errorMsg}，继续挑战下一个`,
+                  type: "warning",
+                });
+                defenderCache.shift();
+                continue;
               }
             }
+            return count;
+          };
 
-            defenderCache.shift();
-            await new Promise(resolve => setTimeout(resolve, 800));
-          } catch (e) {
-            const errorMsg = e.message || String(e);
-            if (errorMsg.includes('13000090') || errorMsg.includes('今日成功挑战次数已用完') || errorMsg.includes('请明日再来')) {
-              challengeLimitReached = true;
-              break;
-            }
+          // 第一次循环挑战
+          challengeCount = await runChallengeLoop();
+
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤5：第一轮循环挑战完成，共执行${challengeCount}次`,
+            type: "info",
+          });
+
+          // 清空缓存
+          defenderCache.length = 0;
+
+          // 如果遇到"今日成功挑战次数已用完"，直接结束步骤5
+          if (stopChallenge) {
             addLog({
               time: new Date().toLocaleTimeString(),
-              message: `${token.name} 挑战${target.name}异常: ${errorMsg}，继续挑战下一个`,
-              type: "warning",
+              message: `${token.name} 步骤5：今日成功挑战次数已用完，结束步骤5`,
+              type: "info",
             });
-            defenderCache.shift();
-            continue;
+          }
+          // 如果遇到"今日挑战次数已用完"，执行club_getinfo + club_attackmonster
+          else if (needAttackMonster) {
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 步骤5：执行club_getinfo获取taskProgress`,
+              type: "info",
+            });
+
+            const newClubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+            const newSiegeData = newClubInfo?.siege || {};
+            const newTaskProgress = newSiegeData.taskProgress || {};
+            const task4Value = newTaskProgress[4] || 0;
+
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} taskProgress[4]=${task4Value}，需要执行${3 - task4Value}次club_attackmonster`,
+              type: "info",
+            });
+
+            // 执行 3-task4Value 次 club_attackmonster
+            const remainingChallenges = 3 - task4Value;
+            if (remainingChallenges > 0) {
+              for (let i = 0; i < remainingChallenges; i++) {
+                try {
+                  await tokenStore.sendClubAttackMonster(tokenId, {
+                    useItem: false,
+                    teamSetParams: {
+                      lordWeaponId: weaponId,
+                      petUId: petUId,
+                      battleTeam: battleTeam
+                    }
+                  });
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} club_attackmonster成功 (${i + 1}/${remainingChallenges})`,
+                    type: "success",
+                  });
+                } catch (e) {
+                  addLog({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} club_attackmonster失败: ${e.message || e}`,
+                    type: "warning",
+                  });
+                }
+                await new Promise(resolve => setTimeout(resolve, 800));
+              }
+            }
+          }
+          // 都没有这两个提示，跳转循环挑战（最多1次）
+          else if (jumpCount < maxJump) {
+            jumpCount++;
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 步骤5：都没有提示，跳转第${jumpCount}次循环挑战`,
+              type: "info",
+            });
+
+            // 重新获取对手列表
+            const refreshInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+            const refreshOppoData = refreshInfo?.club?.oppoMap?.[oppoKey];
+            if (refreshOppoData) {
+              const refreshDefenders = refreshOppoData.defenders || {};
+              for (const [nodeId, def] of Object.entries(refreshDefenders)) {
+                if (def.challengeCnt < 5) {
+                  defenderList.push({
+                    nodeId: parseInt(nodeId),
+                    roleId: def.roleId,
+                    challengeCnt: def.challengeCnt || 0,
+                    failCnt: def.failCnt || 0,
+                    name: def.name || ''
+                  });
+                }
+              }
+              defenderList.sort((a, b) => a.failCnt - b.failCnt);
+              defenderCache.push(...defenderList.slice(0, 3));
+            }
+
+            // 第二轮循环挑战
+            challengeCount = await runChallengeLoop();
+
+            addLog({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 步骤5：第二轮循环挑战完成，共执行${challengeCount}次`,
+              type: "info",
+            });
+
+            // 清空缓存
+            defenderCache.length = 0;
+
+            // 第二轮循环后，如果还是没有这两个提示，执行club_getinfo + club_attackmonster
+            if (!stopChallenge && !needAttackMonster) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 步骤5：第二轮循环后仍无提示，执行club_getinfo获取taskProgress`,
+                type: "info",
+              });
+
+              const finalInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+              const finalSiegeData = finalInfo?.siege || {};
+              const finalTaskProgress = finalSiegeData.taskProgress || {};
+              const task4Value = finalTaskProgress[4] || 0;
+
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} taskProgress[4]=${task4Value}，需要执行${3 - task4Value}次club_attackmonster`,
+                type: "info",
+              });
+
+              // 执行 3-task4Value 次 club_attackmonster
+              const remainingChallenges = 3 - task4Value;
+              if (remainingChallenges > 0) {
+                for (let i = 0; i < remainingChallenges; i++) {
+                  try {
+                    await tokenStore.sendClubAttackMonster(tokenId, {
+                      useItem: false,
+                      teamSetParams: {
+                        lordWeaponId: weaponId,
+                        petUId: petUId,
+                        battleTeam: battleTeam
+                      }
+                    });
+                    addLog({
+                      time: new Date().toLocaleTimeString(),
+                      message: `${token.name} club_attackmonster成功 (${i + 1}/${remainingChallenges})`,
+                      type: "success",
+                    });
+                  } catch (e) {
+                    addLog({
+                      time: new Date().toLocaleTimeString(),
+                      message: `${token.name} club_attackmonster失败: ${e.message || e}`,
+                      type: "warning",
+                    });
+                  }
+                  await new Promise(resolve => setTimeout(resolve, 800));
+                }
+              }
+            }
+            // 第二轮遇到"今日挑战次数已用完"
+            else if (needAttackMonster) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 步骤5：第二轮遇到"今日挑战次数已用完"，执行club_getinfo获取taskProgress`,
+                type: "info",
+              });
+
+              const finalInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+              const finalSiegeData = finalInfo?.siege || {};
+              const finalTaskProgress = finalSiegeData.taskProgress || {};
+              const task4Value = finalTaskProgress[4] || 0;
+
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} taskProgress[4]=${task4Value}，需要执行${3 - task4Value}次club_attackmonster`,
+                type: "info",
+              });
+
+              // 执行 3-task4Value 次 club_attackmonster
+              const remainingChallenges = 3 - task4Value;
+              if (remainingChallenges > 0) {
+                for (let i = 0; i < remainingChallenges; i++) {
+                  try {
+                    await tokenStore.sendClubAttackMonster(tokenId, {
+                      useItem: false,
+                      teamSetParams: {
+                        lordWeaponId: weaponId,
+                        petUId: petUId,
+                        battleTeam: battleTeam
+                      }
+                    });
+                    addLog({
+                      time: new Date().toLocaleTimeString(),
+                      message: `${token.name} club_attackmonster成功 (${i + 1}/${remainingChallenges})`,
+                      type: "success",
+                    });
+                  } catch (e) {
+                    addLog({
+                      time: new Date().toLocaleTimeString(),
+                      message: `${token.name} club_attackmonster失败: ${e.message || e}`,
+                      type: "warning",
+                    });
+                  }
+                  await new Promise(resolve => setTimeout(resolve, 800));
+                }
+              }
+            }
           }
         }
 
-        // 清空缓存
-        defenderCache.length = 0;
+        // 周4额外操作：升级、领取奖励、抽奖
+        if (dayOfWeek === 4) {
+          // 执行club_upgradelevel，出错也继续
+          try {
+            await tokenStore.sendClubUpgradeLevel(tokenId, {});
+            await new Promise(resolve => setTimeout(resolve, 800));
+          } catch (e) {
+            // 出错也继续
+          }
 
-        // 步骤6：执行空投战斗3次（如果未达到挑战上限）
-        if (!challengeLimitReached) {
-          for (let fightCount = 1; fightCount <= 3; fightCount++) {
+          // 执行club_claimlevelreward 1次，出错也继续
+          try {
+            await tokenStore.sendClubClaimLevelReward(tokenId, {});
+            await new Promise(resolve => setTimeout(resolve, 800));
+          } catch (e) {
+            // 出错也继续
+          }
+
+          // 执行club_draw 3次，出错跳过剩余
+          for (let drawCount = 1; drawCount <= 3; drawCount++) {
             try {
-              await tokenStore.sendClubAttackMonster(tokenId, {
-                useItem: false,
-                teamSetParams: {
-                  lordWeaponId: weaponId,
-                  petUId: petUId,
-                  battleTeam: battleTeam
-                }
-              });
+              await tokenStore.sendClubDraw(tokenId, {});
               await new Promise(resolve => setTimeout(resolve, 800));
             } catch (e) {
               break;
             }
+          }
+        }
+
+        // 步骤7：执行club_getinfo获取完成任务和领取奖励情况，根据情况领取未领取任务奖励
+        if (skipStep7) {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤7：所有已完成任务的奖励都已领取，跳过步骤7`,
+            type: "info",
+          });
+        } else {
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤7：执行club_getinfo获取任务完成情况`,
+            type: "info",
+          });
+
+          const finalClubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+          const finalSiegeData = finalClubInfo?.siege || {};
+          const finalTaskProgress = finalSiegeData.taskProgress || {};
+          const finalTaskClaimedMap = finalSiegeData.taskClaimedMap || {};
+
+          // 构建需要领取的confId列表
+          // taskProgress中4对应confId 1，5-13一一对应confId 5-13
+          // taskClaimedMap中1对应任务4，5-13一一对应
+          const confIdsToClaim = [];
+
+          // 检查任务4（对应confId 1）
+          if (finalTaskProgress[4] !== undefined && finalTaskProgress[4] !== 0) {
+            if (!finalTaskClaimedMap[1]) {
+              confIdsToClaim.push(1);
+            }
+          }
+
+          // 检查任务5-13（对应confId 5-13）
+          for (let taskKey = 5; taskKey <= 13; taskKey++) {
+            if (finalTaskProgress[taskKey] !== undefined && finalTaskProgress[taskKey] !== 0) {
+              if (!finalTaskClaimedMap[taskKey]) {
+                confIdsToClaim.push(taskKey);
+              }
+            }
+          }
+
+          addLog({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤7：需要领取的confId: [${confIdsToClaim.join(',')}]`,
+            type: "info",
+          });
+
+          // 依次领取未领取的任务奖励
+          for (const confId of confIdsToClaim) {
+            try {
+              await tokenStore.sendClubTaskClaim(tokenId, { confId });
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 步骤7：领取confId=${confId}成功`,
+                type: "success",
+              });
+            } catch (e) {
+              addLog({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 步骤7：领取confId=${confId}失败: ${e.message || e}`,
+                type: "warning",
+              });
+            }
+            await new Promise(resolve => setTimeout(resolve, 800));
           }
         }
 
@@ -3129,7 +3485,7 @@ export function createTasksItem(deps) {
         // 继续执行
       }
 
-      // 步骤2：club_getinfo 获取篝火营地信息，筛选对手并存入缓存
+      // 步骤2：club_getinfo 获取篝火营地信息
       const clubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
       const oppoMap = clubInfo?.club?.oppoMap;
       if (!oppoMap) throw new Error('未获取到篝火营地对手信息');
@@ -3142,105 +3498,373 @@ export function createTasksItem(deps) {
       const oppoData = oppoMap[oppoKey];
       if (!oppoData) throw new Error(`未找到星期${dayOfWeek}对应的对手`);
 
-      const defenders = oppoData.defenders || {};
-      const defenderList = [];
+      // 获取 siege 信息
+      const siegeData = clubInfo?.siege || {};
+      const attackMap = siegeData.attackMap || {};
+      const todayAttackData = attackMap[oppoKey] || {};
+      const aSuccessCnt = todayAttackData.aSuccessCnt || 0;
 
-      // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前10个），存入缓存
-      for (const [nodeId, def] of Object.entries(defenders)) {
-        if (def.challengeCnt < 5) {
-          defenderList.push({
-            nodeId: parseInt(nodeId),
-            roleId: def.roleId,
-            challengeCnt: def.challengeCnt || 0,
-            failCnt: def.failCnt || 0,
-            name: def.name || ''
-          });
-        }
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 步骤2：成功挑战${aSuccessCnt}次`,
+        type: "info",
+      });
+
+      // 判断是否跳过步骤3-5（成功挑战次数>=5）
+      const skipBattle = aSuccessCnt >= 5;
+      if (skipBattle) {
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 今日已成功挑战${aSuccessCnt}次，跳过步骤3-5`,
+          type: "info",
+        });
       }
 
-      // 按 failCnt 升序排序，取前10个
-      defenderList.sort((a, b) => a.failCnt - b.failCnt);
-      const defenderCache = defenderList.slice(0, 10);
-
-      // 步骤4：fight_startlevel 获取当前阵容
-      const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
-      const battleData = fightResult?.battleData?.leftTeam;
-      if (!battleData) throw new Error('未获取到战斗数据');
-
-      const team = battleData.team || {};
-      const weaponId = battleData.weaponId;
-      const petUId = battleData.petUId;
-      const battleTeam = {};
-      for (let pos = 0; pos <= 4; pos++) {
-        if (team[pos]) {
-          battleTeam[pos] = team[pos].id;
-        }
-      }
-      await new Promise(resolve => setTimeout(resolve, 800));
-
-      // 步骤5：循环挑战（最多10次），累计失败7次执行空投，清空缓存
+      let battleTeam = null;
+      let weaponId = null;
+      let petUId = null;
       let challengeCount = 0;
-      const maxChallenges = 10;
-      let failCount = 0;
-      const maxFailCount = 7;
-      let challengeError = false;
-      let challengeLimitReached = false;
 
-      while (challengeCount < maxChallenges && defenderCache.length > 0 && !challengeError) {
-        const target = defenderCache[0];
-        try {
-          const attackResult = await tokenStore.sendClubAttack(tokenId, {
-            nodeId: target.nodeId,
-            targetId: target.roleId,
-            challengeCnt: target.challengeCnt,
-            failCnt: target.failCnt,
-            useItem: false,
-            teamSetParams: {
-              lordWeaponId: weaponId,
-              petUId: petUId,
-              battleTeam: battleTeam
+      // 步骤3-5：只在未跳过时执行
+      if (!skipBattle) {
+        const defenders = oppoData.defenders || {};
+        const defenderList = [];
+
+        // 步骤3：筛选对手（challengeCnt < 5，按 failCnt 升序，取前10个），并存入缓存
+        for (const [nodeId, def] of Object.entries(defenders)) {
+          if (def.challengeCnt < 5) {
+            defenderList.push({
+              nodeId: parseInt(nodeId),
+              roleId: def.roleId,
+              challengeCnt: def.challengeCnt || 0,
+              failCnt: def.failCnt || 0,
+              name: def.name || ''
+            });
+          }
+        }
+
+        defenderList.sort((a, b) => a.failCnt - b.failCnt);
+        const defenderCache = defenderList.slice(0, 3);
+
+        // 步骤4：fight_startlevel 获取当前阵容
+        const fightResult = await tokenStore.sendFightStartLevel(tokenId, {});
+        const battleData = fightResult?.battleData?.leftTeam;
+        if (!battleData) throw new Error('未获取到战斗数据');
+
+        const team = battleData.team || {};
+        weaponId = battleData.weaponId;
+        petUId = battleData.petUId;
+        battleTeam = {};
+        for (let pos = 0; pos <= 4; pos++) {
+          if (team[pos]) {
+            battleTeam[pos] = team[pos].id;
+          }
+        }
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // 步骤5：循环挑战（最多10次），最多跳转1次
+        const maxChallenges = 10;
+        const maxJump = 1;
+        let jumpCount = 0;
+        let stopChallenge = false;
+        let needAttackMonster = false;
+
+        // 封装循环挑战逻辑
+        const runChallengeLoop = async () => {
+          let count = 0;
+          while (count < maxChallenges && defenderCache.length > 0 && !stopChallenge && !needAttackMonster) {
+            const target = defenderCache[0];
+            const defenderWithNodeId = defenderList.find(d => d.roleId === target.roleId);
+            if (!defenderWithNodeId) {
+              defenderCache.shift();
+              continue;
             }
+
+            try {
+              const attackResult = await tokenStore.sendClubAttack(tokenId, {
+                nodeId: defenderWithNodeId.nodeId,
+                targetId: target.roleId,
+                challengeCnt: target.challengeCnt,
+                failCnt: target.failCnt,
+                useItem: false,
+                teamSetParams: {
+                  lordWeaponId: weaponId,
+                  petUId: petUId,
+                  battleTeam: battleTeam
+                }
+              });
+
+              count++;
+              const resultStr = JSON.stringify(attackResult || {});
+
+              // 检查是否"今日成功挑战次数已用完"
+              if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
+                stopChallenge = true;
+                break;
+              }
+
+              // 检查是否"今日挑战次数已用完"
+              if (resultStr.includes('今日挑战次数已用完')) {
+                needAttackMonster = true;
+                break;
+              }
+
+              defenderCache.shift();
+              await new Promise(resolve => setTimeout(resolve, 800));
+            } catch (e) {
+              const errorMsg = e.message || String(e);
+              // 检查是否"今日成功挑战次数已用完"
+              if (errorMsg.includes('13000090') || errorMsg.includes('今日成功挑战次数已用完') || errorMsg.includes('请明日再来')) {
+                stopChallenge = true;
+                break;
+              }
+              // 检查是否"今日挑战次数已用完"
+              if (errorMsg.includes('今日挑战次数已用完')) {
+                needAttackMonster = true;
+                break;
+              }
+              logWithPrefix({
+                time: new Date().toLocaleTimeString(),
+                message: `${token.name} 挑战${target.name}异常: ${errorMsg}，继续挑战下一个`,
+                type: "warning",
+              });
+              defenderCache.shift();
+              continue;
+            }
+          }
+          return count;
+        };
+
+        // 第一次循环挑战
+        challengeCount = await runChallengeLoop();
+
+        logWithPrefix({
+          time: new Date().toLocaleTimeString(),
+          message: `${token.name} 步骤5：第一轮循环挑战完成，共执行${challengeCount}次`,
+          type: "info",
+        });
+
+        // 清空缓存
+        defenderCache.length = 0;
+
+        // 如果遇到"今日成功挑战次数已用完"，直接结束步骤5
+        if (stopChallenge) {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤5：今日成功挑战次数已用完，结束步骤5`,
+            type: "info",
+          });
+        }
+        // 如果遇到"今日挑战次数已用完"，执行club_getinfo + club_attackmonster
+        else if (needAttackMonster) {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤5：执行club_getinfo获取taskProgress`,
+            type: "info",
           });
 
-          challengeCount++;
-          const resultStr = JSON.stringify(attackResult || {});
-          
-          if (resultStr.includes('今日成功挑战次数已用完') || resultStr.includes('请明日再来')) {
-            challengeLimitReached = true;
-            break;
-          }
+          const newClubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+          const newSiegeData = newClubInfo?.siege || {};
+          const newTaskProgress = newSiegeData.taskProgress || {};
+          const task4Value = newTaskProgress[4] || 0;
 
-          if (resultStr.includes('failCnt')) {
-            failCount++;
-            if (failCount >= maxFailCount) {
-              defenderCache.shift();
-              break;
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} taskProgress[4]=${task4Value}，需要执行${3 - task4Value}次club_attackmonster`,
+            type: "info",
+          });
+
+          // 执行 3-task4Value 次 club_attackmonster
+          const remainingChallenges = 3 - task4Value;
+          if (remainingChallenges > 0) {
+            for (let i = 0; i < remainingChallenges; i++) {
+              try {
+                await tokenStore.sendClubAttackMonster(tokenId, {
+                  useItem: false,
+                  teamSetParams: {
+                    lordWeaponId: weaponId,
+                    petUId: petUId,
+                    battleTeam: battleTeam
+                  }
+                });
+                logWithPrefix({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} club_attackmonster成功 (${i + 1}/${remainingChallenges})`,
+                  type: "success",
+                });
+              } catch (e) {
+                logWithPrefix({
+                  time: new Date().toLocaleTimeString(),
+                  message: `${token.name} club_attackmonster失败: ${e.message || e}`,
+                  type: "warning",
+                });
+              }
+              await new Promise(resolve => setTimeout(resolve, 800));
             }
           }
+        }
+        // 都没有这两个提示，跳转循环挑战（最多1次）
+        else if (jumpCount < maxJump) {
+          jumpCount++;
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤5：都没有提示，跳转第${jumpCount}次循环挑战`,
+            type: "info",
+          });
 
-          defenderCache.shift();
+          // 重新获取对手列表
+          const refreshInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+          const refreshOppoData = refreshInfo?.club?.oppoMap?.[oppoKey];
+          if (refreshOppoData) {
+            const refreshDefenders = refreshOppoData.defenders || {};
+            for (const [nodeId, def] of Object.entries(refreshDefenders)) {
+              if (def.challengeCnt < 5) {
+                defenderList.push({
+                  nodeId: parseInt(nodeId),
+                  roleId: def.roleId,
+                  challengeCnt: def.challengeCnt || 0,
+                  failCnt: def.failCnt || 0,
+                  name: def.name || ''
+                });
+              }
+            }
+            defenderList.sort((a, b) => a.failCnt - b.failCnt);
+            defenderCache.push(...defenderList.slice(0, 3));
+          }
+
+          // 第二轮循环挑战
+          challengeCount = await runChallengeLoop();
+
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤5：第二轮循环挑战完成，共执行${challengeCount}次`,
+            type: "info",
+          });
+
+          // 清空缓存
+          defenderCache.length = 0;
+
+          // 第二轮循环后，如果还是没有这两个提示，执行club_getinfo + club_attackmonster
+          if (!stopChallenge && !needAttackMonster) {
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 步骤5：第二轮循环后仍无提示，执行club_getinfo获取taskProgress`,
+              type: "info",
+            });
+
+            const finalInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+            const finalSiegeData = finalInfo?.siege || {};
+            const finalTaskProgress = finalSiegeData.taskProgress || {};
+            const task4Value = finalTaskProgress[4] || 0;
+
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} taskProgress[4]=${task4Value}，需要执行${3 - task4Value}次club_attackmonster`,
+              type: "info",
+            });
+
+            // 执行 3-task4Value 次 club_attackmonster
+            const remainingChallenges = 3 - task4Value;
+            if (remainingChallenges > 0) {
+              for (let i = 0; i < remainingChallenges; i++) {
+                try {
+                  await tokenStore.sendClubAttackMonster(tokenId, {
+                    useItem: false,
+                    teamSetParams: {
+                      lordWeaponId: weaponId,
+                      petUId: petUId,
+                      battleTeam: battleTeam
+                    }
+                  });
+                  logWithPrefix({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} club_attackmonster成功 (${i + 1}/${remainingChallenges})`,
+                    type: "success",
+                  });
+                } catch (e) {
+                  logWithPrefix({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} club_attackmonster失败: ${e.message || e}`,
+                    type: "warning",
+                  });
+                }
+                await new Promise(resolve => setTimeout(resolve, 800));
+              }
+            }
+          }
+          // 第二轮遇到"今日挑战次数已用完"
+          else if (needAttackMonster) {
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} 步骤5：第二轮遇到"今日挑战次数已用完"，执行club_getinfo获取taskProgress`,
+              type: "info",
+            });
+
+            const finalInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+            const finalSiegeData = finalInfo?.siege || {};
+            const finalTaskProgress = finalSiegeData.taskProgress || {};
+            const task4Value = finalTaskProgress[4] || 0;
+
+            logWithPrefix({
+              time: new Date().toLocaleTimeString(),
+              message: `${token.name} taskProgress[4]=${task4Value}，需要执行${3 - task4Value}次club_attackmonster`,
+              type: "info",
+            });
+
+            // 执行 3-task4Value 次 club_attackmonster
+            const remainingChallenges = 3 - task4Value;
+            if (remainingChallenges > 0) {
+              for (let i = 0; i < remainingChallenges; i++) {
+                try {
+                  await tokenStore.sendClubAttackMonster(tokenId, {
+                    useItem: false,
+                    teamSetParams: {
+                      lordWeaponId: weaponId,
+                      petUId: petUId,
+                      battleTeam: battleTeam
+                    }
+                  });
+                  logWithPrefix({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} club_attackmonster成功 (${i + 1}/${remainingChallenges})`,
+                    type: "success",
+                  });
+                } catch (e) {
+                  logWithPrefix({
+                    time: new Date().toLocaleTimeString(),
+                    message: `${token.name} club_attackmonster失败: ${e.message || e}`,
+                    type: "warning",
+                  });
+                }
+                await new Promise(resolve => setTimeout(resolve, 800));
+              }
+            }
+          }
+        }
+      }
+
+      // 周4额外操作：升级、领取奖励、抽奖
+      if (dayOfWeek === 4) {
+        // 执行club_upgradelevel，出错也继续
+        try {
+          await tokenStore.sendClubUpgradeLevel(tokenId, {});
           await new Promise(resolve => setTimeout(resolve, 800));
         } catch (e) {
-          challengeError = true;
-          break;
+          // 出错也继续
         }
-      }
 
-      // 清空缓存
-      defenderCache.length = 0;
+        // 执行club_claimlevelreward 1次，出错也继续
+        try {
+          await tokenStore.sendClubClaimLevelReward(tokenId, {});
+          await new Promise(resolve => setTimeout(resolve, 800));
+        } catch (e) {
+          // 出错也继续
+        }
 
-      // 步骤6：执行空投战斗3次（如果未达到挑战上限）
-      if (!challengeError && !challengeLimitReached) {
-        for (let fightCount = 1; fightCount <= 3; fightCount++) {
+        // 执行club_draw 3次，出错跳过剩余
+        for (let drawCount = 1; drawCount <= 3; drawCount++) {
           try {
-            await tokenStore.sendClubAttackMonster(tokenId, {
-              useItem: false,
-              teamSetParams: {
-                lordWeaponId: weaponId,
-                petUId: petUId,
-                battleTeam: battleTeam
-              }
-            });
+            await tokenStore.sendClubDraw(tokenId, {});
             await new Promise(resolve => setTimeout(resolve, 800));
           } catch (e) {
             break;
@@ -3248,13 +3872,71 @@ export function createTasksItem(deps) {
         }
       }
 
-      addLog({
+      // 步骤7：执行club_getinfo获取完成任务和领取奖励情况，根据情况领取未领取任务奖励
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 步骤7：执行club_getinfo获取任务完成情况`,
+        type: "info",
+      });
+
+      const finalClubInfo = await tokenStore.sendClubGetInfo(tokenId, {});
+      const finalSiegeData = finalClubInfo?.siege || {};
+      const finalTaskProgress = finalSiegeData.taskProgress || {};
+      const finalTaskClaimedMap = finalSiegeData.taskClaimedMap || {};
+
+      // 构建需要领取的confId列表
+      // taskProgress中4对应confId 1，5-13一一对应confId 5-13
+      // taskClaimedMap中1对应任务4，5-13一一对应
+      const confIdsToClaim = [];
+
+      // 检查任务4（对应confId 1）
+      if (finalTaskProgress[4] !== undefined && finalTaskProgress[4] !== 0) {
+        if (!finalTaskClaimedMap[1]) {
+          confIdsToClaim.push(1);
+        }
+      }
+
+      // 检查任务5-13（对应confId 5-13）
+      for (let taskKey = 5; taskKey <= 13; taskKey++) {
+        if (finalTaskProgress[taskKey] !== undefined && finalTaskProgress[taskKey] !== 0) {
+          if (!finalTaskClaimedMap[taskKey]) {
+            confIdsToClaim.push(taskKey);
+          }
+        }
+      }
+
+      logWithPrefix({
+        time: new Date().toLocaleTimeString(),
+        message: `${token.name} 步骤7：需要领取的confId: [${confIdsToClaim.join(',')}]`,
+        type: "info",
+      });
+
+      // 依次领取未领取的任务奖励
+      for (const confId of confIdsToClaim) {
+        try {
+          await tokenStore.sendClubTaskClaim(tokenId, { confId });
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤7：领取confId=${confId}成功`,
+            type: "success",
+          });
+        } catch (e) {
+          logWithPrefix({
+            time: new Date().toLocaleTimeString(),
+            message: `${token.name} 步骤7：领取confId=${confId}失败: ${e.message || e}`,
+            type: "warning",
+          });
+        }
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 篝火营地战斗完成，挑战${challengeCount}次`,
         type: "success",
       });
     } catch (error) {
-      addLog({
+      logWithPrefix({
         time: new Date().toLocaleTimeString(),
         message: `${token.name} 篝火营地战斗失败: ${error.message}`,
         type: "error",

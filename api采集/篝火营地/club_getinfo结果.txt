@@ -1,0 +1,147 @@
+logger.js:76 [11:31:13] [GAME] [WARN] 收到未处理事件: club_getinforesp TokenID: 802e298ead6e58d08e8728d33b9d11e9 
+{tokenId: '802e298ead6e58d08e8728d33b9d11e9', body: {…}, message: ProtoMsg, client: XyzwWebSocketClient, gameData: RefImpl}
+body
+: 
+club
+: 
+{legionId: 7413993, power: 298097098047, phase: '260921', dan: 4, lastDan: 5, …}
+siege
+: 
+attackMap
+: 
+260901
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260902
+: 
+{attackCnt: 7, aSuccessCnt: 3}
+260903
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260908
+: 
+{attackCnt: 4, aSuccessCnt: 3}
+260909
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260910
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260915
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260916
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260917
+: 
+{attackCnt: 7, aSuccessCnt: 3}
+260922
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+260923
+: 
+{attackCnt: 3, aSuccessCnt: 3}
+[[Prototype]]
+: 
+Object
+boxId
+: 
+4
+exp
+: 
+0
+level
+: 
+2
+levelReward
+: 
+{1: 1789644407, 2: 1789644407}
+poolRewards
+: 
+(4) [{…}, {…}, {…}, {…}]
+roleId
+: 
+115765922
+score
+: 
+162
+seasonId
+: 
+1
+settleTime
+: 
+0
+signUpMap
+: 
+{260831: 7413993, 260907: 7413993, 260914: 7413993, 260921: 7413993}
+talentResetTime
+: 
+1787846400
+taskClaimedMap
+: 
+1
+: 
+1790129342
+[[Prototype]]
+: 
+Object
+taskProgress
+: 
+4
+: 
+3
+5
+: 
+1
+6
+: 
+1
+7
+: 
+1
+8
+: 
+0
+9
+: 
+0
+10
+: 
+0
+11
+: 
+0
+12
+: 
+0
+13
+: 
+0
+[[Prototype]]
+: 
+Object
+taskResetTime
+: 
+1790092800
+[[Prototype]]
+: 
+Object
+[[Prototype]]
+: 
+Object
+client
+: 
+XyzwWebSocketClient {url: 'wss://xxz-xyzw.hortorgames.com/agent?p=%7B%22roleT…4265278%2C%22isRestore%22%3A0%7D&e=x&lang=chinese', utils: {…}, enc: {…}, socket: WebSocket, ack: 4, …}
+gameData
+: 
+RefImpl {dep: Dep, __v_isRef: true, __v_isShallow: false, _rawValue: {…}, _value: Proxy(Object)}
+message
+: 
+ProtoMsg {_raw: {…}, _rawData: {…}, _data: {…}, _t: undefined, _sendMsg: undefined, …}
+tokenId
+: 
+"802e298ead6e58d08e8728d33b9d11e9"
+[[Prototype]]
+: 
+Object

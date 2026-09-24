@@ -63,6 +63,11 @@
         <DreamAssistantCard 
           :selected-token-id="selectedTokenId"
         />
+
+        <!-- 四圣活动卡片 -->
+        <FourSaintsActivityCard 
+          :selected-token-id="selectedTokenId"
+        />
       </div>
 
       <!-- Token 选择区域 -->
@@ -132,6 +137,7 @@ import HeroManagementCard from '@/diy/CommonTasks/HeroManagementCard.vue'
 import WeirdTowerCard from '@/diy/CommonTasks/WeirdTowerCard.vue'
 import SaltFieldCard from '@/diy/CommonTasks/SaltFieldCard.vue'
 import DreamAssistantCard from '@/diy/CommonTasks/DreamAssistantCard.vue'
+import FourSaintsActivityCard from '@/diy/CommonTasks/FourSaintsActivity.vue'
 
 const router = useRouter()
 const tokenStore = useTokenStore()

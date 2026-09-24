@@ -1,0 +1,91 @@
+[11:22:13] [GAME] [VERBOSE] ProtoMsg Blob消息，使用rawData: 
+{role: {…}, reward: Array(4), club: {…}, siege: {…}, battleData: {…}, …}
+addScore
+: 
+3
+battleData
+: 
+id
+: 
+1790133732983
+leftTeam
+: 
+{roleId: 460394822, power: 3776819889, tapAttack: 77885, team: {…}, name: '相符50-3', …}
+maxRound
+: 
+30
+mode
+: 
+41
+randomSeed
+: 
+8245
+result
+: 
+{id: 1790133732983, isWin: true, seed: 8245, totalFrame: 1354, version: 240517, …}
+rightTeam
+: 
+{roleId: 475592562, power: 8667980094, tapAttack: 77885, team: {…}, name: '枫叶⁷⁵⁰\n', …}
+version
+: 
+240517
+[[Prototype]]
+: 
+Object
+club
+: 
+{weekScore: 422, dayScore: 180, scoreMap: {…}, members: {…}, oppoMap: {…}}
+reward
+: 
+(4) [{…}, {…}, {…}, {…}]
+role
+: 
+diamond
+: 
+379111
+freeDiamond
+: 
+379111
+items
+: 
+1014
+: 
+{quantity: 626305}
+41003
+: 
+{quantity: 445}
+41004
+: 
+{quantity: 23}
+[[Prototype]]
+: 
+Object
+[[Prototype]]
+: 
+Object
+siege
+: 
+attackMap
+: 
+260923
+: 
+aSuccessCnt
+: 
+3
+attackCnt
+: 
+3
+[[Prototype]]
+: 
+Object
+[[Prototype]]
+: 
+Object
+score
+: 
+49
+taskProgress
+: 
+4
+: 
+2

@@ -14,97 +14,20 @@
       <div class="account-maintenance">
         <!-- 操作按钮区域 -->
         <CustomizedCard mode="container">
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchMayDayExchange ? '批量五一万能兑换中...' : '批量五一万能兑换'"
-            @button-click="handleBatchMayDayExchange"
-            :disabled="isBatchMayDayExchange"
-            :loading="isBatchMayDayExchange"
+          <CustomizedCard
+            mode="execution-range"
+            name="执行范围"
+            v-model:inputValue="executionTokens"
+            placeholder="留空执行全部，或输入 1-20 或 1,2,3"
+            @update:inputValue="handleExecutionTokensInput"
           />
-          <CustomizedCard 
-            mode="button"
-            :name="isUsingTorch ? '批量使用火把中...' : '批量使用火把'"
-            @button-click="handleUseTorch"
-            :disabled="isUsingTorch"
-            :loading="isUsingTorch"
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBuyingWrench ? '黑市购买扳手中...' : '黑市购买扳手'"
-            @button-click="handleBuyWrench"
-            :disabled="isBuyingWrench"
-            :loading="isBuyingWrench"
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchClaimingBoxRewards ? '批量领取宝箱奖励中...' : '批量领取宝箱奖励'"
-            @button-click="handleBatchClaimBoxRewards"
-            :disabled="isBatchClaimingBoxRewards"
-            :loading="isBatchClaimingBoxRewards"
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchClaimingEmails ? '批量领取邮件中...' : '批量领取邮件'"
-            @button-click="handleBatchClaimEmails"
-            :disabled="isBatchClaimingEmails"
-            :loading="isBatchClaimingEmails"
-          />
-          <CustomizedCard 
+          <CustomizedCard
             mode="name-input"
             name="基准宝箱分"
             v-model:inputValue="baseBoxScore"
             placeholder="输入基准宝箱分"
           />
-          <CustomizedCard 
-            mode="execution-range" 
-            name="执行范围" 
-            v-model:inputValue="executionTokens" 
-            placeholder="留空执行全部，或输入 1-20 或 1,2,3" 
-            @update:inputValue="handleExecutionTokensInput" 
-          />
-          <CustomizedCard 
-            mode="button-number-input" 
-            name="执行间隔(ms)" 
-            v-model:inputValue="commandDelay" 
-            placeholder="输入间隔毫秒" 
-            @update:inputValue="handleCommandDelayInput" 
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchUpgradingEquipment ? '批量升级装备中...' : '批量升级装备'"
-            @button-click="handleBatchUpgradeEquipment"
-            :disabled="isBatchUpgradingEquipment"
-            :loading="isBatchUpgradingEquipment"
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchUpgradingHangup ? '批量升级挂机中...' : '批量升级挂机'"
-            @button-click="handleBatchUpgradeHangup"
-            :disabled="isBatchUpgradingHangup"
-            :loading="isBatchUpgradingHangup"
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchClaimingHangupReward ? '批量领取推图层数奖励中...' : '批量领取推图层数奖励'"
-            @button-click="handleBatchClaimHangupReward"
-            :disabled="isBatchClaimingHangupReward"
-            :loading="isBatchClaimingHangupReward"
-          />
-          <CustomizedCard 
-            mode="button"
-            :name="isBatchRenaming ? '批量重命名中...' : '批量重命名'"
-            @button-click="handleBatchRename"
-            :disabled="isBatchRenaming"
-            :loading="isBatchRenaming"
-          />
-          <CustomizedCard 
-            mode="button"
-            name="导出详情"
-            @button-click="handleExportDetails"
-            :disabled="isExportingDetails"
-            :loading="isExportingDetails"
-          />
-          <CustomizedCard 
+          <CustomizedCard
             mode="button-with-select"
             :button-text="isBatchBoxWeekRunning ? '批量宝箱周中...' : '批量宝箱周'"
             @button-click="handleBatchBoxWeek"
@@ -115,28 +38,75 @@
             :disabled="isAnyOperationRunning || !isBoxWeekAvailable"
             :loading="isBatchBoxWeekRunning"
           />
-          <CustomizedCard 
-            mode="button-switch"
-            :name="isBatchRecruitWeekRunning ? '批量招募周中...' : '批量招募周'"
-            :switch-value="enableRecruitWeek"
-            @update:switch-value="(val) => enableRecruitWeek = val"
-            @button-click="handleBatchRecruitWeek"
-            :disabled="isBatchRecruitWeekRunning || !isRecruitWeekAvailable"
-            :loading="isBatchRecruitWeekRunning"
+          <CustomizedCard
+            mode="button"
+            :name="isUsingTorch ? '批量使用火把中...' : '批量使用火把'"
+            @button-click="handleUseTorch"
+            :disabled="isUsingTorch"
+            :loading="isUsingTorch"
           />
-          <CustomizedCard 
+          <CustomizedCard
+            mode="button"
+            :name="isBatchClaimingEmails ? '批量领取邮件中...' : '批量领取邮件'"
+            @button-click="handleBatchClaimEmails"
+            :disabled="isBatchClaimingEmails"
+            :loading="isBatchClaimingEmails"
+          />
+          <CustomizedCard
+            mode="button-number-input"
+            name="执行间隔(ms)"
+            v-model:inputValue="commandDelay"
+            placeholder="输入间隔毫秒"
+            @update:inputValue="handleCommandDelayInput"
+          />
+          <CustomizedCard
+            mode="button"
+            :name="isBatchUpgradingEquipment ? '批量升级装备中...' : '批量升级装备'"
+            @button-click="handleBatchUpgradeEquipment"
+            :disabled="isBatchUpgradingEquipment"
+            :loading="isBatchUpgradingEquipment"
+          />
+          <CustomizedCard
+            mode="button"
+            :name="isBatchUpgradingHangup ? '批量升级挂机中...' : '批量升级挂机'"
+            @button-click="handleBatchUpgradeHangup"
+            :disabled="isBatchUpgradingHangup"
+            :loading="isBatchUpgradingHangup"
+          />
+          <CustomizedCard
+            mode="button"
+            :name="isBatchClaimingHangupReward ? '批量领取推图层数奖励中...' : '批量领取推图层数奖励'"
+            @button-click="handleBatchClaimHangupReward"
+            :disabled="isBatchClaimingHangupReward"
+            :loading="isBatchClaimingHangupReward"
+          />
+          <CustomizedCard
+            mode="button"
+            :name="isBatchRenaming ? '批量重命名中...' : '批量重命名'"
+            @button-click="handleBatchRename"
+            :disabled="isBatchRenaming"
+            :loading="isBatchRenaming"
+          />
+          <CustomizedCard
+            mode="button"
+            name="导出详情"
+            @button-click="handleExportDetails"
+            :disabled="isExportingDetails"
+            :loading="isExportingDetails"
+          />
+          <CustomizedCard
             mode="button"
             :name="isExportingTeam ? '导出阵容中...' : '导出阵容'"
             @button-click="handleExportTeam"
             :disabled="isExportingTeam"
             :loading="isExportingTeam"
           />
-          <CustomizedCard 
+          <CustomizedCard
             mode="button"
-            :name="isBatchAgreeFriendRunning ? '批量同意好友中...' : '批量同意好友'"
-            @button-click="handleBatchAgreeFriend"
-            :disabled="isBatchAgreeFriendRunning"
-            :loading="isBatchAgreeFriendRunning"
+            :name="isBatchPetUpgrade ? '批量宠物升级中...' : '批量宠物升级'"
+            @button-click="handleBatchPetUpgrade"
+            :disabled="isBatchPetUpgrade"
+            :loading="isBatchPetUpgrade"
           />
         </CustomizedCard>
       </div>
@@ -248,7 +218,6 @@ const props = defineProps({
 
 // 操作状态
 const isUsingTorch = ref(false)
-const isBuyingWrench = ref(false)
 const isBatchUpgradingEquipment = ref(false)
 const isBatchUpgradingHangup = ref(false)
 const isBatchClaimingHangupReward = ref(false)
@@ -257,20 +226,16 @@ const isRecruitWeekRunning = ref(false)
 const isExportingDetails = ref(false)
 const isBatchBoxWeekRunning = ref(false)
 const isBatchBoxWeekCancelled = ref(false)
-const isBatchRecruitWeekRunning = ref(false)
-const enableRecruitWeek = ref(false)
 const boxWeekRewardType = ref('万能')
 const boxWeekRewardOptions = [
   { label: '万能', value: '万能' },
   { label: '珍珠', value: '珍珠' }
 ]
-const isBatchAgreeFriendRunning = ref(false)
 
 // 计算是否有任何操作正在运行
 const isAnyOperationRunning = computed(() => {
-  return isBatchMayDayExchange.value || 
-         isUsingTorch.value || isBuyingWrench.value || 
-         isBatchBoxWeekRunning.value || isBatchRecruitWeekRunning.value ||
+  return isUsingTorch.value ||
+         isBatchBoxWeekRunning.value ||
          isBatchUpgradingEquipment.value || isBatchUpgradingHangup.value ||
          isBatchClaimingHangupReward.value || isBatchRenaming.value || isRecruitWeekRunning.value ||
          isExportingDetails.value
@@ -312,45 +277,13 @@ const isBoxWeekAvailable = computed(() => {
   return weekInCycle === 0
 })
 
-// 计算招募周是否可用
-// 招募周从2026-07-17 12:00开始（宝箱周后2周），每3周循环一次（宝箱周→黑市周→招募周→宝箱周...）
-// 每周从周五12:00到周四24:00
-const isRecruitWeekAvailable = computed(() => {
-  const now = new Date()
-  
-  // 基准日期：2026-07-03 12:00（第一个宝箱周的周五）
-  const baseDate = new Date(2026, 6, 3, 12, 0, 0) // 月份从0开始，6表示7月
-  
-  // 找到当前周的周五（从当前时间往前找最近的周五）
-  const currentDay = now.getDay() // 0=周日, 5=周五
-  const daysSinceFriday = (currentDay + 2) % 7 // 计算距离上一个周五的天数
-  const currentFriday = new Date(now)
-  currentFriday.setDate(now.getDate() - daysSinceFriday)
-  currentFriday.setHours(12, 0, 0, 0)
-  
-  // 如果还没到周五12点，使用上一个周五
-  if (now < currentFriday) {
-    currentFriday.setDate(currentFriday.getDate() - 7)
-  }
-  
-  // 计算距离基准日期的周数
-  const weeksDiff = Math.round((currentFriday - baseDate) / (7 * 24 * 60 * 60 * 1000))
-  
-  // 处理负数取模：((a % n) + n) % n
-  const weekInCycle = ((weeksDiff % 3) + 3) % 3
-  
-  // 招募周是循环中的第2周（宝箱周=0，黑市周=1，招募周=2）
-  return weekInCycle === 2
-})
-
 // 新增状态
-const isBatchClaimingBoxRewards = ref(false)
 const isBatchClaimingEmails = ref(false)
-const baseBoxScore = ref('')
+const baseBoxScore = ref('30000')
 
 // 新功能状态
 const isExportingTeam = ref(false)
-const isBatchMayDayExchange = ref(false)
+const isBatchPetUpgrade = ref(false)
 
 // 执行范围
 const executionTokens = ref('')
@@ -602,117 +535,6 @@ const handleUseTorch = async () => {
     })
   } finally {
     isUsingTorch.value = false
-  }
-}
-
-// 黑市购买扳手
-const handleBuyWrench = async () => {
-  const tokenIndices = parseTokenRange(executionTokens.value)
-  const targetTokens = getTargetTokens(tokenIndices)
-  
-  if (targetTokens.length === 0) {
-    message.warning('没有可用的Token')
-    return
-  }
-  
-  const rangeText = tokenIndices === null ? '全部' : `范围${executionTokens.value}`
-  
-  try {
-    isBuyingWrench.value = true
-    
-    message.info(`开始黑市购买扳手（${rangeText}），共${targetTokens.length}个Token...`)
-    
-    const results = await connectionPool.batchOperate(
-      targetTokens,
-      async (token, globalIndex) => {
-        try {
-          const tokenIndex = globalIndex + 1
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 开始黑市购买扳手...`)
-          
-          let successCount = 0
-          
-          // 执行4次黑市购买扳手
-          for (let i = 0; i < 4; i++) {
-            try {
-              await tokenStore.sendMessageWithPromise(
-                token.id,
-                'activity_buystoregoods',
-                { activityId: 9, goodsIndex: 9, buyNum: 1 },
-                5000
-              )
-              await waitCommandDelay()
-              successCount++
-            } catch (error) {
-              console.error(`第${i + 1}次黑市购买扳手失败:`, error)
-              // 如果购买失败，跳过剩余次数
-              if (error.message && error.message.includes('服务器错误')) {
-                message.warning(`${token.name} - 第${i + 1}次黑市购买扳手失败: ${error.message}，跳过剩余次数`)
-                break
-              }
-            }
-          }
-          
-          message.success(`[序号${tokenIndex}] ${token.name || token.id} 黑市购买扳手完成：成功${successCount}次`)
-
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '黑市购买扳手',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'success',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]黑市购买扳手完成：成功${successCount}次`
-          })
-
-          return { success: true, tokenId: token.id, successCount }
-        } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 黑市购买扳手失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 黑市购买扳手失败: ${error.message}`)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '黑市购买扳手',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'error',
-            message: `${globalIndex + 1}、黑市购买扳手失败: ${error.message}`
-          })
-          return { success: false, tokenId: token.id, error: error.message }
-        }
-      },
-      {
-        batchSize: 5,
-        delayBetweenBatches: 1000
-      }
-    )
-    
-    // 统计结果
-    const successCount = results.filter(r => r.success).length
-    const failureCount = results.filter(r => !r.success).length
-    
-    message.success(`黑市购买扳手完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
-    
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '黑市购买扳手',
-      status: 'success',
-      message: `黑市购买扳手完成：成功 ${successCount} 个，失败 ${failureCount} 个`
-    })
-    
-  } catch (error) {
-    console.error('黑市购买扳手失败:', error)
-    message.error(`黑市购买扳手失败: ${error.message}`)
-    
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '黑市购买扳手',
-      status: 'error',
-      message: `黑市购买扳手失败: ${error.message}`
-    })
-  } finally {
-    isBuyingWrench.value = false
   }
 }
 
@@ -1480,94 +1302,6 @@ const handleBatchRename = async () => {
     })
   } finally {
     isBatchRenaming.value = false
-  }
-}
-
-// 批量同意好友
-const handleBatchAgreeFriend = async () => {
-  const tokenIndices = parseTokenRange(executionTokens.value)
-  const targetTokens = getTargetTokens(tokenIndices)
-
-  if (targetTokens.length === 0) {
-    message.warning('没有可用的Token')
-    return
-  }
-
-  const rangeText = tokenIndices === null ? '全部' : `范围${executionTokens.value}`
-
-  try {
-    isBatchAgreeFriendRunning.value = true
-
-    message.info(`开始批量同意好友（${rangeText}），共${targetTokens.length}个Token...`)
-
-    const results = await connectionPool.batchOperate(
-      targetTokens,
-      async (token, globalIndex) => {
-        try {
-          const tokenIndex = getTokenIndex(token)
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 开始同意好友...`)
-
-          // 执行批量同意好友
-          await tokenStore.sendFriendBatchAgree(token.id, {})
-          await waitCommandDelay()
-
-          message.success(`[序号${tokenIndex}] ${token.name || token.id} - 同意好友成功`)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量同意好友',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'success',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]同意好友成功`
-          })
-          return { success: true, tokenId: token.id }
-        } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 同意好友失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 同意好友失败: ${error.message}`)
-          const tokenIndex = getTokenIndex(token)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量同意好友',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'error',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]同意好友失败: ${error.message}`
-          })
-          return { success: false, tokenId: token.id, error: error.message }
-        }
-      },
-      {
-        batchSize: 5,
-        delayBetweenBatches: 1000
-      }
-    )
-
-    const successCount = results.filter(r => r.success).length
-    const failureCount = results.filter(r => !r.success).length
-
-    message.success(`批量同意好友完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量同意好友',
-      status: 'success',
-      message: `【批量】批量同意好友完成，成功 ${successCount} 个，失败 ${failureCount} 个`
-    })
-
-  } catch (error) {
-    console.error('批量同意好友失败:', error)
-    message.error(`批量同意好友失败: ${error.message || '未知错误'}`)
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量同意好友',
-      status: 'error',
-      message: `【批量】批量同意好友失败: ${error.message || '未知错误'}`
-    })
-  } finally {
-    isBatchAgreeFriendRunning.value = false
   }
 }
 
@@ -3203,144 +2937,6 @@ const handleBatchStoryTeamInternal = async () => {
   }
 }
 
-// 批量五一万能兑换
-const handleBatchMayDayExchange = async () => {
-  const tokenIndices = connectionPool.parseTokenRange(executionTokens.value)
-  const allTokens = [...tokenStore.gameTokens].sort((a, b) => {
-    const nameA = (a.name || a.id || '').toLowerCase()
-    const nameB = (b.name || b.id || '').toLowerCase()
-    return nameA.localeCompare(nameB)
-  })
-  
-  let targetTokens
-  if (tokenIndices === null) {
-    targetTokens = allTokens
-  } else {
-    targetTokens = tokenIndices.map(i => allTokens[i - 1]).filter(Boolean)
-  }
-  
-  if (targetTokens.length === 0) {
-    message.warning('执行范围内没有有效的Token')
-    return
-  }
-  
-  const rangeText = executionTokens.value ? `范围${executionTokens.value}` : "全部"
-  message.info(`开始批量五一万能兑换（${rangeText}），共${targetTokens.length}个Token...`)
-  
-  logStore.addLog({
-    page: 'fish-helper',
-    cardType: '养号',
-    operation: '批量五一万能兑换',
-    status: 'info',
-    message: `开始批量五一万能兑换（${rangeText}），共${targetTokens.length}个Token`
-  })
-  
-  isBatchMayDayExchange.value = true
-  
-  try {
-    const results = await connectionPool.batchOperate(
-      targetTokens,
-      async (token, globalIndex) => {
-        try {
-          const tokenIndex = globalIndex + 1
-          message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在执行五一万能兑换...`)
-          
-          const exchangeList = [
-            { goodsId: 260501424, count: 1 },
-            { goodsId: 260501427, count: 1 },
-            { goodsId: 260501428, count: 2 },
-            { goodsId: 260501432, count: 2 }
-          ]
-          
-          for (const exchange of exchangeList) {
-            for (let i = 0; i < exchange.count; i++) {
-              try {
-                await tokenStore.sendActivityExchange(token.id, {
-                  activityId: 2605014,
-                  goodsId: exchange.goodsId,
-                  quantity: 1
-                })
-              } catch (error) {
-                // 执行失败也不停止
-              }
-              await waitCommandDelay()
-            }
-          }
-          
-          message.success(`[${tokenIndex}] ${token.name || token.id} 五一万能兑换成功`)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量五一万能兑换',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'success',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]五一万能兑换成功`
-          })
-          
-          return { success: true }
-        } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 五一万能兑换失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 五一万能兑换失败：${error.message || error}`)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量五一万能兑换',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'error',
-            message: `${globalIndex + 1}、五一万能兑换失败：${error.message || error}`
-          })
-          return { success: false, error: error.message || error }
-        }
-      },
-      {
-        batchSize: 20,
-        delayBetween: 500,
-        onProgress: (progress) => {
-          if (progress.type === 'batch-start') {
-            message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`)
-          } else if (progress.type === 'token-start') {
-            message.info(`${progress.tokenName} 正在获取连接...`)
-          } else if (progress.type === 'token-success') {
-            message.success(`${progress.tokenName} 连接成功`)
-          } else if (progress.type === 'token-error') {
-            if (progress.status === 'warning') {
-              message.warning(`${progress.tokenName} ${progress.message}`)
-            } else {
-              message.error(`${progress.tokenName} ${progress.message}`)
-            }
-          }
-        }
-      }
-    )
-    
-    const successCount = results.filter(r => r.success).length
-    const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量五一万能兑换完成，成功${successCount}个，失败${failCount}个`)
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量五一万能兑换',
-      status: 'success',
-      message: `【批量】批量五一万能兑换完成，成功${successCount}个，失败${failCount}个`
-    })
-  } catch (error) {
-    console.error('批量五一万能兑换出错:', error)
-    message.error(`批量五一万能兑换出错：${error.message || error}`)
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量五一万能兑换',
-      status: 'error',
-      message: `【批量】批量五一万能兑换出错：${error.message || error}`
-    })
-  } finally {
-    isBatchMayDayExchange.value = false
-  }
-}
-
 // 批量兑换码
 const handleBatchClaimCDK = async () => {
   const tokenIndices = parseTokenRange(executionTokens.value)
@@ -4680,434 +4276,6 @@ const handleBatchBoxWeek = async () => {
     })
   } finally {
     isBatchBoxWeekRunning.value = false
-  }
-}
-
-// 批量招募周
-const handleBatchRecruitWeek = async () => {
-  if (!enableRecruitWeek.value) {
-    message.warning('请先打开招募周开关')
-    return
-  }
-
-  try {
-    isBatchRecruitWeekRunning.value = true
-    message.info('开始批量招募周...')
-    
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量招募周',
-      status: 'info',
-      message: '开始批量招募周'
-    })
-
-    const tokenIndices = parseTokenRange(executionTokens.value)
-    const targetTokens = getTargetTokens(tokenIndices)
-    
-    if (targetTokens.length === 0) {
-      const rangeText = tokenIndices === null ? '全部' : `范围${executionTokens.value}`
-      message.warning(`执行范围${rangeText}内没有找到 Token`)
-      return
-    }
-    
-    const rangeText = tokenIndices === null ? '全部' : `范围${executionTokens.value}`
-    message.info(`开始批量招募周，共 ${targetTokens.length} 个 Token（${rangeText}）`)
-    
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量招募周',
-      status: 'info',
-      message: `开始批量招募周，共 ${targetTokens.length} 个 Token（${rangeText}）`
-    })
-
-    const results = await connectionPool.batchOperate(
-      targetTokens,
-      async (token, globalIndex) => {
-        try {
-          const tokenIndex = globalIndex + 1
-
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 正在获取角色信息...`)
-
-          // 1. 获取角色信息（包含图鉴点数、招募数量、爬塔信息、玩具信息）
-          // 连接池建立连接时已经调用过 role_getroleinfo，直接从缓存读取
-          let bookPoint = 0
-          let currentRecruitCount = 0
-          let towerFloor = 0
-          let passive3Level = 0
-
-          const role = tokenStore.gameData?.roleInfo?.role || {}
-
-          // 获取图鉴点数
-          bookPoint = role.book?.bookPoint || 0
-
-          // 获取招募令数量
-          const items = role.items || {}
-          if (items['1001']) {
-            currentRecruitCount = items['1001'].quantity || items['1001'].num || 0
-          }
-
-          // 获取爬塔层数
-          const tower = role.tower
-          if (tower && tower.id) {
-            towerFloor = Math.floor(tower.id / 10)
-          }
-
-          // 获取玩具被动3等级（skillId 11）
-          const lordWeapon = role.lordWeapon || {}
-          const toy3 = lordWeapon['3'] || {}
-          const passiveSkill = toy3.passiveSkill || {}
-          const passive3 = passiveSkill['11'] || {}
-          passive3Level = passive3.level || 0
-
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 图鉴点数：${bookPoint}`)
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 现有招募令数量：${currentRecruitCount}`)
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 当前爬塔层数：${towerFloor}层`)
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 玩具被动3等级：${passive3Level}`)
-          
-          // 被动3已激活，跳过执行
-          if (passive3Level !== 0) {
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 被动3已激活(${passive3Level}级)，跳过招募周`)
-            logStore.addLog({
-              page: 'fish-helper',
-              cardType: '养号',
-              operation: '批量招募周',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'success',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]被动3已激活(${passive3Level}级)，跳过招募周`
-            })
-            return { success: false, reason: 'passive3_activated', passive3Level }
-          }
-          
-          // 被动3未激活，检查招募令是否>=400
-          if (currentRecruitCount < 400) {
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 被动3未激活，招募令不足400（当前${currentRecruitCount}），继续执行招募周`)
-            logStore.addLog({
-              page: 'fish-helper',
-              cardType: '养号',
-              operation: '批量招募周',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'info',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]被动3未激活，招募令不足400（当前${currentRecruitCount}），继续执行招募周`
-            })
-          } else {
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 被动3未激活，招募令${currentRecruitCount}>=400，执行1轮招募（400个招募令）`)
-          }
-          
-          await waitCommandDelay()
-          
-          // 获取当前已使用的招募令数量
-          let usedRecruitCount = 0
-          try {
-            const activityInfo = await tokenStore.sendMessageWithPromise(
-              token.id,
-              'activity_get',
-              {},
-              5000
-            )
-            
-            if (activityInfo?.activity?.myTotalInfo?.['1']?.num !== undefined) {
-              usedRecruitCount = activityInfo.activity.myTotalInfo['1'].num
-            }
-            
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 当前已用招募令数量：${usedRecruitCount}`)
-          } catch (error) {
-            console.error(`获取活动信息失败：${error.message}`, error)
-            message.warning(`[序号${tokenIndex}] ${token.name || token.id} 获取活动信息失败，继续执行`)
-          }
-          
-          // 固定执行1轮（400个招募令）
-          const maxRounds = 1
-          const theoreticalUsed = 400
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 计划执行1轮招募（400个招募令），已用${usedRecruitCount}个`)
-          
-          // 检查是否已达到目标
-          let completedRounds = 0
-          let totalRecruits = 0
-          let mailClaimCount = 0
-          let remainingRecruits = currentRecruitCount
-          
-          if (usedRecruitCount >= theoreticalUsed) {
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 已用招募令数量已达理论值，不再执行招募，直接领取奖励`)
-            logStore.addLog({
-              page: 'fish-helper',
-              cardType: '养号',
-              operation: '批量招募周',
-              tokenId: token.id,
-              tokenName: token.name,
-              status: 'info',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]已用招募令数量已达理论值，不再执行招募`
-            })
-            // 跳过招募，直接领取奖励
-          } else {
-            // 需要执行招募 - 只执行1轮（400个招募令）
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 计划执行 ${maxRounds} 轮招募周`)
-          
-            // 阶段3：执行招募 - 只执行1轮
-            const SY = maxRounds * 400  // 400
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 开始执行招募，目标已用招募令数量：${SY}`)
-            
-            // 获取当前已用数量
-            let currentUsedCount = 0
-            try {
-              const activityInfo = await tokenStore.sendMessageWithPromise(
-                token.id,
-                'activity_get',
-                {},
-                5000
-              )
-              
-              if (activityInfo?.activity?.myTotalInfo?.['1']?.num !== undefined) {
-                currentUsedCount = activityInfo.activity.myTotalInfo['1'].num
-              }
-              
-              message.info(`[序号${tokenIndex}] ${token.name || token.id} 当前已用招募令数量：${currentUsedCount}，目标：${SY}`)
-            } catch (error) {
-              console.error(`获取活动信息失败：${error.message}`, error)
-              message.warning(`[序号${tokenIndex}] ${token.name || token.id} 获取活动信息失败，跳过招募`)
-            }
-            
-            // 计算需要招募的次数（最多40次 = 400个）
-            const diff = SY - currentUsedCount
-            const recruitCount = Math.min(40, Math.floor(diff / 10))
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 需要招募 ${recruitCount} 次（${recruitCount * 10}个）`)
-            
-            if (recruitCount > 0) {
-              // 执行招募 - 只执行一轮，最多40次
-              for (let i = 0; i < recruitCount; i++) {
-                try {
-                  await tokenStore.sendMessageWithPromise(
-                    token.id,
-                    'hero_recruit',
-                    {
-                      byClub: false,
-                      recruitNumber: 10,
-                      recruitType: 1
-                    },
-                    5000
-                  )
-                  
-                  totalRecruits += 10
-                  remainingRecruits -= 10
-                  
-                  logStore.addLog({
-                    page: 'fish-helper',
-                    cardType: '养号',
-                    operation: '批量招募周',
-                    tokenId: token.id,
-                    tokenName: token.name,
-                    status: 'info',
-                    message: `【序号${tokenIndex}】[${token.name || token.id}]第${i + 1}次招募，已招募${totalRecruits}个`
-                  })
-                  
-                  // 每使用100个招募令，领取一次邮件附件
-                  if ((i + 1) % 10 === 0) {
-                    try {
-                      await tokenStore.sendMessageWithPromise(
-                        token.id,
-                        'mail_claimallattachment',
-                        {},
-                        5000
-                      )
-                      mailClaimCount++
-                      message.success(`[序号${tokenIndex}] ${token.name || token.id} 领取邮件附件成功（第${mailClaimCount}次）`)
-                      logStore.addLog({
-                        page: 'fish-helper',
-                        cardType: '养号',
-                        operation: '批量招募周',
-                        tokenId: token.id,
-                        tokenName: token.name,
-                        status: 'success',
-                        message: `【序号${tokenIndex}】[${token.name || token.id}]领取邮件附件成功（第${mailClaimCount}次）`
-                      })
-                    } catch (mailError) {
-                      console.error(`领取邮件失败：${mailError.message}`, mailError)
-                    }
-                  }
-                  
-                  await waitCommandDelay()
-                } catch (recruitError) {
-                  console.error(`招募失败：${recruitError.message}`, recruitError)
-                  message.warning(`[序号${tokenIndex}] ${token.name || token.id} 招募失败：${recruitError.message}`)
-                  logStore.addLog({
-                    page: 'fish-helper',
-                    cardType: '养号',
-                    operation: '批量招募周',
-                    tokenId: token.id,
-                    tokenName: token.name,
-                    status: 'warning',
-                    message: `【序号${tokenIndex}】[${token.name || token.id}]招募失败：${recruitError.message}`
-                  })
-                  break
-                }
-              }
-              
-              completedRounds = maxRounds
-              message.info(`[序号${tokenIndex}] ${token.name || token.id} 招募完成：共招募${totalRecruits}个`)
-            } else {
-              message.info(`[序号${tokenIndex}] ${token.name || token.id} 无需招募，直接领取奖励`)
-            }
-          }
-          
-          // 阶段6：领取招募周奖励
-          let claimSuccessRounds = 0
-          const claimTimes = maxRounds + 1
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 开始领取招募周奖励，执行${claimTimes}次`)
-          console.log(`[批量招募周] 开始领取奖励，执行${claimTimes}次`)
-          
-          for (let i = 0; i < claimTimes; i++) {
-            try {
-              await tokenStore.sendMessageWithPromise(
-                token.id,
-                'activity_claimweekactreward',
-                {
-                  selectRewardsMap: {
-                    '1': 1
-                  },
-                  typ: 1
-                },
-                5000
-              )
-              claimSuccessRounds++
-              message.success(`[序号${tokenIndex}] ${token.name || token.id} 领取第 ${i + 1} 次奖励成功`)
-              logStore.addLog({
-                page: 'fish-helper',
-                cardType: '养号',
-                operation: '批量招募周',
-                tokenId: token.id,
-                tokenName: token.name,
-                status: 'success',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]领取第 ${i + 1} 次奖励成功`
-              })
-              await waitCommandDelay()
-            } catch (claimError) {
-              console.error(`领取第 ${i + 1} 次奖励失败：${claimError.message}`, claimError)
-              message.warning(`[序号${tokenIndex}] ${token.name || token.id} 领取第 ${i + 1} 次奖励失败：${claimError.message || '服务器错误'}，继续执行`)
-              logStore.addLog({
-                page: 'fish-helper',
-                cardType: '养号',
-                operation: '批量招募周',
-                tokenId: token.id,
-                tokenName: token.name,
-                status: 'warning',
-                message: `【序号${tokenIndex}】[${token.name || token.id}]领取第 ${i + 1} 次奖励失败：${claimError.message || '服务器错误'}`
-              })
-              await waitCommandDelay()
-            }
-          }
-          
-          message.info(`[序号${tokenIndex}] ${token.name || token.id} 领取奖励完成，成功${claimSuccessRounds}/${claimTimes}次`)
-          
-          const successMsg = `${token.name || token.id} 招募周完成，计划${maxRounds}轮，完成${completedRounds}轮，领取奖励${claimSuccessRounds}轮，共招募${totalRecruits}个，领取邮件${mailClaimCount}次，剩余招募令${remainingRecruits}个`
-          message.success(successMsg)
-          
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量招募周',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'success',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]${successMsg}`
-          })
-          
-          return { 
-            success: true, 
-            plannedRounds: maxRounds,
-            completedRounds, 
-            claimSuccessRounds,
-            totalRecruits, 
-            mailClaimCount,
-            remainingRecruits
-          }
-        } catch (error) {
-          console.error(`招募周失败：${error.message}`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 招募周失败：${error.message}`)
-          
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量招募周',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'error',
-            message: `${globalIndex + 1}、招募周失败：${error.message}`
-          })
-          
-          return { success: false, error: error.message }
-        }
-      },
-      {
-        batchSize: 20,
-        delayBetween: 500,
-        keepConnections: false,
-        onProgress: (progress) => {
-          if (progress.type === 'batch-start') {
-            message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`)
-          } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
-          } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
-          } else if (progress.type === 'token-error') {
-            if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
-            } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
-            }
-          }
-        }
-      }
-    )
-    
-    const totalTokens = results.length
-    const successCount = results.filter(r => r.success && !r.skipped).length
-    const skippedCount = results.filter(r => r.skipped).length
-    const towerFloorSkippedCount = results.filter(r => r.reason === 'tower_floor_exceeded').length
-    const failureCount = results.filter(r => !r.success).length
-    const totalCompletedRounds = results.reduce((sum, r) => sum + (r.completedRounds || 0), 0)
-    const totalClaimSuccessRounds = results.reduce((sum, r) => sum + (r.claimSuccessRounds || 0), 0)
-    const totalRecruits = results.reduce((sum, r) => sum + (r.totalRecruits || 0), 0)
-    const totalMailClaims = results.reduce((sum, r) => sum + (r.mailClaimCount || 0), 0)
-    
-    let summaryMessage = `批量招募周完成，共处理${totalTokens}个 Token，成功${successCount}个，跳过${skippedCount}个（爬塔超100层${towerFloorSkippedCount}个），失败${failureCount}个`
-    if (totalCompletedRounds > 0) {
-      summaryMessage += `，共完成${totalCompletedRounds}轮`
-    }
-    if (totalClaimSuccessRounds > 0) {
-      summaryMessage += `，领取奖励${totalClaimSuccessRounds}轮`
-    }
-    if (totalRecruits > 0) {
-      summaryMessage += `，共招募${totalRecruits}个`
-    }
-    if (totalMailClaims > 0) {
-      summaryMessage += `，领取邮件${totalMailClaims}次`
-    }
-    
-    message.success(summaryMessage)
-    
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量招募周',
-      status: 'success',
-      message: summaryMessage
-    })
-  } catch (error) {
-    console.error('批量招募周失败:', error)
-    message.error(`批量招募周失败：${error.message}`)
-    
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量招募周',
-      status: 'error',
-      message: `【批量】批量招募周失败：${error.message}`
-    })
-  } finally {
-    isBatchRecruitWeekRunning.value = false
   }
 }
 
@@ -7022,124 +6190,6 @@ const handleExportTeam = async () => {
   }
 }
 
-// 批量领取宝箱奖励
-const handleBatchClaimBoxRewards = async () => {
-  const tokenIndices = connectionPool.parseTokenRange(executionTokens.value)
-  const allTokens = [...tokenStore.gameTokens].sort((a, b) => {
-    const nameA = (a.name || a.id || '').toLowerCase()
-    const nameB = (b.name || b.id || '').toLowerCase()
-    return nameA.localeCompare(nameB)
-  })
-  
-  let targetTokens
-  if (tokenIndices === null) {
-    targetTokens = allTokens
-  } else {
-    targetTokens = tokenIndices.map(i => allTokens[i - 1]).filter(Boolean)
-  }
-  
-  if (targetTokens.length === 0) {
-    message.warning('执行范围内没有有效的Token')
-    return
-  }
-  
-  const rangeText = executionTokens.value ? `范围${executionTokens.value}` : "全部"
-  message.info(`开始批量领取宝箱奖励（${rangeText}），共${targetTokens.length}个Token...`)
-  
-  logStore.addLog({
-    page: 'fish-helper',
-    cardType: '养号',
-    operation: '批量领取宝箱奖励',
-    status: 'info',
-    message: `开始批量领取宝箱奖励（${rangeText}），共${targetTokens.length}个Token`
-  })
-  
-  isBatchClaimingBoxRewards.value = true
-  
-  try {
-    const results = await connectionPool.batchOperate(
-      targetTokens,
-      async (token, globalIndex) => {
-        try {
-          const tokenIndex = globalIndex + 1
-          message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在领取宝箱奖励...`)
-          
-          await tokenStore.sendBatchClaimBoxPointReward(token.id)
-          
-          message.success(`[${tokenIndex}] ${token.name || token.id} 领取宝箱奖励成功`)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量领取宝箱奖励',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'success',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]领取宝箱奖励成功`
-          })
-          
-          return { success: true }
-        } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 领取宝箱奖励失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 领取宝箱奖励失败：${error.message || error}`)
-          logStore.addLog({
-            page: 'fish-helper',
-            cardType: '养号',
-            operation: '批量领取宝箱奖励',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'error',
-            message: `${globalIndex + 1}、领取宝箱奖励失败：${error.message || error}`
-          })
-          return { success: false, error: error.message || error }
-        }
-      },
-      {
-        batchSize: 20,
-        delayBetween: 500,
-        onProgress: (progress) => {
-          if (progress.type === 'batch-start') {
-            message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`)
-          } else if (progress.type === 'token-start') {
-            message.info(`${progress.tokenName} 正在获取连接...`)
-          } else if (progress.type === 'token-success') {
-            message.success(`${progress.tokenName} 连接成功`)
-          } else if (progress.type === 'token-error') {
-            if (progress.status === 'warning') {
-              message.warning(`${progress.tokenName} ${progress.message}`)
-            } else {
-              message.error(`${progress.tokenName} ${progress.message}`)
-            }
-          }
-        }
-      }
-    )
-    
-    const successCount = results.filter(r => r.success).length
-    const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量领取宝箱奖励完成，成功${successCount}个，失败${failCount}个`)
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量领取宝箱奖励',
-      status: 'success',
-      message: `【批量】批量领取宝箱奖励完成，成功${successCount}个，失败${failCount}个`
-    })
-  } catch (error) {
-    console.error('批量领取宝箱奖励出错:', error)
-    message.error(`批量领取宝箱奖励出错：${error.message || error}`)
-    logStore.addLog({
-      page: 'fish-helper',
-      cardType: '养号',
-      operation: '批量领取宝箱奖励',
-      status: 'error',
-      message: `【批量】批量领取宝箱奖励出错：${error.message || error}`
-    })
-  } finally {
-    isBatchClaimingBoxRewards.value = false
-  }
-}
-
 // 批量领取邮件
 const handleBatchClaimEmails = async () => {
   const tokenIndices = connectionPool.parseTokenRange(executionTokens.value)
@@ -7255,6 +6305,165 @@ const handleBatchClaimEmails = async () => {
     })
   } finally {
     isBatchClaimingEmails.value = false
+  }
+}
+
+// 批量宠物升级
+const handleBatchPetUpgrade = async () => {
+  const tokenIndices = connectionPool.parseTokenRange(executionTokens.value)
+  const allTokens = [...tokenStore.gameTokens].sort((a, b) => {
+    const nameA = (a.name || a.id || '').toLowerCase()
+    const nameB = (b.name || b.id || '').toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+
+  let targetTokens
+  if (tokenIndices === null) {
+    targetTokens = allTokens
+  } else {
+    targetTokens = tokenIndices.map(i => allTokens[i - 1]).filter(Boolean)
+  }
+
+  if (targetTokens.length === 0) {
+    message.warning('执行范围内没有有效的Token')
+    return
+  }
+
+  const rangeText = executionTokens.value ? `范围${executionTokens.value}` : "全部"
+  message.info(`开始批量宠物升级（${rangeText}），共${targetTokens.length}个Token...`)
+
+  logStore.addLog({
+    page: 'fish-helper',
+    cardType: '养号',
+    operation: '批量宠物升级',
+    status: 'info',
+    message: `开始批量宠物升级（${rangeText}），共${targetTokens.length}个Token`
+  })
+
+  isBatchPetUpgrade.value = true
+
+  try {
+    const results = await connectionPool.batchOperate(
+      targetTokens,
+      async (token, globalIndex) => {
+        try {
+          const tokenIndex = globalIndex + 1
+          message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在获取宠物信息...`)
+
+          // 获取角色信息，提取 petUId
+          const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
+          const petUId = roleInfo?.role?.pet?.petUId
+
+          if (!petUId) {
+            message.warning(`[${tokenIndex}] ${token.name || token.id} 没有宠物上阵，跳过宠物升级`)
+            logStore.addLog({
+              page: 'fish-helper',
+              cardType: '养号',
+              operation: '批量宠物升级',
+              tokenId: token.id,
+              tokenName: token.name,
+              status: 'warning',
+              message: `【序号${tokenIndex}】[${token.name || token.id}]没有宠物上阵，跳过宠物升级`
+            })
+            return { success: false, error: '没有宠物上阵' }
+          }
+
+          message.info(`[${tokenIndex}] ${token.name || token.id} 宠物UId: ${petUId}，开始升级...`)
+
+          let successCount = 0
+          let failCount = 0
+
+          // 循环执行 pet_useexpitem，最多20次，出错停止
+          for (let i = 0; i < 20; i++) {
+            try {
+              await tokenStore.sendPetUseExpItem(token.id, {
+                slotUId: {
+                  slot: -1,
+                  uId: petUId
+                },
+                isOneClick: true
+              })
+              successCount++
+              await waitCommandDelay()
+            } catch (error) {
+              // 出错停止
+              failCount++
+              message.info(`[${tokenIndex}] ${token.name || token.id} 第${i + 1}次升级失败，停止升级: ${error.message}`)
+              break
+            }
+          }
+
+          message.success(`[${tokenIndex}] ${token.name || token.id} 宠物升级完成：成功${successCount}次，失败${failCount}次`)
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '养号',
+            operation: '批量宠物升级',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]宠物升级完成：成功${successCount}次，失败${failCount}次`
+          })
+
+          return { success: true, successCount, failCount }
+        } catch (error) {
+          console.error(`[${globalIndex + 1}] ${token.name || token.id} 宠物升级失败:`, error)
+          message.error(`[${globalIndex + 1}] ${token.name || token.id} 宠物升级失败：${error.message || error}`)
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '养号',
+            operation: '批量宠物升级',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `${globalIndex + 1}、宠物升级失败：${error.message || error}`
+          })
+          return { success: false, error: error.message || error }
+        }
+      },
+      {
+        batchSize: 20,
+        delayBetween: 500,
+        onProgress: (progress) => {
+          if (progress.type === 'batch-start') {
+            message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`)
+          } else if (progress.type === 'token-start') {
+            message.info(`${progress.tokenName} 正在获取连接...`)
+          } else if (progress.type === 'token-success') {
+            message.success(`${progress.tokenName} 连接成功`)
+          } else if (progress.type === 'token-error') {
+            if (progress.status === 'warning') {
+              message.warning(`${progress.tokenName} ${progress.message}`)
+            } else {
+              message.error(`${progress.tokenName} ${progress.message}`)
+            }
+          }
+        }
+      }
+    )
+
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+
+    message.success(`批量宠物升级完成，成功${successCount}个，失败${failCount}个`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '养号',
+      operation: '批量宠物升级',
+      status: 'success',
+      message: `【批量】批量宠物升级完成，成功${successCount}个，失败${failCount}个`
+    })
+  } catch (error) {
+    console.error('批量宠物升级出错:', error)
+    message.error(`批量宠物升级出错：${error.message || error}`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '养号',
+      operation: '批量宠物升级',
+      status: 'error',
+      message: `【批量】批量宠物升级出错：${error.message || error}`
+    })
+  } finally {
+    isBatchPetUpgrade.value = false
   }
 }
 

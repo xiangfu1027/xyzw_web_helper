@@ -1,0 +1,166 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/19 08:51:45
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789479256621.8941-%E9%94%A6%E8%A1%A3-%E7%9B%B8%E7%AC%A641-1%EF%BC%88%E5%90%88%EF%BC%89.bin&fromManager=true&windowId=game-window-1789779074158
+记录数量: 2
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/9/19 08:51:34
+服务: EquipmentService
+方法: changeQuench
+参数: [{"heroId":118,"part":1}]
+结果:
+{
+  "_raw": {
+    "seq": 43,
+    "ack": 41,
+    "time": 1789779096366,
+    "resp": 42,
+    "cmd": "syncresp",
+    "body": {
+      "role": {
+        "heroes": {
+          "118": {
+            "attribute": {
+              "51": 1.662000010609627,
+              "52": 0.017499999701976778,
+              "53": 0.428000006377697,
+              "56": 0.6465000256896019,
+              "57": 1.0960000237822531,
+              "59": 0.6500000059604645,
+              "60": 0.018000000268220902,
+              "61": 0.5120000094175344,
+              "63": 0.05000000074505806,
+              "65": null,
+              "66": 0.012000000178813934,
+              "67": 0.004000000059604645,
+              "68": 0.020000000298023225,
+              "69": 0.01600000023841858,
+              "226": 0.18000000715255737,
+              "228": 0.10000000149011612,
+              "230": 0.17000000178813934,
+              "231": 0.17000000178813934
+            },
+            "equipment": {
+              "1": {
+                "curQuenchId": 1,
+                "quenchTimes": 10188,
+                "quenches": {
+                  "1": {
+                    "colorId": 3,
+                    "attrId": 7,
+                    "attrNum": 14,
+                    "allAttrNum": 14000
+                  },
+                  "2": {
+                    "colorId": 1,
+                    "attrId": 17,
+                    "attrNum": 3,
+                    "isLocked": false,
+                    "allAttrNum": 3000
+                  },
+                  "3": {
+                    "colorId": 2,
+                    "attrId": 13,
+                    "attrNum": 9,
+                    "allAttrNum": 9000
+                  },
+                  "4": {
+                    "attrNum": 84,
+                    "allAttrNum": 84000
+                  },
+                  "5": {
+                    "colorId": 1,
+                    "attrId": 19,
+                    "attrNum": 5,
+                    "isLocked": false,
+                    "allAttrNum": 5000
+                  }
+                },
+                "quenchTimes2": 10151,
+                "quenches2": {
+                  "1": {
+                    "colorId": 1,
+                    "attrId": 16,
+                    "attrNum": 5,
+                    "allAttrNum": 5000
+                  },
+                  "2": {
+                    "colorId": 6,
+                    "attrId": 9,
+                    "attrNum": 98,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "3": {
+                    "colorId": 3,
+                    "attrId": 12,
+                    "attrNum": 12,
+                    "allAttrNum": 12000
+                  },
+                  "4": {
+                    "attrNum": 87,
+                    "allAttrNum": 0
+                  },
+                  "5": {
+                    "colorId": 6,
+                    "attrId": 20,
+                    "attrNum": 92,
+                    "isLocked": true,
+                    "allAttrNum": 92000
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 38
+}
+异步: 是
+调用ID: call_1789779094542_scukvbntz
+
+记录 #2:
+----------------------------------------
+时间: 2026/9/19 08:51:31
+服务: ActivityService
+方法: getLotteryInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 42,
+    "ack": 0,
+    "time": 1789779093361,
+    "resp": 41,
+    "cmd": "activity_getlotteryinforesp",
+    "body": {
+      "lotteryInfo": {
+        "boxPackIdList": []
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 38
+}
+异步: 是
+调用ID: call_1789779091536_enrj6ecih
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

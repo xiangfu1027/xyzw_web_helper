@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <MyCard class="helper" status-class="active">
     <template #icon>
       <n-icon size="24">
@@ -199,7 +199,7 @@ const isRefreshing = ref(false)
 const taskItemId = ref('5279')
 const fishItemId = ref('5280')
 const cheerItemId = ref('5278')
-const taskName = ref('202606191')
+const taskName = ref('') // 活动ID，默认由动态节日基准日计算（actId）兜底
 const executionRange = ref('') // 执行范围
 const goldFishChangeCount = ref('') // 批量换金鱼数量
 const useItemMode = ref('12') // 使用道具模式：'12' 每次12个直到出错, 'openAll' 开完
@@ -227,7 +227,7 @@ const loadInputSettings = async () => {
   taskItemId.value = data?.taskItemId || '5279'
   fishItemId.value = data?.fishItemId || '5280'
   cheerItemId.value = data?.cheerItemId || '5278'
-  taskName.value = data?.taskName || '202606191'
+  taskName.value = data?.taskName || String(actId.value || '')
   goldFishChangeCount.value = data?.goldFishChangeCount || ''
 }
 
@@ -341,6 +341,58 @@ const isFestivalWeekAvailable = computed(() => {
   }
   
   return false
+})
+
+// 计算离当天最近的节日（端午/中秋/元旦）所在周的周五日期，作为活动基准日（YYYYMMDD）
+const festivalBaseDate = computed(() => {
+  const now = new Date()
+  const nowY = now.getFullYear()
+
+  // 各节日公历日期表（农历已换算），仅保留当前年份附近的数据
+  const duanwuDates = { 2024: [6, 10], 2025: [5, 31], 2026: [6, 19], 2027: [6, 9], 2028: [5, 28] }
+  const zhongqiuDates = { 2024: [9, 17], 2025: [10, 6], 2026: [9, 25], 2027: [9, 15], 2028: [10, 3] }
+
+  // 候选节日公历日期：相邻年份的元旦、当年及次年的端午与中秋
+  const candidates = []
+  for (let y = nowY - 1; y <= nowY + 1; y++) candidates.push({ y, m: 1, d: 1 })
+  if (duanwuDates[nowY]) candidates.push({ y: nowY, m: duanwuDates[nowY][0], d: duanwuDates[nowY][1] })
+  if (duanwuDates[nowY + 1]) candidates.push({ y: nowY + 1, m: duanwuDates[nowY + 1][0], d: duanwuDates[nowY + 1][1] })
+  if (zhongqiuDates[nowY]) candidates.push({ y: nowY, m: zhongqiuDates[nowY][0], d: zhongqiuDates[nowY][1] })
+  if (zhongqiuDates[nowY + 1]) candidates.push({ y: nowY + 1, m: zhongqiuDates[nowY + 1][0], d: zhongqiuDates[nowY + 1][1] })
+
+  // 求每个节日所在周的周五，取离当天最近者
+  let bestFriday = null
+  let bestDiff = Infinity
+  for (const c of candidates) {
+    const date = new Date(c.y, c.m - 1, c.d)
+    const dow = date.getDay()
+    const mondayOffset = dow === 0 ? -6 : 1 - dow
+    const monday = new Date(date)
+    monday.setDate(date.getDate() + mondayOffset)
+    monday.setHours(0, 0, 0, 0)
+    const friday = new Date(monday)
+    friday.setDate(friday.getDate() + 4)
+    friday.setHours(0, 0, 0, 0)
+    const diff = Math.abs(friday.getTime() - now.getTime())
+    if (diff < bestDiff) {
+      bestDiff = diff
+      bestFriday = friday
+    }
+  }
+
+  if (!bestFriday) return null
+  const F = bestFriday
+  return `${F.getFullYear()}${String(F.getMonth() + 1).padStart(2, '0')}${String(F.getDate()).padStart(2, '0')}`
+})
+
+// 活动ID：actId = 基准日期拼接1，activityId = 基准日期拼接5
+const actId = computed(() => festivalBaseDate.value ? Number(`${festivalBaseDate.value}1`) : 0)
+const activityId = computed(() => festivalBaseDate.value ? Number(`${festivalBaseDate.value}5`) : 0)
+const festivalActIdStr = computed(() => {
+  const base = festivalBaseDate.value
+  if (!base) return '2606191'
+  // commonActivityInfo 的 key 取「年份后两位 + 月日」后拼接1（7位，如 20260925 → 2609251）
+  return `${base.slice(2)}1`
 })
 
 // 按钮是否禁用：非节日周或有操作正在运行
@@ -1060,7 +1112,7 @@ const batchStartFishing = async () => {
             return { success: false, token, error: '获取活动信息失败' }
           }
           
-          const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+          const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.record || {}
           
@@ -1091,7 +1143,7 @@ const batchStartFishing = async () => {
               return { success: false, token, error: '重新获取活动信息失败' }
             }
             
-            const retryCommonInfo = retryActivityInfo.activity.commonActivityInfo['2606191'] || {}
+            const retryCommonInfo = retryActivityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
             const retryTasks = retryCommonInfo.task || {}
             
             if (!('3' in retryTasks)) {
@@ -1229,7 +1281,7 @@ const batchStartFishing = async () => {
           // 重新获取活动信息以获取最新records
           const claimActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const claimCommonInfo = claimActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const claimCommonInfo = claimActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const claimRecords = claimCommonInfo.record || {}
           
           for (let missionId = 41; missionId <= 60; missionId++) {
@@ -1242,7 +1294,7 @@ const batchStartFishing = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: Number(taskName.value) || 2606191, missionId: missionId },
+                { activityId: activityId.value, missionId: missionId },
                 10000
               )
               
@@ -1411,7 +1463,7 @@ const batchBoxWeek = async () => {
             return { success: false, token, error: '获取活动信息失败' }
           }
           
-          const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+          const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.record || {}
           
@@ -1442,7 +1494,7 @@ const batchBoxWeek = async () => {
               return { success: false, token, error: '重新获取活动信息失败' }
             }
             
-            const retryCommonInfo = retryActivityInfo.activity.commonActivityInfo['2606191'] || {}
+            const retryCommonInfo = retryActivityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
             const retryTasks = retryCommonInfo.task || {}
             
             if (!('2' in retryTasks)) {
@@ -1564,8 +1616,8 @@ const batchBoxWeek = async () => {
             try {
               const actInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
               await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-              if (actInfo?.activity?.commonActivityInfo?.['2606191']?.task?.['2']) {
-                Y = actInfo.activity.commonActivityInfo['2606191'].task['2']
+              if (actInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value]?.task?.['2']) {
+                Y = actInfo.activity.commonActivityInfo[festivalActIdStr.value].task['2']
                 message.info(`【序号${tokenIndex}】[${token.name || token.id}]已用宝箱分Y=${Y}`)
               }
             } catch (error) {
@@ -1611,8 +1663,8 @@ const batchBoxWeek = async () => {
             try {
               const actInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
               await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-              if (actInfo?.activity?.commonActivityInfo?.['2606191']?.task?.['2']) {
-                Y = actInfo.activity.commonActivityInfo['2606191'].task['2']
+              if (actInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value]?.task?.['2']) {
+                Y = actInfo.activity.commonActivityInfo[festivalActIdStr.value].task['2']
               }
             } catch (e) {
               // 获取失败也继续
@@ -2077,7 +2129,7 @@ const batchBoxWeek = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: Number(taskName.value) || 2606191, missionId: missionId },
+                { activityId: activityId.value, missionId: missionId },
                 10000
               )
               await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -2242,7 +2294,7 @@ const batchRecruitWeek = async () => {
             return { success: false, token, error: '获取活动信息失败' }
           }
           
-          const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+          const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.record || {}
           
@@ -2273,7 +2325,7 @@ const batchRecruitWeek = async () => {
               return { success: false, token, error: '重新获取活动信息失败' }
             }
             
-            const retryCommonInfo = retryActivityInfo.activity.commonActivityInfo['2606191'] || {}
+            const retryCommonInfo = retryActivityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
             const retryTasks = retryCommonInfo.task || {}
             
             if (!('1' in retryTasks)) {
@@ -2416,7 +2468,7 @@ const batchRecruitWeek = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: Number(taskName.value) || 2606191, missionId: missionId },
+                { activityId: activityId.value, missionId: missionId },
                 10000
               )
               
@@ -2711,7 +2763,7 @@ const batchSaltJar = async () => {
             return { success: false, token, error: '获取活动信息失败' }
           }
           
-          const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+          const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.record || {}
           
@@ -2783,7 +2835,7 @@ const batchSaltJar = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: Number(taskName.value) || 2606191, missionId: missionId },
+                { activityId: activityId.value, missionId: missionId },
                 10000
               )
               
@@ -2885,7 +2937,7 @@ const batchClaimRewards = async () => {
             return { success: false, token, error: '获取活动信息失败' }
           }
           
-          const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+          const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
           const records = commonInfo.record || {}
           
           // 定义奖励组
@@ -2916,7 +2968,7 @@ const batchClaimRewards = async () => {
                 const result = await tokenStore.sendMessageWithPromise(
                   token.id,
                   'activity_claimtaskreward',
-                  { activityId: 2606191, missionId: missionId },
+                  { activityId: activityId.value, missionId: missionId },
                   10000
                 )
                 
@@ -3058,7 +3110,7 @@ const batch38Plus1600 = async () => {
           // 获取活动信息
           const activityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const commonInfo = activityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const commonInfo = activityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.records || {}
           
@@ -3142,7 +3194,7 @@ const batch38Plus1600 = async () => {
           const newGoldRod = newRoleInfo?.role?.items?.['1012']?.quantity || 0
           const newActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const newCommonInfo = newActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const newCommonInfo = newActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const newTasks = newCommonInfo.task || {}
           const newUsedGoldRod = newTasks['3'] || 0
           
@@ -3193,7 +3245,7 @@ const batch38Plus1600 = async () => {
           // 获取活动信息以获取records
           const goldBrickActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const goldBrickCommonInfo = goldBrickActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const goldBrickCommonInfo = goldBrickActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const goldBrickRecords = goldBrickCommonInfo.record || {}
           
           let claimedGoldBrickRewards = []
@@ -3204,7 +3256,7 @@ const batch38Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: 2606191, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldBrickRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3252,7 +3304,7 @@ const batch38Plus1600 = async () => {
           // 获取活动信息以获取records
           const goldRodActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const goldRodCommonInfo = goldRodActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const goldRodCommonInfo = goldRodActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const goldRodRecords = goldRodCommonInfo.record || {}
           
           let claimedGoldRodRewards = []
@@ -3263,7 +3315,7 @@ const batch38Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: 2606191, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldRodRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3430,7 +3482,7 @@ const batch42Plus1600 = async () => {
           
           const activityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const commonInfo = activityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const commonInfo = activityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.records || {}
           
@@ -3507,7 +3559,7 @@ const batch42Plus1600 = async () => {
           // 获取活动信息以获取records
           const goldBrickActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const goldBrickCommonInfo = goldBrickActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const goldBrickCommonInfo = goldBrickActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const goldBrickRecords = goldBrickCommonInfo.record || {}
           
           let claimedGoldBrickRewards = []
@@ -3518,7 +3570,7 @@ const batch42Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: 2606191, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldBrickRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3566,7 +3618,7 @@ const batch42Plus1600 = async () => {
           // 获取活动信息以获取records
           const goldRodActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const goldRodCommonInfo = goldRodActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const goldRodCommonInfo = goldRodActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const goldRodRecords = goldRodCommonInfo.record || {}
           
           let claimedGoldRodRewards = []
@@ -3577,7 +3629,7 @@ const batch42Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: 2606191, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldRodRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3744,7 +3796,7 @@ const batch46Plus1600 = async () => {
           
           const activityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const commonInfo = activityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const commonInfo = activityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.records || {}
           
@@ -3821,7 +3873,7 @@ const batch46Plus1600 = async () => {
           // 获取活动信息以获取records
           const goldBrickActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const goldBrickCommonInfo = goldBrickActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const goldBrickCommonInfo = goldBrickActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const goldBrickRecords = goldBrickCommonInfo.record || {}
           
           let claimedGoldBrickRewards = []
@@ -3832,7 +3884,7 @@ const batch46Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: 2606191, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldBrickRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3880,7 +3932,7 @@ const batch46Plus1600 = async () => {
           // 获取活动信息以获取records
           const goldRodActivityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)
           await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
-          const goldRodCommonInfo = goldRodActivityInfo?.activity?.commonActivityInfo?.['2606191'] || {}
+          const goldRodCommonInfo = goldRodActivityInfo?.activity?.commonActivityInfo?.[festivalActIdStr.value] || {}
           const goldRodRecords = goldRodCommonInfo.record || {}
           
           let claimedGoldRodRewards = []
@@ -3891,7 +3943,7 @@ const batch46Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: 2606191, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldRodRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -4060,7 +4112,8 @@ const batchChangeGoldFish = async () => {
       async (token, globalIndex) => {
         try {
           const tokenIndex = getTokenIndex(token)
-          const activityId = Number(taskName.value) + 2
+          const baseAct = Number(taskName.value) || actId.value
+          const activityId = baseAct + 2
           message.info(`[序号${tokenIndex}] ${token.name || token.id} 正在换金鱼，位置: ${fishPosition}...`)
           
           await tokenStore.sendMessageWithPromise(token.id, 'activity_exchange', { activityId, goodsId: fishPosition, quantity: 1 }, 10000)
@@ -4322,7 +4375,7 @@ const batchGoldBrick = async () => {
             return { success: false, token, error: '获取活动信息失败' }
           }
           
-          const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+          const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
           const tasks = commonInfo.task || {}
           const records = commonInfo.record || {}
           
@@ -4395,7 +4448,7 @@ const batchGoldBrick = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: Number(taskName.value) || 2606191, missionId: missionId },
+                { activityId: activityId.value, missionId: missionId },
                 10000
               )
               
@@ -4559,7 +4612,7 @@ const batchExportItems = async () => {
       let record81_100 = 0
 
       if (activityInfo && activityInfo.activity && activityInfo.activity.commonActivityInfo) {
-        const commonInfo = activityInfo.activity.commonActivityInfo['2606191'] || {}
+        const commonInfo = activityInfo.activity.commonActivityInfo[festivalActIdStr.value] || {}
         const tasks = commonInfo.task || {}
         const records = commonInfo.record || {}
         usedBoxScore = tasks['2'] || 0

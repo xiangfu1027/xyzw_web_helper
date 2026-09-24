@@ -1,0 +1,280 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/19 08:53:31
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789479256621.00-%E7%A9%BA%E5%B1%B1-%E2%98%81%EF%B8%8F%E8%A5%BF%E5%A4%A7.bin&fromManager=true&windowId=game-window-1789779174592
+记录数量: 2
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/9/19 08:53:26
+服务: EquipmentService
+方法: changeQuench
+参数: [{"heroId":118,"part":1}]
+结果:
+{
+  "_raw": {
+    "seq": 49,
+    "ack": 0,
+    "time": 1789779208460,
+    "resp": 48,
+    "cmd": "syncresp",
+    "body": {
+      "role": {
+        "power": 10545105561,
+        "heroes": {
+          "118": {
+            "power": 2337094824,
+            "hp": 7586864273,
+            "speed": 15580,
+            "attribute": {
+              "51": 1.5840000094473363,
+              "53": 0.4000000059604645,
+              "54": 0.02750000002980232,
+              "56": 0.5835000194609165,
+              "57": 1.3400000267922878,
+              "59": 0.6560000060498714,
+              "61": 0.41450000610947607,
+              "66": 0.00800000011920929,
+              "67": 0.04000000059604645,
+              "69": 0.012000000178813934,
+              "70": 0.06000000089406968,
+              "226": 0.20000000298023224,
+              "227": 0.1599999964237213,
+              "229": 0.32760001192092897,
+              "230": 0.16299999642372132
+            },
+            "equipment": {
+              "1": {
+                "curQuenchId": 1,
+                "quenchTimes": 10024,
+                "quenches": {
+                  "1": {
+                    "colorId": 2,
+                    "attrId": 18,
+                    "attrNum": 10,
+                    "isLocked": false,
+                    "allAttrNum": 10000
+                  },
+                  "2": {
+                    "colorId": 1,
+                    "attrId": 4,
+                    "attrNum": 5,
+                    "isLocked": false,
+                    "allAttrNum": 5000
+                  },
+                  "3": {
+                    "colorId": 2,
+                    "attrId": 10,
+                    "attrNum": 9,
+                    "isLocked": false,
+                    "allAttrNum": 9000
+                  },
+                  "4": {
+                    "colorId": 1,
+                    "attrId": 8,
+                    "attrNum": 1,
+                    "isLocked": false,
+                    "allAttrNum": 1000
+                  },
+                  "5": {
+                    "colorId": 1,
+                    "attrId": 20,
+                    "attrNum": 3,
+                    "isLocked": false,
+                    "allAttrNum": 3000
+                  }
+                },
+                "quenchTimes2": 11389,
+                "quenches2": {
+                  "1": {
+                    "colorId": 5,
+                    "attrId": 5,
+                    "attrNum": 60,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "2": {
+                    "colorId": 6,
+                    "attrId": 9,
+                    "attrNum": 88,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "3": {
+                    "colorId": 6,
+                    "attrId": 21,
+                    "attrNum": 87,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "4": {
+                    "colorId": 6,
+                    "attrId": 2,
+                    "attrNum": 83,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "5": {
+                    "colorId": 6,
+                    "attrId": 10,
+                    "attrNum": 82,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "statistics": {
+          "task:complete:22": 10545105561
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 47
+}
+异步: 是
+调用ID: call_1789779206627_dochozj6h
+
+记录 #2:
+----------------------------------------
+时间: 2026/9/19 08:53:23
+服务: EquipmentService
+方法: changeQuench
+参数: [{"heroId":118,"part":2}]
+结果:
+{
+  "_raw": {
+    "seq": 48,
+    "ack": 0,
+    "time": 1789779205741,
+    "resp": 47,
+    "cmd": "syncresp",
+    "body": {
+      "role": {
+        "power": 10651360872,
+        "heroes": {
+          "118": {
+            "power": 2443350135,
+            "attack": 628997687,
+            "attribute": {
+              "51": 1.7040000112354756,
+              "53": 0.4000000059604645,
+              "56": 0.7155000247061253,
+              "57": 1.4860000289678574,
+              "59": 0.6560000060498714,
+              "61": 0.41450000610947607,
+              "66": 0.00800000011920929,
+              "70": 0.40800000607967374,
+              "226": 0.20000000298023224,
+              "227": 0.1599999964237213,
+              "229": 0.32760001192092897,
+              "230": 0.16299999642372132
+            },
+            "equipment": {
+              "2": {
+                "curQuenchId": 1,
+                "quenchTimes": 10057,
+                "quenches": {
+                  "1": {
+                    "colorId": 2,
+                    "attrNum": 8,
+                    "isLocked": false,
+                    "allAttrNum": 8000
+                  },
+                  "2": {
+                    "colorId": 1,
+                    "attrId": 17,
+                    "attrNum": 2,
+                    "allAttrNum": 2000
+                  },
+                  "3": {
+                    "colorId": 1,
+                    "attrId": 14,
+                    "attrNum": 5,
+                    "isLocked": false,
+                    "allAttrNum": 5000
+                  },
+                  "4": {
+                    "colorId": 1,
+                    "attrId": 21,
+                    "attrNum": 4,
+                    "isLocked": false,
+                    "allAttrNum": 4000
+                  },
+                  "5": {
+                    "colorId": 4,
+                    "attrId": 1,
+                    "attrNum": 25,
+                    "isLocked": false,
+                    "allAttrNum": 25000
+                  }
+                },
+                "quenchTimes2": 10491,
+                "quenches2": {
+                  "1": {
+                    "colorId": 6,
+                    "attrNum": 89,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "2": {
+                    "colorId": 2,
+                    "attrId": 1,
+                    "attrNum": 9,
+                    "allAttrNum": 9000
+                  },
+                  "3": {
+                    "colorId": 6,
+                    "attrId": 12,
+                    "attrNum": 89,
+                    "isLocked": true,
+                    "allAttrNum": 89000
+                  },
+                  "4": {
+                    "colorId": 6,
+                    "attrId": 10,
+                    "attrNum": 84,
+                    "isLocked": true,
+                    "allAttrNum": 0
+                  },
+                  "5": {
+                    "colorId": 5,
+                    "attrId": 5,
+                    "attrNum": 65,
+                    "isLocked": true,
+                    "allAttrNum": 65000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "statistics": {
+          "task:complete:22": 10651360872
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 47
+}
+异步: 是
+调用ID: call_1789779203908_i3ba4ke22
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

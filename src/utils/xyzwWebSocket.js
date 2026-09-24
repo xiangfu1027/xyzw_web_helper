@@ -175,6 +175,7 @@ export function registerDefaultCommands(reg) {
     .register("apex_guess", { teamId: "" })
     .register("pet_activatebook", { petId: 0 })
     .register("pet_claimbookreward", { petId: 0 })
+    .register("pet_useexpitem", { petId: 0, itemId: 0, num: 1 })
     .register("saltcup26_signupleague")
     .register("saltcup26_claimmatchreward")
     .register("saltcup26_claimweeklypack")
@@ -417,6 +418,14 @@ export function registerDefaultCommands(reg) {
       slot: 0,
       isLocked: false,
     })
+    .register("equipment_changequench", {
+      heroId: 0,
+      part: 0,
+      quenchId: 0,
+      quenches: {},
+      seed: 0,
+      skipOrange: false,
+    })
 
     // 咸王宝库
     .register("matchteam_getroleteaminfo")
@@ -470,6 +479,15 @@ export function registerDefaultCommands(reg) {
     .register("activity_commonbuygoods")
     .register("activity_maydaylottery")
     .register("activity_claimweekactreward")
+
+    // 四圣活动
+    .register("activity_claimsignreward", { activityId: 0, patchDay: 0 })
+    .register("activity_warorderrewardclaim", { actId: 0 })
+    .register("activity_warordertaskclaim", { actId: 0, missionId: 0 })
+    .register("activity_warorderget", { actId: 0 })
+    .register("activity_lottery", { times: 1 })
+    .register("activity_claimlotterycumulative", { id: 1 })
+    .register("activity_getlotteryinfo", {})
     .register("mergebox_claimmergeprogress")
     .register("mergebox_claimcostprogress")
     .register("mergebox_claimfreeenergy")
@@ -543,6 +561,10 @@ export function registerDefaultCommands(reg) {
     .register("club_gettargetteam", { targetId: 0 })
     .register("club_attack", { nodeId: 0, targetId: 0, challengeCnt: 1, failCnt: 0, useItem: false, teamSetParams: { lordWeaponId: 3, petUId: "", battleTeam: {} } })
     .register("club_attackmonster", { useItem: false, teamSetParams: { lordWeaponId: 3, petUId: "", battleTeam: {} } })
+    .register("club_taskclaim")
+    .register("club_upgradelevel")
+    .register("club_claimlevelreward")
+    .register("club_draw")
   registry.commands.set(
     "fight_startareaarena",
     (ack = 0, seq = 0, params = {}) => {
@@ -1258,6 +1280,7 @@ export class XyzwWebSocketClient {
       apex_guessresp: "apex_guess",
       pet_activatebookresp: "pet_activatebook",
       pet_claimbookrewardresp: "pet_claimbookreward",
+      pet_useexpitemresp: "pet_useexpitem",
       saltcup26_signupleagueresp: "saltcup26_signupleague",
       saltcup26_claimmatchrewardresp: "saltcup26_claimmatchreward",
       saltcup26_claimweeklypackresp: "saltcup26_claimweeklypack",
@@ -1301,6 +1324,7 @@ export class XyzwWebSocketClient {
       activity_battlepassrewardclaimresp: "activity_battlepassrewardclaim",
       item_openpackresp: "item_openpack",
       equipment_quenchresp: "equipment_quench",
+      equipment_changequenchresp: "equipment_changequench",
       rank_getserverrankresp: "rank_getserverrank",
       legion_claimpayloadtaskresp: "legion_claimpayloadtask",
       legion_claimpayloadtaskprogressresp: "legion_claimpayloadtaskprogress",
@@ -1361,7 +1385,7 @@ export class XyzwWebSocketClient {
       car_researchresp: "car_research",
       car_claimpartconsumerewardresp: "car_claimpartconsumereward",
       role_gettargetteamresp: "role_gettargetteam",
-      activity_warorderclaimresp: "activity_recyclewarorderrewardclaim",
+      activity_warorderclaimresp: ["activity_recyclewarorderrewardclaim", "activity_warorderrewardclaim", "activity_warordertaskclaim"],
       arena_getarearankresp: "arena_getarearank",
       bosstower_gethelprankresp: "bosstower_gethelprank",
       // 功法相关响应映射
@@ -1374,6 +1398,13 @@ export class XyzwWebSocketClient {
       saltcup26_getbetinforesp: "saltcup26_getbetinfo",
       saltcup26_placebetresp: "saltcup26_placebet",
       activity_takeegamerewardresp: "activity_startactegame",
+
+      // 四圣活动响应映射
+      activity_rewardresp: "activity_claimsignreward",
+      activity_warordergetresp: "activity_warorderget",
+      activity_lotteryresp: "activity_lottery",
+      activity_claimlotterycumulativeresp: "activity_claimlotterycumulative",
+      activity_getlotteryinforesp: "activity_getlotteryinfo",
       // 换皮闯关相关响应映射
       towers_getinforesp: "towers_getinfo",
       towers_startresp: "towers_start",
@@ -1387,6 +1418,10 @@ export class XyzwWebSocketClient {
       club_gettargetteamresp: "club_gettargetteam",
       club_attackresp: "club_attack",
       club_attackmonsterresp: "club_attackmonster",
+      club_taskclaimresp: "club_taskclaim",
+      club_upgradelevelresp: "club_upgradelevel",
+      club_claimlevelrewardresp: "club_claimlevelreward",
+      club_drawresp: "club_draw",
 
       // 同步响应映射（优先级低）
 

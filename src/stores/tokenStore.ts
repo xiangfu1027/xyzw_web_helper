@@ -1178,6 +1178,26 @@ export const useTokenStore = defineStore("tokens", () => {
     return sendMessageWithPromise(tokenId, "club_attackmonster", params);
   };
 
+  // 俱乐部任务领取
+  const sendClubTaskClaim = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "club_taskclaim", params);
+  };
+
+  // 俱乐部升级等级
+  const sendClubUpgradeLevel = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "club_upgradelevel", params);
+  };
+
+  // 俱乐部领取等级奖励
+  const sendClubClaimLevelReward = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "club_claimlevelreward", params);
+  };
+
+  // 俱乐部抽奖
+  const sendClubDraw = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "club_draw", params);
+  };
+
   // 批量同意好友申请
   const sendFriendBatchAgree = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "friend_batchagree", params);
@@ -1557,6 +1577,41 @@ export const useTokenStore = defineStore("tokens", () => {
     return sendMessageWithPromise(tokenId, "activity_maydaylottery", params);
   };
 
+  // 发送领取四圣签到奖励
+  const sendActivityClaimSignReward = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "activity_claimsignreward", params);
+  };
+
+  // 发送领取四圣通行证奖励
+  const sendActivityWarOrderRewardClaim = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "activity_warorderrewardclaim", params);
+  };
+
+  // 发送领取四圣任务奖励
+  const sendActivityWarOrderTaskClaim = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "activity_warordertaskclaim", params);
+  };
+
+  // 发送获取四圣通行证信息
+  const sendActivityWarOrderGet = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "activity_warorderget", params);
+  };
+
+  // 发送四圣抽奖
+  const sendActivityLottery = (tokenId: string, params = { times: 1 }) => {
+    return sendMessageWithPromise(tokenId, "activity_lottery", params);
+  };
+
+  // 发送四圣累计抽奖奖励领取
+  const sendActivityClaimLotteryCumulative = (tokenId: string, params = { id: 1 }) => {
+    return sendMessageWithPromise(tokenId, "activity_claimlotterycumulative", params);
+  };
+
+  // 发送获取抽奖信息
+  const sendActivityGetLotteryInfo = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "activity_getlotteryinfo", params);
+  };
+
   // 发送活动兑换
   const sendActivityExchange = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "activity_exchange", params);
@@ -1605,6 +1660,11 @@ export const useTokenStore = defineStore("tokens", () => {
   // 发送装备批量升级
   const sendEquipmentBatchUpgradeLevel = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "equipment_batchupgradelevel", params);
+  };
+
+  // 发送切换洗练方案
+  const sendEquipmentChangeQuench = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "equipment_changequench", params);
   };
 
   // 发送英雄技能觉醒
@@ -1795,6 +1855,11 @@ export const useTokenStore = defineStore("tokens", () => {
   // 发送领取宠物图鉴奖励
   const sendPetClaimBookReward = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "pet_claimbookreward", params);
+  };
+
+  // 发送宠物使用经验道具
+  const sendPetUseExpItem = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "pet_useexpitem", params);
   };
 
   // 发送世界杯详情
@@ -2448,6 +2513,13 @@ export const useTokenStore = defineStore("tokens", () => {
     sendLegacyBeginHangup,
     sendActivityCommonBuyGoods,
     sendActivityMaydaylottery,
+    sendActivityClaimSignReward,
+    sendActivityWarOrderRewardClaim,
+    sendActivityWarOrderTaskClaim,
+    sendActivityWarOrderGet,
+    sendActivityLottery,
+    sendActivityClaimLotteryCumulative,
+    sendActivityGetLotteryInfo,
     sendActivityExchange,
     sendAutumnUseItem,
     sendTowerBuyEnergy,
@@ -2497,6 +2569,8 @@ export const useTokenStore = defineStore("tokens", () => {
     sendApexGuess,
     sendPetActivateBook,
     sendPetClaimBookReward,
+    sendPetUseExpItem,
+    sendEquipmentChangeQuench,
     sendSaltcup26SignupLeague,
     sendSaltcup26ClaimMatchReward,
     sendSaltcup26ClaimWeeklyPack,
@@ -2518,6 +2592,10 @@ export const useTokenStore = defineStore("tokens", () => {
     sendClubGetTargetTeam,
     sendClubAttack,
     sendClubAttackMonster,
+    sendClubTaskClaim,
+    sendClubUpgradeLevel,
+    sendClubClaimLevelReward,
+    sendClubDraw,
     sendFriendBatchAgree,
 
     // 工具方法

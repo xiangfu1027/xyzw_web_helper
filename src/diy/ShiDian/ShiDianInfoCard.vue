@@ -3700,8 +3700,8 @@ const resetDianLabels = () => {
     // 获取所有 Token
     const allTokens = tokenStore.gameTokens
     
-    // 定义需要重置的十殿标签（殿一到殿五）
-    const dianLabels = ['殿一', '殿二', '殿三', '殿四', '殿五']
+    // 定义需要重置的十殿标签（殿一到殿十）
+    const dianLabels = ['殿一', '殿二', '殿三', '殿四', '殿五', '殿六', '殿七', '殿八', '殿九', '殿十']
     
     let resetCount = 0
     
@@ -3709,7 +3709,7 @@ const resetDianLabels = () => {
     for (const token of allTokens) {
       if (token.remark) {
         const remark = token.remark.trim()
-        // 检查是否包含十殿标签（殿一到殿五）
+        // 检查是否包含十殿标签（殿一到殿十）
         if (dianLabels.some(label => remark.includes(label))) {
           // 移除十殿标签部分
           const newRemark = remark

@@ -1,0 +1,446 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/22 11:43:31
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789478930529.00-%E7%A9%BA%E5%B1%B1-%E2%98%81%EF%B8%8F%E7%9B%B8%E7%AC%A6%E6%9C%BA%20(2).bin&fromManager=true&windowId=game-window-1790048547898&isMaster=false&syncEnabled=true
+记录数量: 7
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/9/22 11:43:25
+服务: ActivityService
+方法: getLotteryInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 56,
+    "ack": 54,
+    "time": 1790048605996,
+    "resp": 55,
+    "cmd": "activity_getlotteryinforesp",
+    "body": {
+      "lotteryInfo": {
+        "lotteryNum": 45,
+        "fragProgress": 10,
+        "boxPackIdList": [],
+        "cumulativeClaimedMap": {
+          "1": true,
+          "2": true,
+          "3": true,
+          "4": true,
+          "5": true,
+          "6": true,
+          "7": true,
+          "8": true,
+          "9": true
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 22
+}
+异步: 是
+调用ID: call_1790048605762_ae9n57dvq
+
+记录 #2:
+----------------------------------------
+时间: 2026/9/22 11:43:24
+服务: ActivityService
+方法: warOrderGet
+参数: [{"actId":2609191}]
+结果:
+{
+  "_raw": {
+    "seq": 55,
+    "ack": 0,
+    "time": 1790048604350,
+    "resp": 54,
+    "cmd": "activity_warordergetresp",
+    "body": {
+      "activity": {
+        "warOrderActivityInfo": {
+          "2609191": {
+            "purchased": false,
+            "purchased2": false,
+            "purchased3": false,
+            "complete": {
+              "260919101": 40,
+              "260919102": 6,
+              "260919103": 3,
+              "260919104": 10,
+              "260919105": 17,
+              "260919106": 4,
+              "260919141": 28934,
+              "260919142": 28934,
+              "260919143": 28934,
+              "260919144": 94,
+              "260919145": 94,
+              "260919146": 94,
+              "260919147": 63,
+              "260919148": 63,
+              "260919149": 63,
+              "260919150": 45,
+              "260919151": 45,
+              "260919152": 45,
+              "260919153": 45,
+              "260919154": 45,
+              "260919155": 45,
+              "260919156": 45,
+              "260919157": 45,
+              "260919158": 45,
+              "260919159": 45,
+              "260919160": 45,
+              "260919161": 45,
+              "260919162": 45,
+              "260919163": 45,
+              "260919164": 45,
+              "260919165": 45,
+              "260919166": 45,
+              "260919167": 45,
+              "260919168": 45,
+              "260919169": 45,
+              "260919170": 1,
+              "260919171": 0,
+              "260919172": 0,
+              "260919173": 0
+            },
+            "taskClaimed": {
+              "260919101": true,
+              "260919102": true,
+              "260919103": true,
+              "260919104": true,
+              "260919105": true,
+              "260919106": true,
+              "260919141": true,
+              "260919142": true,
+              "260919143": true,
+              "260919144": true,
+              "260919145": true,
+              "260919146": true,
+              "260919147": true,
+              "260919148": true,
+              "260919149": true,
+              "260919150": true,
+              "260919151": true,
+              "260919152": true,
+              "260919153": true,
+              "260919154": true,
+              "260919155": true,
+              "260919170": true
+            },
+            "rewardClaimed": {
+              "1221": 1,
+              "1222": 1,
+              "1223": 1,
+              "1224": 1,
+              "1225": 1,
+              "1226": 1,
+              "1227": 1,
+              "1228": 1,
+              "1229": 1,
+              "1230": 1,
+              "1231": 1,
+              "1232": 1,
+              "1233": 1
+            },
+            "newRewardClaimed": null,
+            "dailyTime": 1790006400,
+            "weekTime": 1789920000,
+            "itemNum": 0,
+            "unlockClaimed": false,
+            "phaseTh": 0,
+            "phaseEndTime": 0
+          }
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 54
+}
+异步: 是
+调用ID: call_1790048604115_f1ftnuvsq
+
+记录 #3:
+----------------------------------------
+时间: 2026/9/22 11:43:07
+服务: DiscountService
+方法: getDiscountInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 54,
+    "ack": 0,
+    "time": 1790048587292,
+    "resp": 53,
+    "cmd": "discount_getdiscountinforesp",
+    "body": {
+      "discountList": [
+        {
+          "discountId": 1,
+          "expireTime": 0,
+          "discountState": 3,
+          "version": 0
+        },
+        {
+          "discountId": 2,
+          "expireTime": 1754183095,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 3,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 4,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 5,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 23
+}
+异步: 是
+调用ID: call_1790048587057_fihyz6qkm
+
+记录 #4:
+----------------------------------------
+时间: 2026/9/22 11:43:02
+服务: ActivityService
+方法: claimLotteryCumulative
+参数: [{"id":9}]
+结果:
+{
+  "_raw": {
+    "seq": 53,
+    "ack": 0,
+    "time": 1790048582674,
+    "resp": 52,
+    "cmd": "activity_claimlotterycumulativeresp",
+    "body": {
+      "role": {
+        "items": {
+          "5283": {
+            "quantity": 6
+          },
+          "5285": {
+            "quantity": 16
+          }
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 5283,
+          "value": 1,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 5285,
+          "value": 2,
+          "ext": 0
+        }
+      ],
+      "lotteryInfo": {
+        "cumulativeClaimedMap": {
+          "9": true
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 36
+}
+异步: 是
+调用ID: call_1790048582426_nq2oajhcg
+
+记录 #5:
+----------------------------------------
+时间: 2026/9/22 11:43:01
+服务: ActivityService
+方法: claimLotteryCumulative
+参数: [{"id":8}]
+结果:
+{
+  "_raw": {
+    "seq": 52,
+    "ack": 50,
+    "time": 1790048581540,
+    "resp": 51,
+    "cmd": "activity_claimlotterycumulativeresp",
+    "body": {
+      "role": {
+        "items": {
+          "5283": {
+            "quantity": 5
+          },
+          "5285": {
+            "quantity": 14
+          }
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 5283,
+          "value": 1,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 5285,
+          "value": 2,
+          "ext": 0
+        }
+      ],
+      "lotteryInfo": {
+        "cumulativeClaimedMap": {
+          "8": true
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 37
+}
+异步: 是
+调用ID: call_1790048581291_aqib3wsi4
+
+记录 #6:
+----------------------------------------
+时间: 2026/9/22 11:43:00
+服务: ActivityService
+方法: claimLotteryCumulative
+参数: [{"id":7}]
+结果:
+{
+  "_raw": {
+    "seq": 51,
+    "ack": 49,
+    "time": 1790048580418,
+    "resp": 50,
+    "cmd": "activity_claimlotterycumulativeresp",
+    "body": {
+      "role": {
+        "items": {
+          "5283": {
+            "quantity": 4
+          },
+          "5285": {
+            "quantity": 12
+          }
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 5283,
+          "value": 1,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 5285,
+          "value": 2,
+          "ext": 0
+        }
+      ],
+      "lotteryInfo": {
+        "cumulativeClaimedMap": {
+          "7": true
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 36
+}
+异步: 是
+调用ID: call_1790048580171_9a3pnbx46
+
+记录 #7:
+----------------------------------------
+时间: 2026/9/22 11:42:58
+服务: ActivityService
+方法: claimLotteryCumulative
+参数: [{"id":6}]
+结果:
+{
+  "_raw": {
+    "seq": 50,
+    "ack": 0,
+    "time": 1790048578917,
+    "resp": 49,
+    "cmd": "activity_claimlotterycumulativeresp",
+    "body": {
+      "role": {
+        "items": {
+          "5283": {
+            "quantity": 3
+          },
+          "5285": {
+            "quantity": 10
+          }
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 5283,
+          "value": 1,
+          "ext": 0
+        },
+        {
+          "type": 3,
+          "itemId": 5285,
+          "value": 2,
+          "ext": 0
+        }
+      ],
+      "lotteryInfo": {
+        "cumulativeClaimedMap": {
+          "6": true
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 37
+}
+异步: 是
+调用ID: call_1790048578668_phpql7qug
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

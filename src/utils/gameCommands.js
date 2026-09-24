@@ -1002,6 +1002,23 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
   }
 
   /**
+   * 装备翻面
+   */
+  equipment_changequench(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        heroId: params.heroId || 0,
+        part: params.part || 0,
+        ...params
+      }),
+      cmd: "changequench",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
    * 灯神扫荡
    */
   genie_sweep(ack = 0, seq = 0, params = {}) {
@@ -1104,7 +1121,7 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
   }
 
   /**
-   * 开始推图
+   * 推图阵容
    */
   fight_startlevel(ack = 0, seq = 0, params = {}) {
     return {
@@ -2001,6 +2018,68 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
       time: Date.now()
     }
   }
+  
+  
+    /**
+   *篝火营地抽奖
+   */
+  club_draw(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+            ...params
+      }),
+      cmd: "club_draw",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
+   *篝火营地领取任务奖励
+   */
+  club_taskclaim(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	  confId:params.confId,
+            ...params
+      }),
+      cmd: "club_taskclaim",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
+   *篝火营地升级声望
+   */
+  club_upgradelevel(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	              ...params
+      }),
+      cmd: "club_upgradelevel",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
+   *篝火营地领取声望奖励
+   */
+  club_claimlevelreward(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+            ...params
+      }),
+      cmd: "club_claimlevelreward",
+      seq,
+      time: Date.now()
+    }
+  }
 
   /**
    *篝火营地对手详情
@@ -2188,7 +2267,7 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
   }
 
   /**
-   * 领取五一免费道具
+   * 领取活动免费道具
    */
   activity_commonbuygoods(ack = 0, seq = 0, params = {}) {
     return {
@@ -2284,6 +2363,24 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
     }
   }
   
+    /**
+   * 宠物一键升级
+   */
+  pet_useexpitem(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        slotUId:{
+        slot:-1,
+        uId:params.uId},
+        isOneClick:true,
+          ...params
+      }),
+      cmd: "pet_useexpitem",
+      seq,
+      time: Date.now()
+    }
+  }
 
   /**
    * 对战助威
@@ -2502,7 +2599,7 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
   
   
     /**
-   * 五一兑换
+   * 活动兑换
    */
   activity_exchange(ack = 0, seq = 0, params = {}) {
     return {
@@ -3016,6 +3113,118 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
     }
   }
 
+        /**
+   * 四圣活动详情
+   */
+  activity_warorderget(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	    actId:params.actId
+        ...params
+      }),
+      cmd: "activity_warorderget",
+      seq,
+      time: Date.now()
+    }
+  }
+
+        /**
+   * 四圣签到奖励
+   */
+  activity_claimsignreward(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	    activityId:params.activityId,
+      	    patchDay:0,
+        ...params
+      }),
+      cmd: "activity_claimsignreward",
+      seq,
+      time: Date.now()
+    }
+  }
+
+        /**
+   * 四圣通行证奖励
+   */
+  activity_warorderrewordclaim(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	    actId:params.actId,
+        ...params
+      }),
+      cmd: "activity_warorderrewardclaim",
+      seq,
+      time: Date.now()
+    }
+  }
+
+        /**
+   * 四圣任务奖励
+   */
+  activity_warordertaskclaim(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	    actId:params.actId,
+      	    missionId:params.missionId,
+        ...params
+      }),
+      cmd: "activity_warordertaskclaim",
+      seq,
+      time: Date.now()
+    }
+  }
+
+        /**
+   * 四圣抽奖
+   */
+  activity_lottery(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	    times:1,
+        ...params
+      }),
+      cmd: "activity_lottery",
+      seq,
+      time: Date.now()
+    }
+  }
+
+        /**
+   * 四圣抽奖详情
+   */
+  activity_getlotteryinfo(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	            ...params
+      }),
+      cmd: "activity_getlotteryinfo",
+      seq,
+      time: Date.now()
+    }
+  }
+
+        /**
+   * 四圣累计抽奖
+   */
+  activity_claimlotterycumulative(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	    id:1,
+        ...params
+      }),
+      cmd: "activity_claimlotterycumulative",
+      seq,
+      time: Date.now()
+    }
+  }
 
   /**
    * 怪异塔参与成员

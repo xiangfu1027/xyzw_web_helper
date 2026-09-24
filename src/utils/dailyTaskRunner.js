@@ -224,142 +224,104 @@ export class DailyTaskRunner {
 
     const taskList = [];
 
-    // 1. 基础任务
-    if (!isTaskCompleted(2)) {
-      taskList.push({
-        name: "分享一次游戏",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "system_mysharecallback",
-            { isSkipShareCard: true, type: 2 },
-            "分享游戏",
-          ),
-      });
-    }
+    // 俱乐部签到已签到标志，用于跳过所有后续任务
+    let legionSigninFailed = false;
 
+    // 1. 赠送好友金币
     if (!isTaskCompleted(3)) {
       taskList.push({
         name: "赠送好友金币",
-        execute: () =>
-          this.executeGameCommand(tokenId, "friend_batch", {}, "赠送好友金币"),
+        execute: () => {
+          return this.executeGameCommand(tokenId, "friend_batch", {}, "赠送好友金币");
+        },
       });
     }
 
-    if (!isTaskCompleted(4)) {
-      taskList.push({
-        name: "免费招募",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "hero_recruit",
-            { recruitType: 3, recruitNumber: 1 },
-            "免费招募",
-          ),
-      });
-
-      if (settings.payRecruit) {
-        taskList.push({
-          name: "付费招募",
-          execute: () =>
-            this.executeGameCommand(
-              tokenId,
-              "hero_recruit",
-              { recruitType: 1, recruitNumber: 1 },
-              "付费招募",
-            ),
-        });
-      }
-    }
-
+    // 2. 免费点金 1/3
     if (!isTaskCompleted(6) && isTodayAvailable(statisticsTime["buy:gold"])) {
       for (let i = 0; i < 3; i++) {
         taskList.push({
           name: `免费点金 ${i + 1}/3`,
-          execute: () =>
-            this.executeGameCommand(
+          execute: () => {
+            return this.executeGameCommand(
               tokenId,
               "system_buygold",
               { buyNum: 1 },
               `免费点金 ${i + 1}`,
-            ),
+            );
+          },
         });
       }
     }
 
-    if (!isTaskCompleted(5) && settings.claimHangUp) {
+    // 3. 领取挂机奖励 + 挂机加钟 1/4
+    if (settings.claimHangUp) {
       taskList.push({
         name: "领取挂机奖励",
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          return this.executeGameCommand(
             tokenId,
             "system_claimhangupreward",
             {},
             "领取挂机奖励",
-          ),
+          );
+        },
       });
       for (let i = 0; i < 4; i++) {
         taskList.push({
           name: `挂机加钟 ${i + 1}/4`,
-          execute: () =>
-            this.executeGameCommand(
+          execute: () => {
+            return this.executeGameCommand(
               tokenId,
               "system_mysharecallback",
               { isSkipShareCard: true, type: 2 },
               `挂机加钟 ${i + 1}`,
-            ),
+            );
+          },
         });
       }
     }
 
-    if (!isTaskCompleted(7) && settings.openBox) {
-      taskList.push({
-        name: "开启木质宝箱",
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "item_openbox",
-            { itemId: 2001, number: 10 },
-            "开启木质宝箱10个",
-          ),
-      });
-    }
-
+    // 4. 停止盐罐计时 → 开始盐罐计时
     taskList.push({
       name: "停止盐罐计时",
-      execute: () =>
-        this.executeGameCommand(
+      execute: () => {
+        return this.executeGameCommand(
           tokenId,
           "bottlehelper_stop",
           {},
           "停止盐罐计时",
-        ),
+        );
+      },
     });
     taskList.push({
       name: "开始盐罐计时",
-      execute: () =>
-        this.executeGameCommand(
+      execute: () => {
+        return this.executeGameCommand(
           tokenId,
           "bottlehelper_start",
           {},
           "开始盐罐计时",
-        ),
+        );
+      },
     });
 
+    // 5. 领取盐罐奖励（设置开启时）
     if (!isTaskCompleted(14) && settings.claimBottle) {
       taskList.push({
         name: "领取盐罐奖励",
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          return this.executeGameCommand(
             tokenId,
             "bottlehelper_claim",
             {},
             "领取盐罐奖励",
-          ),
+          );
+        },
       });
     }
 
-    // 2. 竞技场
+    // 6. 竞技场战斗 1/3（6-22点）
     if (!isTaskCompleted(13) && settings.arenaEnable) {
       taskList.push({
         name: "竞技场战斗",
@@ -426,8 +388,25 @@ export class DailyTaskRunner {
       });
     }
 
-    // 3. BOSS
-    if (settings.bossTimes > 0) {
+    // 7. 俱乐部签到（失败则跳过军团BOSS，继续分享一次游戏）
+    taskList.push({
+      name: "俱乐部签到",
+      execute: async () => {
+        try {
+          await this.executeGameCommand(tokenId, "legion_signin", {}, "俱乐部签到");
+        } catch (error) {
+          if (error.message && (error.message.includes("2300190") || error.message.includes("今天已经签到过了"))) {
+            this.log(`俱乐部签到：今天已经签到过了，跳过军团BOSS`, "warning");
+            legionSigninFailed = true;
+          } else {
+            throw error;
+          }
+        }
+      },
+    });
+
+    // 8. 军团BOSS（俱乐部签到失败则不添加任务）
+    if (settings.bossTimes > 0 && !legionSigninFailed) {
       let alreadyLegionBoss = statistics["legion:boss"] ?? 0;
       if (isTodayAvailable(statisticsTime["legion:boss"])) {
         alreadyLegionBoss = 0;
@@ -440,62 +419,136 @@ export class DailyTaskRunner {
       if (remainingLegionBoss > 0) {
         taskList.push({
           name: "军团BOSS阵容检查",
-          execute: () =>
-            this.switchToFormationIfNeeded(
+          execute: () => {
+            return this.switchToFormationIfNeeded(
               tokenId,
               settings.bossFormation,
               "BOSS阵容",
-            ),
+            );
+          },
         });
         for (let i = 0; i < remainingLegionBoss; i++) {
           taskList.push({
             name: `军团BOSS ${i + 1}/${remainingLegionBoss}`,
-            execute: () =>
-              this.executeGameCommand(
+            execute: () => {
+              return this.executeGameCommand(
                 tokenId,
                 "fight_startlegionboss",
                 {},
                 `军团BOSS ${i + 1}`,
                 12000,
-              ),
+              );
+            },
           });
         }
       }
     }
 
+    // 分享一次游戏（不受俱乐部签到影响）
+    if (!isTaskCompleted(2)) {
+      taskList.push({
+        name: "分享一次游戏",
+        execute: () =>
+          this.executeGameCommand(
+            tokenId,
+            "system_mysharecallback",
+            { isSkipShareCard: true, type: 2 },
+            "分享游戏",
+          ),
+      });
+    }
+
+    // 招募冷却标志，用于跳过付费招募和开宝箱
+    let recruitCooldown = false;
+
+    // 9. 免费招募（不受俱乐部签到失败影响）
+    if (!isTaskCompleted(4)) {
+      taskList.push({
+        name: "免费招募",
+        execute: async () => {
+          try {
+            await this.executeGameCommand(
+              tokenId,
+              "hero_recruit",
+              { recruitType: 3, recruitNumber: 1 },
+              "免费招募",
+            );
+          } catch (error) {
+            // 如果提示"冷却时间未过"，设置标志，由付费招募任务在执行时自行跳过
+            if (error.message && error.message.includes("冷却时间未过")) {
+              recruitCooldown = true;
+              this.log("免费招募失败：冷却时间未过，将跳过付费招募", "warning");
+            }
+            throw error;
+          }
+        },
+      });
+    }
+
+    // 10. 付费招募（设置开启且免费招募任务未完成时添加；免费招募冷却中则在执行时跳过）
+    if (settings.payRecruit && !isTaskCompleted(4)) {
+      taskList.push({
+        name: "付费招募",
+        execute: () => {
+          if (recruitCooldown) {
+            this.log("跳过付费招募（免费招募冷却时间未过）", "warning");
+            return Promise.resolve();
+          }
+          return this.executeGameCommand(
+            tokenId,
+            "hero_recruit",
+            { recruitType: 1, recruitNumber: 1 },
+            "付费招募",
+          );
+        },
+      });
+    }
+
+    // 11. 开启木质宝箱
+    if (!isTaskCompleted(7) && settings.openBox) {
+      taskList.push({
+        name: "开启木质宝箱",
+        execute: () => {
+          return this.executeGameCommand(
+            tokenId,
+            "item_openbox",
+            { itemId: 2001, number: 10 },
+            "开启木质宝箱10个",
+          );
+        },
+      });
+    }
+
+    // 12. 每日BOSS（不受俱乐部签到失败影响）
     const todayBossId = getTodayBossId();
     taskList.push({
       name: "每日BOSS阵容检查",
-      execute: () =>
-        this.switchToFormationIfNeeded(
+      execute: () => {
+        return this.switchToFormationIfNeeded(
           tokenId,
           settings.bossFormation,
           "BOSS阵容",
-        ),
+        );
+      },
     });
     for (let i = 0; i < 3; i++) {
       taskList.push({
         name: `每日BOSS ${i + 1}/3`,
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          return this.executeGameCommand(
             tokenId,
             "fight_startboss",
             { bossId: todayBossId },
             `每日BOSS ${i + 1}`,
             12000,
-          ),
+          );
+        },
       });
     }
 
-    // 4. 固定奖励
-    // 4.1 俱乐部签到
-    taskList.push({
-      name: "俱乐部签到",
-      execute: () =>
-        this.executeGameCommand(tokenId, "legion_signin", {}, "俱乐部签到"),
-    });
-
-    // 4.2 福利签到 + 条件判断
+    // 13. 福利签到 + 条件判断
+    // 注意：不能通过构建期记录的索引splice移除后续任务，一旦前面有任务被移除导致索引偏移，
+    // 就会误删任务奖励等靠后的任务；这里只设置标志，由对应任务自行判断跳过
     let signInFailed = false;
     taskList.push({
       name: "福利签到",
@@ -508,7 +561,7 @@ export class DailyTaskRunner {
             "福利签到",
           );
         } catch (error) {
-          if (error.message && error.message.includes("400190")) {
+          if (error.message && (error.message.includes("400190") || error.message.includes("没有可领取的签到奖励"))) {
             this.log(`福利签到：没有可领取的签到奖励，跳过后续礼包领取`, "warning");
             signInFailed = true;
           } else {
@@ -518,85 +571,89 @@ export class DailyTaskRunner {
       },
     });
 
-    // 4.3 领取每日礼包（福利签到失败则跳过）
+    // 14. 领取每日礼包
     taskList.push({
       name: "领取每日礼包",
       execute: async () => {
         if (signInFailed) {
-          this.log(`跳过领取每日礼包（福利签到失败）`, "warning");
+          this.log("跳过领取每日礼包（福利签到已领取）", "warning");
           return;
         }
         await this.executeGameCommand(tokenId, "discount_claimreward", {}, "领取每日礼包");
       },
     });
 
-    // 4.4 领取每日免费奖励（福利签到失败则跳过）
+    // 15. 领取每日免费奖励
     taskList.push({
       name: "领取每日免费奖励",
       execute: async () => {
         if (signInFailed) {
-          this.log(`跳过领取每日免费奖励（福利签到失败）`, "warning");
+          this.log("跳过领取每日免费奖励（福利签到已领取）", "warning");
           return;
         }
         await this.executeGameCommand(tokenId, "collection_claimfreereward", {}, "领取每日免费奖励");
       },
     });
 
-    // 4.5 领取免费礼包（福利签到失败则跳过）
+    // 16. 领取免费礼包
     taskList.push({
       name: "领取免费礼包",
       execute: async () => {
         if (signInFailed) {
-          this.log(`跳过领取免费礼包（福利签到失败）`, "warning");
+          this.log("跳过领取免费礼包（福利签到已领取）", "warning");
           return;
         }
         await this.executeGameCommand(tokenId, "card_claimreward", {}, "领取免费礼包");
       },
     });
 
-    // 4.6 领取永久卡礼包（福利签到失败则跳过）
+    // 17. 领取永久卡礼包
     taskList.push({
       name: "领取永久卡礼包",
       execute: async () => {
         if (signInFailed) {
-          this.log(`跳过领取永久卡礼包（福利签到失败）`, "warning");
+          this.log("跳过领取永久卡礼包（福利签到已领取）", "warning");
           return;
         }
         await this.executeGameCommand(tokenId, "card_claimreward", { cardId: 4003 }, "领取永久卡礼包");
       },
     });
 
-    // 4.7 领取邮件奖励
+    // 18. 领取邮件奖励（不受俱乐部签到失败影响）
     if (settings.claimEmail) {
       taskList.push({
         name: "领取邮件奖励",
-        execute: () =>
-          this.executeGameCommand(tokenId, "mail_claimallattachment", {}, "领取邮件奖励"),
+        execute: () => {
+          return this.executeGameCommand(tokenId, "mail_claimallattachment", {}, "领取邮件奖励");
+        },
       });
     }
 
+    // 19. 领取珍宝阁礼包（不受俱乐部签到失败影响）
     taskList.push({
       name: "开始领取珍宝阁礼包",
-      execute: () =>
-        this.executeGameCommand(
+      execute: () => {
+        return this.executeGameCommand(
           tokenId,
           "collection_goodslist",
           {},
           "开始领取珍宝阁礼包",
-        ),
+        );
+      },
     });
     taskList.push({
       name: "领取珍宝阁免费礼包",
-      execute: () =>
-        this.executeGameCommand(
+      execute: () => {
+        return this.executeGameCommand(
           tokenId,
           "collection_claimfreereward",
           {},
           "领取珍宝阁免费礼包",
-        ),
+        );
+      },
     });
 
-    // 免费扭蛋：只在周二/周四/周六执行
+    // 20. 免费扭蛋：只在周二/周四/周六执行
     const dayOfWeek = new Date().getDay();
     if (
       settings.freeGachaEnable !== false
@@ -605,40 +662,47 @@ export class DailyTaskRunner {
     ) {
       taskList.push({
         name: "免费扭蛋",
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          return this.executeGameCommand(
             tokenId,
             "gacha_drawreward",
             { num: 1, isGroup: false },
             "免费扭蛋",
-          ),
+          );
+        },
       });
     }
 
-    // 5. 免费活动
+    // 21. 免费钓鱼
     if (isTodayAvailable(statistics["artifact:normal:lottery:time"])) {
       for (let i = 0; i < 3; i++) {
         taskList.push({
           name: `免费钓鱼 ${i + 1}/3`,
-          execute: () =>
-            this.executeGameCommand(
+          execute: () => {
+            return this.executeGameCommand(
               tokenId,
               "artifact_lottery",
               { lotteryNumber: 1, newFree: true, type: 1 },
               `免费钓鱼 ${i + 1}`,
-            ),
+            );
+          },
         });
       }
     }
 
-    // 先领取免费扫荡卷（3次），再执行灯神免费扫荡（4国）
-    // 如果第一次领取免费扫荡卷失败（3300050错误），跳过剩余次数和灯神扫荡
+    // 22. 领取免费扫荡卷（3次）+ 灯神免费扫荡（4国）
+    // 如果第一次领取免费扫荡卷失败（3300050错误），跳过剩余扫荡卷和灯神扫荡
+    // 注意：不能通过构建期记录的索引splice移除任务，前面的任务（付费招募、礼包等）被移除后索引会偏移，
+    // 会导致误删任务奖励1-10等后续任务；这里只设置标志，由对应任务自行判断跳过
     let sweepRollFailed = false;
     for (let i = 0; i < 3; i++) {
-      if (sweepRollFailed) break;
       taskList.push({
         name: `领取免费扫荡卷 ${i + 1}/3`,
         execute: async () => {
+          if (sweepRollFailed) {
+            this.log(`跳过领取免费扫荡卷 ${i + 1}/3（首次领取失败）`, "warning");
+            return;
+          }
           try {
             await this.executeGameCommand(
               tokenId,
@@ -647,8 +711,8 @@ export class DailyTaskRunner {
               `领取免费扫荡卷 ${i + 1}`,
             );
           } catch (error) {
-            if (error.message && error.message.includes("3300050")) {
-              this.log(`领取免费扫荡卷失败（购买数量超出限制），跳过剩余次数和灯神扫荡`, "warning");
+            if (error.message && (error.message.includes("3300050") || error.message.includes("购买数量超出限制"))) {
+              this.log(`领取免费扫荡卷失败（购买数量超出限制），跳过剩余扫荡卷和灯神扫荡`, "warning");
               sweepRollFailed = true;
             } else {
               throw error;
@@ -679,21 +743,22 @@ export class DailyTaskRunner {
       }
     }
 
-    // 6. 黑市
+    // 23. 黑市购买
     if (!isTaskCompleted(12) && settings.blackMarketPurchase) {
       taskList.push({
         name: "黑市购买1次物品",
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          return this.executeGameCommand(
             tokenId,
             "store_purchase",
             { goodsId: 1 },
             "黑市购买1次物品",
-          ),
+          );
+        },
       });
     }
 
-    // 咸王梦境
+    // 24. 咸王梦境（周日/周一/周三/周四）
     const mengyandayOfWeek = new Date().getDay();
     if (
       (mengyandayOfWeek === 0) |
@@ -704,34 +769,40 @@ export class DailyTaskRunner {
       const mjbattleTeam = { 0: 107 };
       taskList.push({
         name: "咸王梦境",
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          return this.executeGameCommand(
             tokenId,
             "dungeon_selecthero",
             { battleTeam: mjbattleTeam },
             "咸王梦境",
-          ),
+          );
+        },
       });
     }
 
-    // 深海灯神
+    // 25. 深海灯神（周一）
     if (
       mengyandayOfWeek === 1 &&
       isTodayAvailable(statisticsTime[`genie:daily:free:5`])
     ) {
       taskList.push({
         name: "深海灯神",
-        execute: () =>
-          this.executeGameCommand(
+        execute: () => {
+          if (legionSigninFailed) {
+            this.log(`跳过深海灯神（俱乐部签到已签到）`, "warning");
+            return Promise.resolve();
+          }
+          return this.executeGameCommand(
             tokenId,
             "genie_sweep",
             { genieId: 5, sweepCnt: 1 },
             "深海灯神",
-          ),
+          );
+        },
       });
     }
 
-    // 阵容还原
+    // 阵容还原（不受俱乐部签到影响）
     if (originalFormation) {
       taskList.push({
         name: "阵容还原",
@@ -744,18 +815,28 @@ export class DailyTaskRunner {
       });
     }
 
-    // 7. 任务奖励
+    // 26. 任务奖励（不受俱乐部签到影响）
+    // 领取失败（"已经领取过这个任务"或"任务未达成完成条件"）只记录并跳过，继续执行后续任务
     for (let taskId = 1; taskId <= 10; taskId++) {
       taskList.push({
         name: `领取任务奖励${taskId}`,
-        execute: () =>
-          this.executeGameCommand(
-            tokenId,
-            "task_claimdailypoint",
-            { taskId },
-            `领取任务奖励${taskId}`,
-            5000,
-          ),
+        execute: async () => {
+          try {
+            await this.executeGameCommand(
+              tokenId,
+              "task_claimdailypoint",
+              { taskId },
+              `领取任务奖励${taskId}`,
+              5000,
+            );
+          } catch (error) {
+            if (error.message && (error.message.includes("已经领取过这个任务") || error.message.includes("任务未达成完成条件"))) {
+              this.log(`领取任务奖励${taskId}失败（已领取或未完成），跳过继续下一个`, "warning");
+            } else {
+              throw error;
+            }
+          }
+        },
       });
     }
 
