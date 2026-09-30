@@ -67,10 +67,13 @@
             :loading="boxWeekRunning"
           />
           <CustomizedCard
-            mode="button-placeholder"
+            mode="button-with-input"
+            name="批量金竿"
             button-text="批量金竿"
             :disabled="isButtonDisabled"
             @button-click="batchStartFishing"
+            v-model:inputValue="fishingTarget"
+            placeholder="金竿目标(默认1600)"
           />
           <CustomizedCard
             mode="button-placeholder"
@@ -132,12 +135,18 @@
             v-model:placeholderValue="goldFishChangeCount"
             placeholder="输入金鱼goodsId(9位数字)"
           />
+          <CustomizedCard
+            mode="button-placeholder"
+            button-text="领取免费"
+            :disabled="isButtonDisabled"
+            @button-click="batchClaimFree"
+          />
         </CustomizedCard>
         
         <!-- 操作日志 -->
         <OperationLogCard 
           page="fish-helper" 
-          :filter-operations="['一键金鱼', '批量宝箱', '批量金竿', '批量招募', '批量助威', '批量盐罐', '批量金砖', '批量购买金竿', '批量使用道具', '批量导出', '批量一键宝箱', '38+1600', '42+1600', '46+1600', '批量换金鱼', '批量购买招募', '批量领取奖励']"
+          :filter-operations="['一键金鱼', '批量宝箱', '批量金竿', '批量招募', '批量助威', '批量盐罐', '批量金砖', '批量购买金竿', '批量使用道具', '批量导出', '批量一键宝箱', '38+1600', '42+1600', '46+1600', '批量换金鱼', '批量购买招募', '批量领取奖励', '领取免费']"
         />
     </template>
   </MyCard>
@@ -203,6 +212,7 @@ const taskName = ref('') // 活动ID，默认由动态节日基准日计算（ac
 const executionRange = ref('') // 执行范围
 const goldFishChangeCount = ref('') // 批量换金鱼数量
 const useItemMode = ref('12') // 使用道具模式：'12' 每次12个直到出错, 'openAll' 开完
+const fishingTarget = ref('1600') // 批量金竿目标已用数，默认1600
 
 // 使用道具模式选项
 const useItemModeOptions = [
@@ -217,7 +227,8 @@ const saveInputSettings = async () => {
     fishItemId: fishItemId.value,
     cheerItemId: cheerItemId.value,
     taskName: taskName.value,
-    goldFishChangeCount: goldFishChangeCount.value
+    goldFishChangeCount: goldFishChangeCount.value,
+    fishingTarget: fishingTarget.value
   })
 }
 
@@ -229,11 +240,12 @@ const loadInputSettings = async () => {
   cheerItemId.value = data?.cheerItemId || '5278'
   taskName.value = data?.taskName || String(actId.value || '')
   goldFishChangeCount.value = data?.goldFishChangeCount || ''
+  fishingTarget.value = data?.fishingTarget || '1600'
 }
 
 // 监听输入框状态变化，自动保存（防抖）
 let inputSaveTimer = null
-watch([taskItemId, fishItemId, cheerItemId, taskName, goldFishChangeCount], () => {
+watch([taskItemId, fishItemId, cheerItemId, taskName, goldFishChangeCount, fishingTarget], () => {
   if (inputSaveTimer) {
     clearTimeout(inputSaveTimer)
   }
@@ -262,85 +274,32 @@ const batch38Running = ref(false)
 const batch42Running = ref(false)
 const batch46Running = ref(false)
 const batchChangeGoldFishRunning = ref(false)
+const claimFreeRunning = ref(false)
+const useItemRunning = ref(false)
 
 // 计算是否有任何操作正在运行
 const isAnyOperationRunning = computed(() => {
-  return boxOpening.value || fishingRunning.value || recruitRunning.value || cheerRunning.value || quickFishingRunning.value || boxWeekRunning.value || recruitWeekRunning.value || claimRewardsRunning.value || exportRunning.value || batch38Running.value || batch42Running.value || batch46Running.value || batchChangeGoldFishRunning.value
+  return boxOpening.value || fishingRunning.value || recruitRunning.value || cheerRunning.value || quickFishingRunning.value || boxWeekRunning.value || recruitWeekRunning.value || claimRewardsRunning.value || exportRunning.value || batch38Running.value || batch42Running.value || batch46Running.value || batchChangeGoldFishRunning.value || claimFreeRunning.value || useItemRunning.value
 })
 
 // 判断当前日期是否在节日周内（端午、中秋、元旦）
 const isFestivalWeekAvailable = computed(() => {
+  const base = festivalBaseDate.value
+  if (!base) return false
+
   const now = new Date()
-  const year = now.getFullYear()
-  const month = now.getMonth() + 1
-  const day = now.getDate()
-  const dayOfWeek = now.getDay() // 0=周日, 1=周一, ..., 6=周六
-  
-  // 获取本周一和周五的日期
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-  const monday = new Date(year, month - 1, day + mondayOffset)
-  const friday = new Date(monday)
-  friday.setDate(friday.getDate() + 4)
-  
-  // 检查当前日期是否在周一到周五之间
-  const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5
-  
-  // 元旦：公历1月1日所在周
-  if (month === 1 && day >= 1 && day <= 7 && isWeekday) {
-    return true
-  }
-  
-  // 端午节：农历五月初五（需要手动计算或查表）
-  // 2024年端午节：6月10日（农历五月初五）
-  // 2025年端午节：5月31日（农历五月初五）
-  // 2026年端午节：6月19日（农历五月初五）
-  const duanwuDates = {
-    2024: { month: 6, day: 10 },
-    2025: { month: 5, day: 31 },
-    2026: { month: 6, day: 19 },
-    2027: { month: 6, day: 9 }
-  }
-  
-  if (duanwuDates[year]) {
-    const duanwuDate = new Date(year, duanwuDates[year].month - 1, duanwuDates[year].day)
-    const duanwuMonday = new Date(duanwuDate)
-    const duanwuDayOfWeek = duanwuDate.getDay()
-    const duanwuMondayOffset = duanwuDayOfWeek === 0 ? -6 : 1 - duanwuDayOfWeek
-    duanwuMonday.setDate(duanwuDate.getDate() + duanwuMondayOffset)
-    const duanwuFriday = new Date(duanwuMonday)
-    duanwuFriday.setDate(duanwuFriday.getDate() + 4)
-    
-    if (now >= duanwuMonday && now <= duanwuFriday && isWeekday) {
-      return true
-    }
-  }
-  
-  // 中秋节：农历八月十五
-  // 2024年中秋节：9月17日（农历八月十五）
-  // 2025年中秋节：10月6日（农历八月十五）
-  // 2026年中秋节：9月25日（农历八月十五）
-  const zhongqiuDates = {
-    2024: { month: 9, day: 17 },
-    2025: { month: 10, day: 6 },
-    2026: { month: 9, day: 25 },
-    2027: { month: 9, day: 15 }
-  }
-  
-  if (zhongqiuDates[year]) {
-    const zhongqiuDate = new Date(year, zhongqiuDates[year].month - 1, zhongqiuDates[year].day)
-    const zhongqiuMonday = new Date(zhongqiuDate)
-    const zhongqiuDayOfWeek = zhongqiuDate.getDay()
-    const zhongqiuMondayOffset = zhongqiuDayOfWeek === 0 ? -6 : 1 - zhongqiuDayOfWeek
-    zhongqiuMonday.setDate(zhongqiuDate.getDate() + zhongqiuMondayOffset)
-    const zhongqiuFriday = new Date(zhongqiuMonday)
-    zhongqiuFriday.setDate(zhongqiuFriday.getDate() + 4)
-    
-    if (now >= zhongqiuMonday && now <= zhongqiuFriday && isWeekday) {
-      return true
-    }
-  }
-  
-  return false
+  const y = Number(base.slice(0, 4))
+  const m = Number(base.slice(4, 6))
+  const d = Number(base.slice(6, 8))
+
+  // 窗口起点：最近的节日周五（当天0点）
+  const friday = new Date(y, m - 1, d, 0, 0, 0, 0)
+  // 窗口终点：下一个周四（当天23:59:59.999）
+  const wednesday = new Date(friday)
+  wednesday.setDate(wednesday.getDate() + 6)
+  wednesday.setHours(23, 59, 59, 999)
+
+  return now >= friday && now <= wednesday
 })
 
 // 计算离当天最近的节日（端午/中秋/元旦）所在周的周五日期，作为活动基准日（YYYYMMDD）
@@ -385,9 +344,8 @@ const festivalBaseDate = computed(() => {
   return `${F.getFullYear()}${String(F.getMonth() + 1).padStart(2, '0')}${String(F.getDate()).padStart(2, '0')}`
 })
 
-// 活动ID：actId = 基准日期拼接1，activityId = 基准日期拼接5
+// 活动ID：actId = 基准日期拼接1，activityId = 基准日期拼接5（领取活动奖励用 activityId 即 festivalActIdStr，7位）
 const actId = computed(() => festivalBaseDate.value ? Number(`${festivalBaseDate.value}1`) : 0)
-const activityId = computed(() => festivalBaseDate.value ? Number(`${festivalBaseDate.value}5`) : 0)
 const festivalActIdStr = computed(() => {
   const base = festivalBaseDate.value
   if (!base) return '2606191'
@@ -1096,7 +1054,9 @@ const batchStartFishing = async () => {
     status: 'info',
     message: `开始批量金竿，${rangeText}，共${targetTokens.length}个Token`
   })
-  
+
+  fishingRunning.value = true
+
   try {
     // 使用连接池执行批量操作
     const results = await connectionPool.batchOperate(
@@ -1174,13 +1134,13 @@ const batchStartFishing = async () => {
           // 从下一位开始执行
           let currentMissionId = startMissionId + 1
           
-          // 金竿目标1600
-          const targetFishing = 1600
+          // 金竿目标（用户输入，默认1600）
+          const targetFishing = parseInt(fishingTarget.value) || 1600
           
           // 获取现有金竿数量
           const currentGoldRod = getResourceCount('goldRod')
           
-          // 计算执行次数：min((1600-已用)/10, 现有金竿/10)
+          // 计算执行次数：min((目标-已用)/10, 现有金竿/10)
           const needCount = Math.ceil((targetFishing - usedFishing) / 10)
           const rodCount = Math.floor(currentGoldRod / 10)
           const executeCount = Math.min(needCount, rodCount)
@@ -1196,16 +1156,16 @@ const batchStartFishing = async () => {
             message: `【序号${tokenIndex}】[${token.name || token.id}]已用金竿: ${usedFishing}, 起始任务ID: ${startMissionId}, 现有金竿: ${currentGoldRod}, 需要次数: ${needCount}, 金竿可执行: ${rodCount}, 执行次数: ${executeCount}`
           })
           
-          // 已用金竿大于等于1600，跳转到领取奖励阶段
+          // 已用金竿大于等于目标，跳转到领取奖励阶段
           let skipFishing = false
-          if (usedFishing >= 1600) {
-            message.info(`[序号${tokenIndex}] ${token.name || token.id} 已用金竿${usedFishing}已达到目标1600，跳过金竿，直接领取奖励`)
+          if (usedFishing >= targetFishing) {
+            message.info(`[序号${tokenIndex}] ${token.name || token.id} 已用金竿${usedFishing}已达到目标${targetFishing}，跳过金竿，直接领取奖励`)
             logStore.addLog({
               page: 'fish-helper',
               cardType: '金鱼资源',
               operation: '批量金竿',
               status: 'info',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]已用金竿${usedFishing}已达到目标1600，跳过金竿，直接领取奖励`
+              message: `【序号${tokenIndex}】[${token.name || token.id}]已用金竿${usedFishing}已达到目标${targetFishing}，跳过金竿，直接领取奖励`
             })
             skipFishing = true
           }
@@ -1294,7 +1254,7 @@ const batchStartFishing = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: activityId.value, missionId: missionId },
+                { activityId: Number(festivalActIdStr.value), missionId: missionId },
                 10000
               )
               
@@ -1377,6 +1337,8 @@ const batchStartFishing = async () => {
   } catch (error) {
     console.error('批量金竿失败:', error)
     message.error(`批量金竿失败: ${error.message || '未知错误'}`)
+  } finally {
+    fishingRunning.value = false
   }
 }
 
@@ -2129,7 +2091,7 @@ const batchBoxWeek = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: activityId.value, missionId: missionId },
+                { activityId: Number(festivalActIdStr.value), missionId: missionId },
                 10000
               )
               await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -2468,7 +2430,7 @@ const batchRecruitWeek = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: activityId.value, missionId: missionId },
+                { activityId: Number(festivalActIdStr.value), missionId: missionId },
                 10000
               )
               
@@ -2835,7 +2797,7 @@ const batchSaltJar = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: activityId.value, missionId: missionId },
+                { activityId: Number(festivalActIdStr.value), missionId: missionId },
                 10000
               )
               
@@ -2968,7 +2930,7 @@ const batchClaimRewards = async () => {
                 const result = await tokenStore.sendMessageWithPromise(
                   token.id,
                   'activity_claimtaskreward',
-                  { activityId: activityId.value, missionId: missionId },
+                  { activityId: Number(festivalActIdStr.value), missionId: missionId },
                   10000
                 )
                 
@@ -3256,7 +3218,7 @@ const batch38Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: Number(festivalActIdStr.value), missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldBrickRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3315,7 +3277,7 @@ const batch38Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: Number(festivalActIdStr.value), missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldRodRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3570,7 +3532,7 @@ const batch42Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: Number(festivalActIdStr.value), missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldBrickRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3629,7 +3591,7 @@ const batch42Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: Number(festivalActIdStr.value), missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldRodRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3884,7 +3846,7 @@ const batch46Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: Number(festivalActIdStr.value), missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldBrickRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -3943,7 +3905,7 @@ const batch46Plus1600 = async () => {
             }
             
             try {
-              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: activityId.value, missionId: i }, 10000)
+              const claimResult = await tokenStore.sendMessageWithPromise(token.id, 'activity_claimtaskreward', { activityId: Number(festivalActIdStr.value), missionId: i }, 10000)
               if (claimResult && (claimResult.code === 0 || claimResult.code === undefined || claimResult.success === true)) {
                 claimedGoldRodRewards.push(i)
                 await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
@@ -4161,6 +4123,100 @@ const batchChangeGoldFish = async () => {
     message.error(`批量换金鱼失败: ${error.message || '未知错误'}`)
   } finally {
     batchChangeGoldFishRunning.value = false
+  }
+}
+
+// 批量领取免费
+const batchClaimFree = async () => {
+  // goodsId = 动态基准日期后6位(年月日) + '41'，如 20260925 -> 26092541
+  const base = festivalBaseDate.value
+  const goodsId = base ? Number(base.slice(2) + '41') : 26092541
+
+  const sortedTokensList = [...tokenStore.gameTokens].sort((a, b) => {
+    const nameA = (a.name || '未命名').toLowerCase()
+    const nameB = (b.name || '未命名').toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+
+  if (sortedTokensList.length === 0) {
+    message.warning('没有可用的Token')
+    return
+  }
+
+  const tokenIndices = connectionPool.parseTokenRange(executionRange.value)
+  const targetTokens = connectionPool.getTargetTokens(sortedTokensList, tokenIndices)
+
+  if (targetTokens.length === 0) {
+    message.warning('执行范围内没有有效的Token')
+    return
+  }
+
+  const getTokenIndex = (token) => {
+    const index = sortedTokensList.findIndex(t => t.id === token.id)
+    return index + 1
+  }
+
+  const rangeText = executionRange.value ? `范围${executionRange.value}` : "全部"
+  message.info(`开始领取免费（${rangeText}），goodsId: ${goodsId}，共${targetTokens.length}个Token...`)
+
+  logStore.addLog({
+    page: 'fish-helper',
+    cardType: '金鱼资源',
+    operation: '领取免费',
+    status: 'info',
+    message: `开始领取免费，${rangeText}，goodsId: ${goodsId}`
+  })
+
+  claimFreeRunning.value = true
+
+  try {
+    const results = await connectionPool.batchOperate(
+      targetTokens,
+      async (token) => {
+        try {
+          const tokenIndex = getTokenIndex(token)
+          message.info(`[序号${tokenIndex}] ${token.name || token.id} 正在领取免费商品...`)
+
+          await tokenStore.sendActivityCommonBuyGoods(token.id, { goodsId })
+          await new Promise(resolve => setTimeout(resolve, COMMAND_DELAY))
+
+          message.success(`[序号${tokenIndex}] ${token.name || token.id} 领取免费完成`)
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '金鱼资源',
+            operation: '领取免费',
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]领取免费完成，goodsId: ${goodsId}`
+          })
+          return { success: true, token }
+        } catch (error) {
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 领取免费失败:`, error)
+          return { success: false, token, error: error.message || '未知错误' }
+        }
+      },
+      {
+        batchSize: 20,
+        delayBetween: 300
+      }
+    )
+
+    const successCount = results.filter(r => r.success).length
+    const failCount = results.filter(r => !r.success).length
+    message.success(`领取免费完成：成功${successCount}个，失败${failCount}个`)
+
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '金鱼资源',
+      operation: '领取免费',
+      status: 'info',
+      message: `【批量】领取免费完成：成功${successCount}个，失败${failCount}个`
+    })
+  } catch (error) {
+    console.error('领取免费失败:', error)
+    message.error(`领取免费失败: ${error.message || '未知错误'}`)
+  } finally {
+    claimFreeRunning.value = false
   }
 }
 
@@ -4448,7 +4504,7 @@ const batchGoldBrick = async () => {
               const rewardResult = await tokenStore.sendMessageWithPromise(
                 token.id,
                 'activity_claimtaskreward',
-                { activityId: activityId.value, missionId: missionId },
+                { activityId: Number(festivalActIdStr.value), missionId: missionId },
                 10000
               )
               
@@ -4594,9 +4650,9 @@ const batchExportItems = async () => {
       }
 
       const items = roleInfo.role.items
-      const cheerCount = items['5278']?.quantity || 0
-      const taskCount = items['5279']?.quantity || 0
-      const fishCount = items['5280']?.quantity || 0
+      const cheerCount = items[cheerItemId.value]?.quantity || 0
+      const taskCount = items[taskItemId.value]?.quantity || 0
+      const fishCount = items[fishItemId.value]?.quantity || 0
 
       // 获取活动信息（已用资源 + 领取记录）
       const activityInfo = await tokenStore.sendMessageWithPromise(token.id, 'activity_get', {}, 10000)

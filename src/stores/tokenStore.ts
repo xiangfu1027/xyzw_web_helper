@@ -1036,6 +1036,33 @@ export const useTokenStore = defineStore("tokens", () => {
         wsLogger.info(`🗼 [咸将塔] 收到爬塔响应 [${tokenId}]:`, result);
       }
 
+      // 检查返回结果是否包含"操作过快"错误（服务器可能返回正常响应但包含错误信息）
+      const resultStr = result ? JSON.stringify(result) : '';
+      const isRateLimitInResult = 
+        resultStr.includes('操作过快') || 
+        resultStr.includes('请稍后重试') ||
+        resultStr.includes('操作太快');
+      
+      if (isRateLimitInResult) {
+        // 最多重试3次，等待时间递增：2分钟、3分钟、4分钟
+        if (retryCount >= 3) {
+          wsLogger.error(
+            `⏰ [操作过快] 命令 [${cmd}] 已达最大重试次数(3次)，放弃重试`,
+          );
+          return Promise.reject(new Error(`操作过快，已达最大重试次数`));
+        }
+        
+        const waitMinutes = 2 + retryCount; // 第1次2分钟，第2次3分钟，第3次4分钟
+        const waitMs = waitMinutes * 60 * 1000;
+        
+        wsLogger.warn(
+          `⏰ [操作过快] 命令 [${cmd}] 返回结果包含限流错误，等待${waitMinutes}分钟后重试... (第${retryCount + 1}/3次重试)`,
+        );
+        
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        return sendMessageWithPromise(tokenId, cmd, params, timeout, retryCount + 1);
+      }
+
       return result;
     } catch (error) {
       // 特殊日志：fight_starttower 错误
@@ -1052,17 +1079,22 @@ export const useTokenStore = defineStore("tokens", () => {
         errorMsg.includes("200400");
 
       if (isRateLimitError) {
-        const waitMinutes = 2;
+        // 最多重试3次，等待时间递增：2分钟、3分钟、4分钟
+        if (retryCount >= 3) {
+          wsLogger.error(
+            `⏰ [操作过快] 命令 [${cmd}] 已达最大重试次数(3次)，放弃重试`,
+          );
+          return Promise.reject(error);
+        }
+        
+        const waitMinutes = 2 + retryCount; // 第1次2分钟，第2次3分钟，第3次4分钟
         const waitMs = waitMinutes * 60 * 1000;
         
         wsLogger.warn(
-          `⏰ [操作过快] 命令 [${cmd}] 触发限流错误，等待${waitMinutes}分钟后重试... (第${retryCount + 1}次重试)`,
+          `⏰ [操作过快] 命令 [${cmd}] 触发限流错误，等待${waitMinutes}分钟后重试... (第${retryCount + 1}/3次重试)`,
         );
         
-        // 等待2分钟
         await new Promise((resolve) => setTimeout(resolve, waitMs));
-        
-        // 无限重试，不限制次数
         return sendMessageWithPromise(tokenId, cmd, params, timeout, retryCount + 1);
       }
 

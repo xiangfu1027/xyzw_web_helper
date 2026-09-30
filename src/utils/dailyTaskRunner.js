@@ -71,24 +71,47 @@ export class DailyTaskRunner {
     description = "",
     timeout = 8000,
   ) {
-    try {
-      if (description) this.log(`执行: ${description}`);
-      const result = await this.tokenStore.sendMessageWithPromise(
-        tokenId,
-        cmd,
-        params,
-        timeout,
-      );
-      await new Promise((resolve) => setTimeout(resolve, this.delaySettings.commandDelay));
-      if (description) this.log(`${description} - 成功`, "success");
-      return result;
-    } catch (error) {
-      if (description) {
-        const token = this.tokenStore.gameTokens.find((t) => t.id === tokenId);
-        const tokenName = token?.name || tokenId;
-        this.log(`[${tokenName}] ${description} - 失败: ${error.message}`, "error");
+    const maxRetries = 3;
+    const retryDelay = 120000; // 2分钟
+    
+    for (let retry = 0; retry < maxRetries; retry++) {
+      try {
+        if (description) this.log(`执行: ${description}`);
+        const result = await this.tokenStore.sendMessageWithPromise(
+          tokenId,
+          cmd,
+          params,
+          timeout,
+        );
+        
+        // 检查返回结果是否包含"操作过快"错误
+        const resultStr = result ? JSON.stringify(result) : '';
+        if (resultStr.includes('操作过快') || resultStr.includes('请稍后重试')) {
+          if (retry < maxRetries - 1) {
+            this.log(`检测到"操作过快"，等待2分钟后重试 (${retry + 1}/${maxRetries})...`, "warning");
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
+            continue;
+          }
+        }
+        
+        await new Promise((resolve) => setTimeout(resolve, this.delaySettings.commandDelay));
+        if (description) this.log(`${description} - 成功`, "success");
+        return result;
+      } catch (error) {
+        // 检查错误信息是否包含"操作过快"
+        if ((error.message?.includes('操作过快') || error.message?.includes('请稍后重试')) && retry < maxRetries - 1) {
+          this.log(`检测到"操作过快"，等待2分钟后重试 (${retry + 1}/${maxRetries})...`, "warning");
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+          continue;
+        }
+        
+        if (description) {
+          const token = this.tokenStore.gameTokens.find((t) => t.id === tokenId);
+          const tokenName = token?.name || tokenId;
+          this.log(`[${tokenName}] ${description} - 失败: ${error.message}`, "error");
+        }
+        throw error;
       }
-      throw error;
     }
   }
 

@@ -1,0 +1,161 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/9/28 15:58:14
+游戏版本: 未知
+页面URL: aiking://d/Program%20Files/ai-king-manager/resources/app.asar/dist/index.html?fileName=group-1789479256621.00-%E7%A9%BA%E5%B1%B1-%E2%98%81%EF%B8%8F%E8%A5%BF%E5%A4%A7.bin&fromManager=true&windowId=game-window-1790582216403
+记录数量: 3
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/1.1.9 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/9/28 15:58:00
+服务: ActivityService
+方法: claimWeekActReward
+参数: [{"typ":2,"selectRewardsMap":{}}]
+结果:
+{
+  "_raw": {
+    "seq": 46,
+    "ack": 0,
+    "time": 1790582281338,
+    "resp": 46,
+    "cmd": "activity_claimweekactrewardresp",
+    "body": {
+      "role": {
+        "items": {
+          "1013": {
+            "quantity": 365
+          }
+        },
+        "statistics": {
+          "week:act:cr:cnt:2": 2
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 1013,
+          "value": 1,
+          "ext": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 37
+}
+异步: 是
+调用ID: call_1790582280731_jeeeu7btl
+
+记录 #2:
+----------------------------------------
+时间: 2026/9/28 15:57:52
+服务: ActivityService
+方法: claimWeekActReward
+参数: [{"typ":2,"selectRewardsMap":{}}]
+结果:
+{
+  "_raw": {
+    "seq": 45,
+    "ack": 0,
+    "time": 1790582272793,
+    "resp": 45,
+    "cmd": "activity_claimweekactrewardresp",
+    "body": {
+      "role": {
+        "items": {
+          "1013": {
+            "quantity": 364
+          }
+        },
+        "statistics": {
+          "week:act:cr:cnt:2": 1
+        },
+        "statisticsTime": {
+          "week:act:cr:cnt:2": 1790308800
+        }
+      },
+      "reward": [
+        {
+          "type": 3,
+          "itemId": 1013,
+          "value": 1,
+          "ext": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 35
+}
+异步: 是
+调用ID: call_1790582272188_edopz2hb6
+
+记录 #3:
+----------------------------------------
+时间: 2026/9/28 15:57:34
+服务: DiscountService
+方法: getDiscountInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 44,
+    "ack": 0,
+    "time": 1790582255211,
+    "resp": 44,
+    "cmd": "discount_getdiscountinforesp",
+    "body": {
+      "discountList": [
+        {
+          "discountId": 1,
+          "expireTime": 0,
+          "discountState": 3,
+          "version": 0
+        },
+        {
+          "discountId": 2,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 3,
+          "expireTime": 1714617450,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 4,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        },
+        {
+          "discountId": 5,
+          "expireTime": 0,
+          "discountState": 0,
+          "version": 0
+        }
+      ]
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 22
+}
+异步: 是
+调用ID: call_1790582254620_gf0je4bbl
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================
