@@ -39,6 +39,17 @@
             :loading="isBatchBoxWeekRunning"
           />
           <CustomizedCard
+            mode="button-with-select"
+            :button-text="isClaimingBoxReward ? '领取宝箱奖励中...' : '领取宝箱奖励'"
+            @button-click="handleClaimBoxReward"
+            :select-value="boxWeekRewardType"
+            @update:select-value="(val) => boxWeekRewardType = val"
+            :select-options="boxWeekRewardOptions"
+            placeholder="选择奖励"
+            :disabled="isAnyOperationRunning"
+            :loading="isClaimingBoxReward"
+          />
+          <CustomizedCard
             mode="button"
             :name="isUsingTorch ? '批量使用火把中...' : '批量使用火把'"
             @button-click="handleUseTorch"
@@ -226,6 +237,7 @@ const isRecruitWeekRunning = ref(false)
 const isExportingDetails = ref(false)
 const isBatchBoxWeekRunning = ref(false)
 const isBatchBoxWeekCancelled = ref(false)
+const isClaimingBoxReward = ref(false)
 const boxWeekRewardType = ref('万能')
 const boxWeekRewardOptions = [
   { label: '万能', value: '万能' },
@@ -235,7 +247,7 @@ const boxWeekRewardOptions = [
 // 计算是否有任何操作正在运行
 const isAnyOperationRunning = computed(() => {
   return isUsingTorch.value ||
-         isBatchBoxWeekRunning.value ||
+         isBatchBoxWeekRunning.value || isClaimingBoxReward.value ||
          isBatchUpgradingEquipment.value || isBatchUpgradingHangup.value ||
          isBatchClaimingHangupReward.value || isBatchRenaming.value || isRecruitWeekRunning.value ||
          isExportingDetails.value
@@ -4100,6 +4112,111 @@ const executeBoxWeekForToken = async (token) => {
 const stopBatchBoxWeek = () => {
   isBatchBoxWeekCancelled.value = true
   message.info('已停止批量宝箱周')
+}
+
+// 领取宝箱奖励（固定4次，失败停止）
+const handleClaimBoxReward = async () => {
+  const tokenIndices = parseTokenRange(executionTokens.value)
+  const targetTokens = getTargetTokens(tokenIndices)
+  
+  if (targetTokens.length === 0) {
+    message.warning('执行范围内没有有效的Token')
+    return
+  }
+  
+  isClaimingBoxReward.value = true
+  const rangeText = executionTokens.value ? `范围${executionTokens.value}` : '全部'
+  message.info(`开始领取宝箱奖励（${rangeText}），共${targetTokens.length}个Token...`)
+  
+  logStore.addLog({
+    page: 'fish-helper',
+    cardType: '养号',
+    operation: '领取宝箱奖励',
+    status: 'info',
+    message: `开始领取宝箱奖励，${rangeText}，共${targetTokens.length}个Token`
+  })
+  
+  let successCount = 0
+  let failCount = 0
+  
+  try {
+    for (let i = 0; i < targetTokens.length; i++) {
+      const token = targetTokens[i]
+      if (!token || !token.id) continue
+      
+      try {
+        const connectionAcquired = await connectionPool.acquire(token.id)
+        if (!connectionAcquired) {
+          message.warning(`[${token.name || token.id}] 连接失败`)
+          failCount++
+          continue
+        }
+        
+        await waitCommandDelay()
+        
+        let tokenSuccessCount = 0
+        let shouldStop = false
+        
+        // 固定执行4次
+        for (let j = 0; j < 4 && !shouldStop; j++) {
+          try {
+            const reward_params = boxWeekRewardType.value === '珍珠' 
+              ? { selectRewardsMap: { 5: 1 }, typ: 2 }
+              : { selectRewardsMap: { 0: 1 }, typ: 2 }
+            
+            await tokenStore.sendActivityClaimWeekActReward(token.id, reward_params)
+            tokenSuccessCount++
+            
+            message.info(`[${token.name || token.id}] 第${j + 1}次领取宝箱奖励成功`)
+            logStore.addLog({
+              page: 'fish-helper',
+              cardType: '养号',
+              operation: '领取宝箱奖励',
+              tokenId: token.id,
+              tokenName: token.name,
+              status: 'success',
+              message: `第${j + 1}次领取宝箱奖励成功`
+            })
+          } catch (error) {
+            message.warning(`[${token.name || token.id}] 第${j + 1}次领取宝箱奖励失败: ${error.message || '未知错误'}，停止领取`)
+            logStore.addLog({
+              page: 'fish-helper',
+              cardType: '养号',
+              operation: '领取宝箱奖励',
+              tokenId: token.id,
+              tokenName: token.name,
+              status: 'warning',
+              message: `第${j + 1}次领取宝箱奖励失败: ${error.message || '未知错误'}，停止领取`
+            })
+            shouldStop = true
+          }
+          await waitCommandDelay()
+        }
+        
+        if (tokenSuccessCount > 0) successCount++
+        else failCount++
+        
+        await connectionPool.release(token.id, false)
+      } catch (error) {
+        console.error(`[${token.name || token.id}] 领取宝箱奖励异常:`, error)
+        failCount++
+      }
+    }
+    
+    message.success(`领取宝箱奖励完成：成功${successCount}个，失败${failCount}个`)
+    logStore.addLog({
+      page: 'fish-helper',
+      cardType: '养号',
+      operation: '领取宝箱奖励',
+      status: 'success',
+      message: `领取宝箱奖励完成：成功${successCount}个，失败${failCount}个`
+    })
+  } catch (error) {
+    console.error('领取宝箱奖励失败:', error)
+    message.error(`领取宝箱奖励失败: ${error.message || '未知错误'}`)
+  } finally {
+    isClaimingBoxReward.value = false
+  }
 }
 
 // 批量宝箱周
