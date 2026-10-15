@@ -100,6 +100,14 @@
             @button-click="handleCampBattle"
           />
           <CustomizedCard mode="button" :name="isGetLegionLeaderRunning ? '获取团长中...' : '获取俱乐部团长'" :disabled="isGetLegionLeaderRunning" @button-click="handleGetLegionLeader" />
+          <CustomizedCard 
+            mode="button-number-input" 
+            :name="isSaltroadCheerRunning ? '天宫助威中...' : '天宫助威'" 
+            v-model:inputValue="saltroadCheerLegionId" 
+            placeholder="输入军团 ID" 
+            :disabled="isSaltroadCheerRunning || !saltroadCheerLegionId"
+            @button-click="handleSaltroadCheer" 
+          />
         </CustomizedCard>
       </div>
       
@@ -107,7 +115,7 @@
       <OperationLogCard 
         page="shidian" 
         card-type="俱乐部管理"
-        :filter-operations="['批量赠送功法', '导出功法详情', '导出俱乐部信息', '刷新图鉴信息', '激活功法图鉴', '批量功法图鉴', '加入俱乐部', '批量招募周', '批量开启功法挂机', '批量收集特权', '一键接受礼物', '批量宠物蛋', '批量宠物图鉴', '一键送功法', '一键领取', '批量功法挂机', '批量收集功法', '接受礼物', '批量接受礼物', '图鉴', '批量图鉴', '获取残卷数量', '篝火营地报名', '篝火营地上阵', '篝火营地战斗', '获取俱乐部团长', '功法挂机']"
+        :filter-operations="['批量赠送功法', '导出功法详情', '导出俱乐部信息', '刷新图鉴信息', '激活功法图鉴', '批量功法图鉴', '加入俱乐部', '批量招募周', '批量开启功法挂机', '批量收集特权', '一键接受礼物', '批量宠物蛋', '批量宠物图鉴', '一键送功法', '一键领取', '批量功法挂机', '批量收集功法', '接受礼物', '批量接受礼物', '图鉴', '批量图鉴', '获取残卷数量', '篝火营地报名', '篝火营地上阵', '篝火营地战斗', '获取俱乐部团长', '功法挂机', '天宫助威']"
       />
     </template>
   </MyCard>
@@ -158,18 +166,28 @@ const executeWithRetry = async (commandFn, commandName, tokenIndex, tokenName, m
 }
 
 const legionTokens = ref(localStorage.getItem('clubLegionTokens') || '')
+// 监听执行范围变化，持久化保存
+watch(legionTokens, (newValue) => {
+  localStorage.setItem('clubLegionTokens', newValue)
+})
 const exportClubInfoTokens = ref('')
 const legionId = ref('')
 const legacyTargetId = ref(localStorage.getItem('legacyTargetId') || '111582820') // 默认赠送目标
+
+const legacyPassword = ref('946215') // 默认密码
+const quickSendLegacyTargetId = ref(localStorage.getItem('quickSendLegacyTargetId') || '') // 一键送功法目标ID
+const quickSendLegacyCount = ref('10') // 一键送功法次数
+const saltroadCheerLegionId = ref(localStorage.getItem('saltroadCheerLegionId') || '') // 盐场助威军团ID
+const autoAcceptGiftTokenIndex = ref('13') // 一键领取的 Token 序号，默认 13
 
 // 监听赠送目标ID变化，持久化保存
 watch(legacyTargetId, (newValue) => {
   localStorage.setItem('legacyTargetId', newValue)
 })
-const legacyPassword = ref('946215') // 默认密码
-const quickSendLegacyTargetId = ref(localStorage.getItem('quickSendLegacyTargetId') || '') // 一键送功法目标ID
-const quickSendLegacyCount = ref('10') // 一键送功法次数
-const autoAcceptGiftTokenIndex = ref('13') // 一键领取的 Token 序号，默认 13
+// 监听盐场助威军团ID变化，持久化保存
+watch(saltroadCheerLegionId, (newValue) => {
+  localStorage.setItem('saltroadCheerLegionId', newValue)
+})
 
 // 对手战力缓存：从 localStorage 读取
 const getDefenderPowerCache = () => {
@@ -250,7 +268,7 @@ const handleBatchCollectPrivilege = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
 
           try {
             message.info(`[序号${tokenIndex}] ${token.name || token.id} 正在收集特权...`)
@@ -417,13 +435,13 @@ const handleBatchCollectPrivilege = async () => {
             return { collected: true, sentGift: false, fragmentCount: 0 }
           }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 处理失败:`, error)
+          console.error(`[序号${getTokenIndex(token)}] ${token.name || token.id} 处理失败:`, error)
           logOperation('shidian', '批量收集特权', {
             cardType: '俱乐部管理',
             tokenId: token.id,
             tokenName: token.name,
             status: 'error',
-            message: `【序号${globalIndex + 1}】[${token.name || token.id}]处理失败: ${error.message || error}`
+            message: `【序号${getTokenIndex(token)}】[${token.name || token.id}]处理失败: ${error.message || error}`
           })
           return { collected: false, sentGift: false, error: error.message || error }
         }
@@ -432,17 +450,19 @@ const handleBatchCollectPrivilege = async () => {
         batchSize: 20,
         delayBetween: 300,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -452,12 +472,18 @@ const handleBatchCollectPrivilege = async () => {
     const successCount = results.filter(r => r.sentGift).length
     const skipCount = results.filter(r => !r.sentGift && r.fragmentCount < 100).length
     const errorCount = results.filter(r => r.error).length
+    const failedTokens = results.filter(r => r.error).map(r => r.token?.name || r.token?.id || '未知')
     
-    message.success(`批量收集特权完成，共处理${targetTokens.length}个Token，赠送成功${successCount}个，跳过${skipCount}个，失败${errorCount}个`)
+    let summaryMsg = `批量收集特权完成，共处理${targetTokens.length}个Token，赠送成功${successCount}个，跳过${skipCount}个，失败${errorCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logOperation('shidian', '批量收集特权', {
       cardType: '俱乐部管理',
       status: 'success',
-      message: `【批量】批量收集特权完成，共处理${targetTokens.length}个Token，赠送成功${successCount}个，跳过${skipCount}个，失败${errorCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量收集特权失败:', error)
@@ -1950,6 +1976,126 @@ const handleGetLegionLeader = async () => {
   }
 }
 
+// 天宫助威
+const handleSaltroadCheer = async () => {
+  if (!saltroadCheerLegionId.value) {
+    message.warning('请输入军团 ID')
+    return
+  }
+
+  try {
+    isSaltroadCheerRunning.value = true
+    message.info('开始天宫助威...')
+    logOperation('shidian', '天宫助威', {
+      cardType: '俱乐部管理',
+      status: 'info',
+      message: `开始天宫助威，军团ID: ${saltroadCheerLegionId.value}`
+    })
+
+    const tokenIndices = connectionPool.parseTokenRange(legionTokens.value)
+    const targetTokens = connectionPool.getTargetTokens(sortedTokens.value, tokenIndices)
+
+    if (targetTokens.length === 0) {
+      const rangeText = tokenIndices === null ? '全部' : `范围${legionTokens.value}`
+      message.warning(`执行范围${rangeText}内没有找到Token`)
+      logOperation('shidian', '天宫助威', {
+        cardType: '俱乐部管理',
+        status: 'warning',
+        message: `执行范围${rangeText}内没有找到Token`
+      })
+      return
+    }
+
+    const rangeText = tokenIndices === null ? '全部' : `范围${legionTokens.value}`
+    message.info(`找到${targetTokens.length}个Token（${rangeText}）`)
+
+    let successCount = 0
+    let failCount = 0
+    const failedTokens = []
+
+    for (let i = 0; i < targetTokens.length; i++) {
+      const token = targetTokens[i]
+      const tokenIndex = sortedTokens.value.findIndex(t => t.id === token.id) + 1
+
+      try {
+        const connected = await connectionPool.acquire(token.id)
+        if (!connected) {
+          logOperation('shidian', '天宫助威', {
+            cardType: '俱乐部管理',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'warning',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]连接失败，跳过`
+          })
+          failCount++
+          failedTokens.push(token.name || token.id)
+          continue
+        }
+
+        try {
+          message.info(`[序号${tokenIndex}] ${token.name || token.id} 正在助威...`)
+          await tokenStore.sendSaltroadOutcheer(token.id, { legionId: parseInt(saltroadCheerLegionId.value) })
+          logOperation('shidian', '天宫助威', {
+            cardType: '俱乐部管理',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]助威成功`
+          })
+          successCount++
+        } catch (error) {
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 助威失败:`, error)
+          logOperation('shidian', '天宫助威', {
+            cardType: '俱乐部管理',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'warning',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]助威失败: ${error.message || error}`
+          })
+          failCount++
+          failedTokens.push(token.name || token.id)
+        }
+
+        await connectionPool.release(token.id, true)
+      } catch (error) {
+        console.error(`[序号${tokenIndex}] ${token.name || token.id} 助威失败:`, error)
+        logOperation('shidian', '天宫助威', {
+          cardType: '俱乐部管理',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'error',
+          message: `【序号${tokenIndex}】[${token.name || token.id}]助威失败: ${error.message || error}`
+        })
+        failCount++
+        failedTokens.push(token.name || token.id)
+        try {
+          await connectionPool.release(token.id, true)
+        } catch (e) {}
+      }
+
+      await waitCommandDelay()
+    }
+
+    const failInfo = failedTokens.length > 0 ? `，失败token：${failedTokens.join('、')}` : ''
+    logOperation('shidian', '天宫助威', {
+      cardType: '俱乐部管理',
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `天宫助威完成，成功${successCount}个，失败${failCount}个${failInfo}`
+    })
+
+    message.success(`天宫助威完成，成功${successCount}个，失败${failCount}个`)
+  } catch (error) {
+    console.error('天宫助威失败:', error)
+    logOperation('shidian', '天宫助威', {
+      cardType: '俱乐部管理',
+      status: 'error',
+      message: `天宫助威失败: ${error.message || error}`
+    })
+  } finally {
+    isSaltroadCheerRunning.value = false
+  }
+}
+
 // 一键领取的 Token 序号，默认 13
 const isLegacyHangupRunning = ref(false)
 const isLegacyCollectRunning = ref(false)
@@ -1977,6 +2123,7 @@ const isCampFightRunning = ref(false)
 const isCampBattleRunning = ref(false)
 const campSignupRange = ref(localStorage.getItem('campSignupRange') || '')
 const isGetLegionLeaderRunning = ref(false)
+const isSaltroadCheerRunning = ref(false)
 const legacyBookInfo = ref({
   books: {},
   storage: {}
@@ -2466,7 +2613,7 @@ const joinLegion = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          console.log(`[批量加入俱乐部] [${globalIndex + 1}/${targetTokens.length}] 开始处理 ${token.name || token.id}`)
+          console.log(`[批量加入俱乐部] [${getTokenIndex(token)}/${targetTokens.length}] 开始处理 ${token.name || token.id}`)
           
           // 根据昵称关键字确定俱乐部ID
           const tokenName = token.name || ''
@@ -2568,7 +2715,7 @@ const joinLegion = async () => {
           }
         } catch (error) {
           const errorMsg = `${token.name || token.id}: 加入失败 - ${error.message || '未知错误'}`
-          console.error(`[批量加入俱乐部] [${globalIndex + 1}]`, errorMsg)
+          console.error(`[批量加入俱乐部] [${getTokenIndex(token)}]`, errorMsg)
           message.error(errorMsg)
           
           // 记录操作日志
@@ -2589,17 +2736,19 @@ const joinLegion = async () => {
         delayBetween: 1000,
         keepConnections: false,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             console.log(`[批量加入俱乐部] 正在处理第 ${progress.batchIndex} 批（共 ${progress.totalBatches} 批）`)
           } else if (progress.type === 'token-start') {
-            console.log(`[批量加入俱乐部] [${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            console.log(`[批量加入俱乐部] [${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            console.log(`[批量加入俱乐部] [${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            console.log(`[批量加入俱乐部] [${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              console.warn(`[批量加入俱乐部] [${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              console.warn(`[批量加入俱乐部] [${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              console.error(`[批量加入俱乐部] [${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              console.error(`[批量加入俱乐部] [${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -2609,8 +2758,14 @@ const joinLegion = async () => {
     // 汇总统计结果
     const successCount = results.filter(r => r.success).length
     const errorCount = results.filter(r => !r.success).length
-    
-    message.success(`批量加入俱乐部完成，成功${successCount}个，失败${errorCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量加入俱乐部完成，成功${successCount}个，失败${errorCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     console.log(`[批量加入俱乐部] 完成 - 成功：${successCount}, 失败：${errorCount}`)
   } catch (error) {
     console.error('[批量加入俱乐部] 失败:', error)
@@ -2918,12 +3073,12 @@ const handleBatchLegacyHangup = async () => {
             5000
           )
           
-          console.log(`[${globalIndex + 1}] 功法挂机响应:`, res)
+          console.log(`[${getTokenIndex(token)}] 功法挂机响应:`, res)
           
           if (res && res.code !== undefined && res.code !== 0) {
             const errorMsg = res.msg || res.message || `错误码: ${res.code}`
-            console.error(`[${globalIndex + 1}] 功法挂机失败 - 错误码:`, res.code, '错误信息:', errorMsg)
-            message.error(`[${globalIndex + 1}] ${token.name || token.id}: ${errorMsg} (错误码: ${res.code})`)
+            console.error(`[${getTokenIndex(token)}] 功法挂机失败 - 错误码:`, res.code, '错误信息:', errorMsg)
+            message.error(`[${getTokenIndex(token)}] ${token.name || token.id}: ${errorMsg} (错误码: ${res.code})`)
             logOperation('shidian', '批量功法挂机', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -2935,8 +3090,8 @@ const handleBatchLegacyHangup = async () => {
           }
           
           if (!res) {
-            console.error(`[${globalIndex + 1}] 功法挂机失败 - 响应为空`)
-            message.error(`[${globalIndex + 1}] ${token.name || token.id}: 服务器未返回响应`)
+            console.error(`[${getTokenIndex(token)}] 功法挂机失败 - 响应为空`)
+            message.error(`[${getTokenIndex(token)}] ${token.name || token.id}: 服务器未返回响应`)
             logOperation('shidian', '批量功法挂机', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -2947,7 +3102,7 @@ const handleBatchLegacyHangup = async () => {
             return { success: false, error: '服务器未返回响应' }
           }
           
-          let successMsg = `[${globalIndex + 1}] ${token.name || token.id} 功法挂机奖励领取成功`
+          let successMsg = `[${getTokenIndex(token)}] ${token.name || token.id} 功法挂机奖励领取成功`
           if (res.reward && res.reward.length > 0) {
             const rewardInfo = res.reward.map(r => {
               const itemName = (r.itemId === 37007 || r.id === 37007) ? '功法残卷' : (r.name || '未知')
@@ -2967,12 +3122,12 @@ const handleBatchLegacyHangup = async () => {
             tokenId: token.id,
             tokenName: token.name,
             status: 'success',
-            message: successMsg.replace(`[${globalIndex + 1}] `, '')
+            message: successMsg.replace(`[${getTokenIndex(token)}] `, '')
           })
           
           return { success: true, result: res }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] 功法挂机失败 - 异常详情:`, {
+          console.error(`[${getTokenIndex(token)}] 功法挂机失败 - 异常详情:`, {
             token: token.name || token.id,
             error,
             message: error.message,
@@ -3005,7 +3160,7 @@ const handleBatchLegacyHangup = async () => {
             errorMessage = '没有可领取的功法挂机奖励'
           }
           
-          message.error(`[${globalIndex + 1}] ${token.name || token.id}: ${errorMessage}`)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id}: ${errorMessage}`)
           logOperation('shidian', '批量功法挂机', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -3021,17 +3176,19 @@ const handleBatchLegacyHangup = async () => {
         batchSize: 20,
         delayBetween: 500,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -3203,12 +3360,12 @@ const handleBatchLegacyCollect = async () => {
       allLegacyTokens,
       async (token, globalIndex) => {
         try {
-          message.info(`[${globalIndex + 1}] ${token.name || token.id} 正在获取功法残卷数量...`)
+          message.info(`[${getTokenIndex(token)}] ${token.name || token.id} 正在获取功法残卷数量...`)
           const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
           const legacyFragmentCount = roleInfo?.role?.items?.[37007]?.quantity || 0
           
           if (legacyFragmentCount === 0) {
-            message.warning(`[${globalIndex + 1}] ${token.name || token.id}: 功法残卷数量为0，跳过`)
+            message.warning(`[${getTokenIndex(token)}] ${token.name || token.id}: 功法残卷数量为0，跳过`)
             logOperation('shidian', '批量收集功法', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -3219,23 +3376,23 @@ const handleBatchLegacyCollect = async () => {
             return { collected: false, fragmentCount: 0 }
           }
           
-          console.log(`[${globalIndex + 1}] ${token.name || token.id} 功法残卷数量: ${legacyFragmentCount}`)
+          console.log(`[${getTokenIndex(token)}] ${token.name || token.id} 功法残卷数量: ${legacyFragmentCount}`)
           
           try {
             await tokenStore.sendRoleCommitPassword(token.id, {})
           } catch (error) {
-            console.error(`[${globalIndex + 1}] ${token.name || token.id} 提交密码失败:`, error)
+            console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 提交密码失败:`, error)
           }
           
           try {
-            message.info(`[${globalIndex + 1}] ${token.name || token.id} 正在赠送功法残卷，数量: ${legacyFragmentCount}...`)
+            message.info(`[${getTokenIndex(token)}] ${token.name || token.id} 正在赠送功法残卷，数量: ${legacyFragmentCount}...`)
             const giftRes = await tokenStore.sendLegacySendGift(token.id, {
               itemCnt: legacyFragmentCount
             })
             
             if (giftRes && giftRes.code !== undefined && giftRes.code !== 0) {
               const errorMsg = giftRes.msg || giftRes.message || `错误码: ${giftRes.code}`
-              message.error(`[${globalIndex + 1}] ${token.name || token.id}: ${errorMsg}`)
+              message.error(`[${getTokenIndex(token)}] ${token.name || token.id}: ${errorMsg}`)
               logOperation('shidian', '批量收集功法', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
@@ -3246,7 +3403,7 @@ const handleBatchLegacyCollect = async () => {
               return { collected: false, error: errorMsg }
             }
             
-            message.success(`[${globalIndex + 1}] ${token.name || token.id}: 收集功法成功，已赠送 ${legacyFragmentCount} 个功法残卷`)
+            message.success(`[${getTokenIndex(token)}] ${token.name || token.id}: 收集功法成功，已赠送 ${legacyFragmentCount} 个功法残卷`)
             logOperation('shidian', '批量收集功法', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -3256,8 +3413,8 @@ const handleBatchLegacyCollect = async () => {
             })
             return { collected: true, fragmentCount: legacyFragmentCount }
           } catch (error) {
-            console.error(`[${globalIndex + 1}] ${token.name || token.id} 赠送功法残卷失败:`, error)
-            message.error(`[${globalIndex + 1}] ${token.name || token.id}: 赠送失败 - ${error.message || '未知错误'}`)
+            console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 赠送功法残卷失败:`, error)
+            message.error(`[${getTokenIndex(token)}] ${token.name || token.id}: 赠送失败 - ${error.message || '未知错误'}`)
             logOperation('shidian', '批量收集功法', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -3268,8 +3425,8 @@ const handleBatchLegacyCollect = async () => {
             return { collected: false, error: error.message || '未知错误' }
           }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 收集功法失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id}: 收集功法失败`)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 收集功法失败:`, error)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id}: 收集功法失败`)
           logOperation('shidian', '批量收集功法', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -3284,17 +3441,19 @@ const handleBatchLegacyCollect = async () => {
         batchSize: 20,
         delayBetween: 500,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -3367,13 +3526,13 @@ const handleBatchLegacyClaimGift = async () => {
         try {
           const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
           legacyFragmentCount = roleInfo?.role?.items?.[37007]?.quantity || 0
-          console.info(`[${globalIndex + 1}] ${token.name || token.id} 当前功法残卷数量: ${legacyFragmentCount}`)
+          console.info(`[${getTokenIndex(token)}] ${token.name || token.id} 当前功法残卷数量: ${legacyFragmentCount}`)
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 获取角色信息失败:`, error)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 获取角色信息失败:`, error)
         }
 
         if (legacyFragmentCount < 100) {
-          console.info(`[${globalIndex + 1}] ${token.name || token.id} 功法残卷数量(${legacyFragmentCount})小于100，跳过收集功法按钮`)
+          console.info(`[${getTokenIndex(token)}] ${token.name || token.id} 功法残卷数量(${legacyFragmentCount})小于100，跳过收集功法按钮`)
           logOperation('shidian', '批量赠送功法', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -3391,13 +3550,13 @@ const handleBatchLegacyClaimGift = async () => {
             await tokenStore.sendRoleCommitPassword(token.id, {
               password: legacyPassword.value ? parseInt(legacyPassword.value) : 946215
             })
-            console.info(`[${globalIndex + 1}] ${token.name || token.id} 提交密码成功`)
+            console.info(`[${getTokenIndex(token)}] ${token.name || token.id} 提交密码成功`)
             
             // 提交密码后需要等待一段时间使其生效
             await waitCommandDelay()
           } catch (error) {
-            console.error(`[${globalIndex + 1}] ${token.name || token.id} 提交密码失败:`, error)
-            console.info(`[${globalIndex + 1}] ${token.name || token.id} 提交密码失败，但继续执行`)
+            console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 提交密码失败:`, error)
+            console.info(`[${getTokenIndex(token)}] ${token.name || token.id} 提交密码失败，但继续执行`)
           }
           
           try {
@@ -3409,7 +3568,7 @@ const handleBatchLegacyClaimGift = async () => {
             
             if (giftRes && giftRes.code !== undefined && giftRes.code !== 0) {
               const errorMsg = giftRes.msg || giftRes.message || `错误码: ${giftRes.code}`
-              console.error(`[${globalIndex + 1}] ${token.name || token.id} 赠送功法残卷失败: ${errorMsg}`)
+              console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 赠送功法残卷失败: ${errorMsg}`)
               logOperation('shidian', '批量赠送功法', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
@@ -3419,7 +3578,7 @@ const handleBatchLegacyClaimGift = async () => {
               })
               return { collected: true, sentGift: false, fragmentCount: legacyFragmentCount, error: errorMsg }
             } else {
-              console.info(`[${globalIndex + 1}] ${token.name || token.id} 模拟点击收集功法按钮完成，已赠送 ${sendCount} 个功法残卷`)
+              console.info(`[${getTokenIndex(token)}] ${token.name || token.id} 模拟点击收集功法按钮完成，已赠送 ${sendCount} 个功法残卷`)
               logOperation('shidian', '批量赠送功法', {
                 cardType: '俱乐部管理',
                 tokenId: token.id,
@@ -3430,7 +3589,7 @@ const handleBatchLegacyClaimGift = async () => {
               return { collected: true, sentGift: true, fragmentCount: legacyFragmentCount, sendCount: sendCount }
             }
           } catch (error) {
-            console.error(`[${globalIndex + 1}] ${token.name || token.id} 执行legacy_sendgift失败:`, error)
+            console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 执行legacy_sendgift失败:`, error)
             logOperation('shidian', '批量赠送功法', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -3441,7 +3600,7 @@ const handleBatchLegacyClaimGift = async () => {
             return { collected: true, sentGift: false, fragmentCount: legacyFragmentCount, error: error.message || error }
           }
         } else {
-          console.info(`[${globalIndex + 1}] ${token.name || token.id} 功法残卷数量为0，跳过`)
+          console.info(`[${getTokenIndex(token)}] ${token.name || token.id} 功法残卷数量为0，跳过`)
           logOperation('shidian', '批量赠送功法', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -3456,17 +3615,19 @@ const handleBatchLegacyClaimGift = async () => {
         batchSize: 20,
         delayBetween: 300,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -3585,7 +3746,7 @@ const handleBatchAcceptGift = async () => {
       async (token, globalIndex) => {
         try {
           await tokenStore.sendLegacyClaimGift(token.id, {})
-          message.success(`[${globalIndex + 1}] ${token.name || token.id} 接受礼物成功`)
+          message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 接受礼物成功`)
           logOperation('shidian', '批量接受礼物', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -3595,8 +3756,8 @@ const handleBatchAcceptGift = async () => {
           })
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 接受礼物失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 接受礼物失败: ${error.message || error}`)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 接受礼物失败:`, error)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id} 接受礼物失败: ${error.message || error}`)
           logOperation('shidian', '批量接受礼物', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -3611,17 +3772,19 @@ const handleBatchAcceptGift = async () => {
         batchSize: 20,
         delayBetween: 500,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -4164,18 +4327,18 @@ const handleBatchBookUpgrade = async () => {
             await waitCommandDelay()
           }
           
-          message.success(`[${globalIndex + 1}] ${token.name || token.id} 图鉴完成`)
+          message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 图鉴完成`)
           logOperation('shidian', '批量图鉴', {
             cardType: '俱乐部管理',
             tokenId: token.id,
             tokenName: token.name,
             status: 'success',
-            message: `【序号${globalIndex + 1}】[${token.name || token.id}]图鉴升星和领取奖励完成`
+            message: `【序号${getTokenIndex(token)}】[${token.name || token.id}]图鉴升星和领取奖励完成`
           })
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 图鉴失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 图鉴失败: ${error.message || '未知错误'}`)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 图鉴失败:`, error)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id} 图鉴失败: ${error.message || '未知错误'}`)
           logOperation('shidian', '批量图鉴', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -4190,17 +4353,19 @@ const handleBatchBookUpgrade = async () => {
         batchSize: 20,
         delayBetween: 300,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -4473,12 +4638,12 @@ const handleBatchLegacyBook = async () => {
       tokens,
       async (token, globalIndex) => {
         try {
-          message.info(`[${globalIndex + 1}/${tokens.length}] ${token.name || token.id} 正在刷新图鉴信息...`)
+          message.info(`[${getTokenIndex(token)}/${tokens.length}] ${token.name || token.id} 正在刷新图鉴信息...`)
           
           const legacyInfo = await tokenStore.sendLegacyGetInfo(token.id, {})
           
           if (!legacyInfo) {
-            message.warning(`[${globalIndex + 1}] ${token.name || token.id} 获取功法信息失败，跳过`)
+            message.warning(`[${getTokenIndex(token)}] ${token.name || token.id} 获取功法信息失败，跳过`)
             logOperation('shidian', '批量功法图鉴', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -4525,9 +4690,9 @@ const handleBatchLegacyBook = async () => {
             storage: storageCount
           }
           
-          message.success(`[${globalIndex + 1}] ${token.name || token.id} 图鉴信息刷新成功`)
+          message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 图鉴信息刷新成功`)
           
-          message.info(`[${globalIndex + 1}] ${token.name || token.id} 正在激活功法图鉴...`)
+          message.info(`[${getTokenIndex(token)}] ${token.name || token.id} 正在激活功法图鉴...`)
           
           let activatedCount = 0
           
@@ -4567,14 +4732,14 @@ const handleBatchLegacyBook = async () => {
                   activatedCount++
                 }
               } catch (err) {
-                console.error(`[${globalIndex + 1}] 激活图鉴 ${legacyId} 失败:`, err)
+                console.error(`[${getTokenIndex(token)}] 激活图鉴 ${legacyId} 失败:`, err)
               }
               
               await waitCommandDelay()
             }
           }
           
-          message.success(`[${globalIndex + 1}] ${token.name || token.id} 功法图鉴完成，激活 ${activatedCount} 个`)
+          message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 功法图鉴完成，激活 ${activatedCount} 个`)
           logOperation('shidian', '批量功法图鉴', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -4584,8 +4749,8 @@ const handleBatchLegacyBook = async () => {
           })
           return { success: true, activatedCount }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 功法图鉴失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 功法图鉴失败: ${error.message || '未知错误'}`)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 功法图鉴失败:`, error)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id} 功法图鉴失败: ${error.message || '未知错误'}`)
           logOperation('shidian', '批量功法图鉴', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -4600,17 +4765,19 @@ const handleBatchLegacyBook = async () => {
         batchSize: 20,
         delayBetween: 500,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -4663,13 +4830,13 @@ const handleBatchRecruitWeek = async () => {
       tokens,
       async (token, globalIndex) => {
         try {
-          message.info(`[${globalIndex + 1}/${tokens.length}] ${token.name || token.id} 正在获取招募令数量...`)
+          message.info(`[${getTokenIndex(token)}/${tokens.length}] ${token.name || token.id} 正在获取招募令数量...`)
           
           const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
           const recruitCount = roleInfo?.role?.items?.[1001]?.quantity || roleInfo?.role?.items?.[1001]?.num || 0
           
           if (recruitCount < 10) {
-            message.warning(`[${globalIndex + 1}] ${token.name || token.id} 招募令数量不足（${recruitCount}），跳过`)
+            message.warning(`[${getTokenIndex(token)}] ${token.name || token.id} 招募令数量不足（${recruitCount}），跳过`)
             logOperation('shidian', '批量招募周', {
               cardType: '俱乐部管理',
               tokenId: token.id,
@@ -4680,7 +4847,7 @@ const handleBatchRecruitWeek = async () => {
             return { success: false, recruitCount, rounds: 0 }
           }
           
-          message.info(`[${globalIndex + 1}] ${token.name || token.id} 当前招募令数量: ${recruitCount}`)
+          message.info(`[${getTokenIndex(token)}] ${token.name || token.id} 当前招募令数量: ${recruitCount}`)
           
           let currentRecruitCount = recruitCount
           let totalRounds = 0
@@ -4700,7 +4867,7 @@ const handleBatchRecruitWeek = async () => {
               currentRecruitCount -= recruitNumber
               totalRecruits += recruitNumber
               
-              message.success(`[${globalIndex + 1}] ${token.name || token.id} 使用${recruitNumber}个招募令进行招募`)
+              message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 使用${recruitNumber}个招募令进行招募`)
               
               await waitCommandDelay()
               
@@ -4708,22 +4875,22 @@ const handleBatchRecruitWeek = async () => {
                 try {
                   await tokenStore.sendGameMessage(token.id, 'mail_claimallattachment', {})
                   mailClaimCount++
-                  message.success(`[${globalIndex + 1}] ${token.name || token.id} 领取邮件附件成功`)
+                  message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 领取邮件附件成功`)
                   
                   await waitCommandDelay()
                 } catch (mailError) {
-                  console.error(`[${globalIndex + 1}] ${token.name || token.id} 领取邮件失败:`, mailError)
+                  console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 领取邮件失败:`, mailError)
                 }
               }
               
               if (totalRecruits > 0 && totalRecruits % 400 === 0) {
                 totalRounds++
                 currentRecruitCount += 40
-                message.info(`[${globalIndex + 1}] ${token.name || token.id} 完成第${totalRounds}轮招募周，获得40招募令奖励`)
+                message.info(`[${getTokenIndex(token)}] ${token.name || token.id} 完成第${totalRounds}轮招募周，获得40招募令奖励`)
               }
             } catch (recruitError) {
-              console.error(`[${globalIndex + 1}] ${token.name || token.id} 招募失败:`, recruitError)
-              message.error(`[${globalIndex + 1}] ${token.name || token.id} 招募失败: ${recruitError.message || '未知错误'}`)
+              console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 招募失败:`, recruitError)
+              message.error(`[${getTokenIndex(token)}] ${token.name || token.id} 招募失败: ${recruitError.message || '未知错误'}`)
               break
             }
           }
@@ -4747,8 +4914,8 @@ const handleBatchRecruitWeek = async () => {
             remainingRecruit: currentRecruitCount
           }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 招募周失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 招募周失败: ${error.message || '未知错误'}`)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 招募周失败:`, error)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id} 招募周失败: ${error.message || '未知错误'}`)
           logOperation('shidian', '批量招募周', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -4763,17 +4930,19 @@ const handleBatchRecruitWeek = async () => {
         batchSize: 20,
         delayBetween: 500,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`)
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             }
           }
         }
@@ -4860,20 +5029,20 @@ const handleBatchLegacyBeginHangup = async () => {
       tokens,
       async (token, globalIndex) => {
         try {
-          message.info(`[${globalIndex + 1}/${tokens.length}] ${token.name || token.id} 正在开启功法挂机...`)
+          message.info(`[${getTokenIndex(token)}/${tokens.length}] ${token.name || token.id} 正在开启功法挂机...`)
           
           // 等待执行间隔后执行
           await waitCommandDelay()
           
           // 先发送 legacy_getinfo 获取功法信息
-          console.log(`[${globalIndex + 1}] ${token.name || token.id} 正在获取功法信息...`);
+          console.log(`[${getTokenIndex(token)}] ${token.name || token.id} 正在获取功法信息...`);
           await tokenStore.sendLegacyGetInfo(token.id, {});
           await waitCommandDelay();
           
           // 发送 legacy_beginhangup 开始挂机
           await tokenStore.sendLegacyBeginHangup(token.id, {})
           
-          message.success(`[${globalIndex + 1}] ${token.name || token.id} 开启功法挂机成功`)
+          message.success(`[${getTokenIndex(token)}] ${token.name || token.id} 开启功法挂机成功`)
           logOperation('shidian', '批量开启功法挂机', {
             cardType: '俱乐部管理',
             tokenId: token.id,
@@ -4884,8 +5053,8 @@ const handleBatchLegacyBeginHangup = async () => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 开启功法挂机失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 开启功法挂机失败：${error.message || error}`)
+          console.error(`[${getTokenIndex(token)}] ${token.name || token.id} 开启功法挂机失败:`, error)
+          message.error(`[${getTokenIndex(token)}] ${token.name || token.id} 开启功法挂机失败：${error.message || error}`)
           logOperation('shidian', '批量开启功法挂机', {
             cardType: '俱乐部管理',
             tokenId: token.id,

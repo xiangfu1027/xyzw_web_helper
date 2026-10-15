@@ -81,11 +81,16 @@
               :disabled="tokenStore.gameTokens.length === 0 || isBatchRunning" 
               @button-click="handleBatchUpgrade" 
             />
-            <CustomizedCard 
-              mode="button" 
-              :name="isBatchTowerRunning ? '批量爬塔中...' : '批量爬塔'" 
-              :disabled="tokenStore.gameTokens.length === 0 || isBatchTowerRunning" 
-              @button-click="handleBatchTower" 
+            <CustomizedCard
+              mode="button-with-select"
+              :buttonText="isBatchTowerRunning ? '批量爬塔中...' : '批量爬塔'"
+              :disabled="tokenStore.gameTokens.length === 0 || isBatchTowerRunning"
+              @button-click="handleBatchTower"
+              v-model:selectValue="batchTowerTeam"
+              :selectOptions="[
+                { label: '阵容1', value: '1' },
+                { label: '阵容2', value: '2' }
+              ]"
             />
             <CustomizedCard 
               mode="button" 
@@ -100,7 +105,7 @@
       <!-- 操作日志 -->
       <OperationLogCard 
         page="fish-helper" 
-        :filter-operations="['开始爬塔', '停止爬塔', '刷新信息', '领取奖励', '英雄升星', '图鉴升星', '领取图鉴奖励', '批量执行', '批量升星图鉴', '批量爬塔', '导出爬塔']"
+        :filter-operations="['开始爬塔', '停止爬塔', '刷新信息', '领取奖励', '领取塔奖励', '英雄升星', '图鉴升星', '领取图鉴奖励', '批量执行', '批量升星图鉴', '批量爬塔', '导出爬塔']"
       />
     </template>
   </MyCard>
@@ -109,7 +114,7 @@
 <script setup>
 // @unocss-include
 // uno-css-ignore-file
-import { defineProps, ref, computed } from 'vue'
+import { defineProps, ref, computed, watch } from 'vue'
 import { useTokenStore } from '@/stores/tokenStore'
 import { useOperationLogStore } from '@/stores/operationLogStore'
 import { useMessage } from 'naive-ui'
@@ -134,8 +139,9 @@ const props = defineProps({
 const isRunning = ref(false)
 const isBatchRunning = ref(false)
 const isBatchTowerRunning = ref(false)
+const batchTowerTeam = ref('1')
 const isExportingTower = ref(false)
-const batchTokens = ref('')
+const batchTokens = ref(localStorage.getItem('towerStarUpgrade_batch_tokens') || '')
 
 // 爬塔相关状态
 let stopFlag = false
@@ -867,6 +873,11 @@ const handleBatchTokensInput = (value) => {
   batchTokens.value = value
 }
 
+// 自动保存批量执行范围
+watch(batchTokens, (newValue) => {
+  localStorage.setItem('towerStarUpgrade_batch_tokens', newValue)
+})
+
 // 连接Token（使用直接创建连接方式，避免selectToken触发其他连接）
 const connectTokenWithRetry = async (token, tokenIndex) => {
   let status = tokenStore.getWebSocketStatus(token.id)
@@ -1225,14 +1236,20 @@ const handleBatchUpgrade = async () => {
     // 批量执行完成，生成失败报告
     const successCount = sortedTargetTokens.length - failedTokens.length
     const failCount = failedTokens.length
+    const failedTokenNames = failedTokens.map(t => t.name || '未知')
     
-    message.success(`批量升星操作完成，成功: ${successCount}个，失败: ${failCount}个`)
+    let summaryMsg = `批量升星操作完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokenNames.length > 0) {
+      summaryMsg += `，失败token：${failedTokenNames.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '爬塔升星',
       operation: '批量执行',
       status: 'success',
-      message: `【批量】批量升星操作完成，成功: ${successCount}个，失败: ${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
     
     // 如果有失败的token，生成txt文档
@@ -1410,7 +1427,34 @@ const handleBatchTower = async () => {
           continue
         }
         
-        // 2. 执行爬塔操作（模拟点击开始爬塔按钮）
+        // 2. 切换阵容
+        const teamId = parseInt(batchTowerTeam.value)
+        try {
+          await tokenStore.sendPresetteamSaveTeam(token.id, { teamId })
+          await new Promise(resolve => setTimeout(resolve, 500))
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '爬塔升星',
+            operation: '批量爬塔',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]已切换到阵容${teamId}`
+          })
+        } catch (error) {
+          console.warn(`序号 ${tokenIndex} ${token.name || token.id} 切换阵容失败，继续执行:`, error)
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '爬塔升星',
+            operation: '批量爬塔',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'warning',
+            message: `【序号${tokenIndex}】[${token.name || token.id}]切换阵容失败，继续执行`
+          })
+        }
+
+        // 3. 执行爬塔操作（模拟点击开始爬塔按钮）
         logStore.addLog({
           page: 'fish-helper',
           cardType: '爬塔升星',
@@ -1515,19 +1559,25 @@ const handleBatchTower = async () => {
     // 批量执行完成，生成失败报告
     const successCount = sortedTargetTokens.length - failedTokens.length
     const failCount = failedTokens.length
+    const failedTokenNames = failedTokens.map(t => t.name || '未知')
     
     // 筛选出 WebSocket 未连接的 token
-    const websocketFailedTokens = failedTokens.filter(t => 
+    const websocketFailedTokens = failedTokens.filter(t =>
       t.reason && (t.reason.includes('WebSocket') || t.reason.includes('未连接'))
     )
     
-    message.success(`批量爬塔操作完成，成功：${successCount}个，失败：${failCount}个`)
+    let summaryMsg = `批量爬塔操作完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokenNames.length > 0) {
+      summaryMsg += `，失败token：${failedTokenNames.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '爬塔升星',
       operation: '批量爬塔',
       status: 'success',
-      message: `【批量】批量爬塔操作完成，成功：${successCount}个，失败：${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
     
     // 如果有 WebSocket 未连接的 token，单独列出

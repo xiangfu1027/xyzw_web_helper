@@ -71,11 +71,13 @@
             @update:inputValue="handleCommandDelayInput"
           />
           <CustomizedCard
-            mode="button"
-            :name="isBatchUpgradingEquipment ? '批量升级装备中...' : '批量升级装备'"
+            mode="button-with-select"
+            :buttonText="isBatchUpgradingEquipment ? '批量升级装备中...' : '批量升级装备'"
             @button-click="handleBatchUpgradeEquipment"
             :disabled="isBatchUpgradingEquipment"
             :loading="isBatchUpgradingEquipment"
+            v-model:selectValue="selectedUpgradeEquipTeam"
+            :selectOptions="teamOptions"
           />
           <CustomizedCard
             mode="button"
@@ -134,7 +136,7 @@
 <script setup>
 // @unocss-include
 // uno-css-ignore-file
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTokenStore, selectedTokenId } from '@/stores/tokenStore'
 import { useOperationLogStore } from '@/stores/operationLogStore'
 import { useMessage } from 'naive-ui'
@@ -230,6 +232,13 @@ const props = defineProps({
 // 操作状态
 const isUsingTorch = ref(false)
 const isBatchUpgradingEquipment = ref(false)
+const selectedUpgradeEquipTeam = ref(1) // 默认阵容1
+
+// 阵容选项
+const teamOptions = [
+  { label: '阵容1', value: 1 },
+  { label: '阵容2', value: 2 }
+]
 const isBatchUpgradingHangup = ref(false)
 const isBatchClaimingHangupReward = ref(false)
 const isBatchRenaming = ref(false)
@@ -298,7 +307,7 @@ const isExportingTeam = ref(false)
 const isBatchPetUpgrade = ref(false)
 
 // 执行范围
-const executionTokens = ref('')
+const executionTokens = ref(localStorage.getItem('accountMaintenance_execution_tokens') || '')
 const commandDelay = ref(localStorage.getItem('accountMaintenanceCommandDelay') || '600')
 
 // 按token昵称排序的token列表
@@ -312,6 +321,11 @@ const sortedTokens = [...tokenStore.gameTokens].sort((a, b) => {
 const handleExecutionTokensInput = (value) => {
   executionTokens.value = value
 }
+
+// 自动保存执行范围
+watch(executionTokens, (newValue) => {
+  localStorage.setItem('accountMaintenance_execution_tokens', newValue)
+})
 
 // 处理执行间隔输入
 const handleCommandDelayInput = (value) => {
@@ -440,7 +454,7 @@ const handleUseTorch = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[序号${tokenIndex}] ${token.name || token.id} 开始使用火把...`)
           
           let successCount = 0
@@ -500,8 +514,9 @@ const handleUseTorch = async () => {
 
           return { success: true, tokenId: token.id, successCount, failCount }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 使用火把失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 使用火把失败: ${error.message}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 使用火把失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 使用火把失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -523,15 +538,22 @@ const handleUseTorch = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
-    
-    message.success(`批量使用火把完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
-    
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量使用火把完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
+
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '使用火把',
-      status: 'success',
-      message: `【批量】批量使用火把完成：成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
   } catch (error) {
@@ -630,9 +652,9 @@ const handleUpgradeCrystal = async () => {
           })
           return { success: true, tokenId: token.id, successCount, failCount }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 升级水晶失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 升级水晶失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 升级水晶失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 升级水晶失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -654,14 +676,21 @@ const handleUpgradeCrystal = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量升级水晶完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    let summaryMsg = `批量升级水晶完成，目标英雄: ${selectedHeroName}，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '升级水晶',
-      status: 'success',
-      message: `【批量】批量升级水晶完成，目标英雄: ${selectedHeroName}，成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
   } catch (error) {
@@ -699,17 +728,67 @@ const handleBatchUpgradeEquipment = async () => {
     const results = await connectionPool.batchOperate(
       targetTokens,
       async (token, globalIndex) => {
+        const tokenIndex = getTokenIndex(token)
         try {
-          const tokenIndex = getTokenIndex(token)
           message.info(`[序号${tokenIndex}] ${token.name || token.id} 开始升级装备...`)
 
-          // 执行equipment_batchupgradelevel命令升级装备
-          const response = await tokenStore.sendEquipmentBatchUpgradeLevel(token.id, {
-            heroId: 107
-          })
+          // 切换到选中的阵容
+          const teamId = selectedUpgradeEquipTeam.value
+          try {
+            await tokenStore.sendPresetteamSaveTeam(token.id, { teamId })
+            message.info(`[序号${tokenIndex}] ${token.name || token.id} 切换阵容${teamId}成功`)
+          } catch (switchError) {
+            console.warn(`[序号${tokenIndex}] ${token.name || token.id} 切换阵容${teamId}失败:`, switchError.message)
+            message.warning(`[序号${tokenIndex}] ${token.name || token.id} 切换阵容${teamId}失败，继续执行`)
+          }
 
-          if (response && (response.code === 0 || response.code === undefined)) {
-            message.success(`[序号${tokenIndex}] ${token.name || token.id} - 升级装备成功`)
+          // 获取阵容信息，提取武将heroId
+          let heroIds = []
+          try {
+            const teamInfo = await tokenStore.sendPresetteamGetInfo(token.id, {})
+            if (teamInfo && teamInfo.teams) {
+              const team = teamInfo.teams[teamId]
+              if (team && team.heroes) {
+                // 从4号到0号依次获取heroId
+                for (let i = 4; i >= 0; i--) {
+                  const hero = team.heroes[i]
+                  if (hero && hero.heroId) {
+                    heroIds.push(hero.heroId)
+                  }
+                }
+              }
+            }
+            message.info(`[序号${tokenIndex}] ${token.name || token.id} 获取阵容武将: ${heroIds.join(', ')}`)
+          } catch (getTeamError) {
+            console.warn(`[序号${tokenIndex}] ${token.name || token.id} 获取阵容信息失败:`, getTeamError.message)
+            message.warning(`[序号${tokenIndex}] ${token.name || token.id} 获取阵容信息失败，跳过该Token`)
+            return { success: false, tokenId: token.id, error: '获取阵容信息失败' }
+          }
+
+          if (heroIds.length === 0) {
+            message.warning(`[序号${tokenIndex}] ${token.name || token.id} 阵容中没有武将，跳过`)
+            return { success: false, tokenId: token.id, error: '阵容中没有武将' }
+          }
+
+          // 从4号到1号依次执行升级装备
+          let allSuccess = true
+          for (const heroId of heroIds) {
+            try {
+              const response = await tokenStore.sendEquipmentBatchUpgradeLevel(token.id, { heroId })
+              if (response && (response.code === 0 || response.code === undefined)) {
+                message.info(`[序号${tokenIndex}] ${token.name || token.id} 武将${heroId}升级装备成功`)
+              } else {
+                const errorMsg = response?.msg || response?.message || '未知错误'
+                message.warning(`[序号${tokenIndex}] ${token.name || token.id} 武将${heroId}升级装备失败: ${errorMsg}，继续执行`)
+                allSuccess = false
+              }
+            } catch (upgradeError) {
+              message.warning(`[序号${tokenIndex}] ${token.name || token.id} 武将${heroId}升级装备失败: ${upgradeError.message}，继续执行`)
+              allSuccess = false
+            }
+          }
+
+          if (allSuccess) {
             logStore.addLog({
               page: 'fish-helper',
               cardType: '养号',
@@ -717,17 +796,24 @@ const handleBatchUpgradeEquipment = async () => {
               tokenId: token.id,
               tokenName: token.name,
               status: 'success',
-              message: `【序号${tokenIndex}】[${token.name || token.id}]升级装备成功`
+              message: `【序号${tokenIndex}】[${token.name || token.id}]升级装备全部成功`
             })
-            return { success: true, tokenId: token.id }
           } else {
-            const errorMsg = response?.msg || response?.message || '未知错误'
-            throw new Error(errorMsg)
+            logStore.addLog({
+              page: 'fish-helper',
+              cardType: '养号',
+              operation: '升级装备',
+              tokenId: token.id,
+              tokenName: token.name,
+              status: 'warning',
+              message: `【序号${tokenIndex}】[${token.name || token.id}]升级装备部分失败`
+            })
           }
+
+          return { success: allSuccess, tokenId: token.id }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 升级装备失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 升级装备失败: ${error.message}`)
-          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 升级装备失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 升级装备失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -749,14 +835,21 @@ const handleBatchUpgradeEquipment = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量升级装备完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    let summaryMsg = `批量升级装备完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '升级装备',
-      status: 'success',
-      message: `【批量】批量升级装备完成，成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
     // 清空过程日志，只保留结果日志
@@ -884,14 +977,21 @@ const handleBatchAwakeSkill = async () => {
     // 统计总结果
     const totalSuccess = results.reduce((sum, r) => sum + (r.successCount || 0), 0)
     const totalFail = results.reduce((sum, r) => sum + (r.failCount || 0), 0)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量觉醒完成：共执行 ${totalSuccess + totalFail} 次，成功 ${totalSuccess} 次，失败 ${totalFail} 次`)
+    let summaryMsg = `批量觉醒完成，共执行${totalSuccess + totalFail}次，成功${totalSuccess}次，失败${totalFail}次`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '觉醒',
-      status: 'success',
-      message: `【批量】批量觉醒完成，共执行 ${totalSuccess + totalFail} 次，成功 ${totalSuccess} 次，失败 ${totalFail} 次`
+      status: totalFail > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
     // 清空过程日志，只保留结果日志
@@ -1045,9 +1145,9 @@ const handleBatchUpgradeHangup = async () => {
           })
           return { success: true, tokenId: token.id, totalUpgradeCount }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 升级挂机失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 升级挂机失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 升级挂机失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 升级挂机失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -1069,14 +1169,21 @@ const handleBatchUpgradeHangup = async () => {
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
     const totalUsed = results.filter(r => r.success).reduce((sum, r) => sum + (r.totalUpgradeCount || 0), 0)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量升级挂机完成：成功 ${successCount} 个，失败 ${failureCount} 个，共使用${totalUsed}个道具`)
+    let summaryMsg = `批量升级挂机完成，成功${successCount}个，失败${failureCount}个，共使用${totalUsed}个道具`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '升级挂机',
-      status: 'success',
-      message: `【批量】批量升级挂机完成，成功 ${successCount} 个，失败 ${failureCount} 个，共使用${totalUsed}个道具`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
     // 清空过程日志，只保留结果日志
@@ -1137,9 +1244,9 @@ const handleBatchClaimHangupReward = async () => {
           })
           return { success: true, tokenId: token.id }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 领取推图层数奖励失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 领取推图层数奖励失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 领取推图层数奖励失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 领取推图层数奖励失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -1160,14 +1267,21 @@ const handleBatchClaimHangupReward = async () => {
 
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量领取推图层数奖励完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    let summaryMsg = `批量领取推图层数奖励完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '领取推图层数奖励',
-      status: 'success',
-      message: `【批量】批量领取推图层数奖励完成，成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
     results.forEach(r => {
@@ -1268,9 +1382,9 @@ const handleBatchRename = async () => {
           })
           return { success: true, tokenId: token.id, oldName: currentName, newName: expectedName }
         } catch (error) {
-          console.error(`[序号${globalIndex + 1}] ${token.name || token.id} 重命名失败:`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 重命名失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 重命名失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 重命名失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -1292,14 +1406,21 @@ const handleBatchRename = async () => {
     const successCount = results.filter(r => r.success && !r.skipped).length
     const skippedCount = results.filter(r => r.skipped).length
     const failureCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量重命名完成：成功 ${successCount} 个，跳过 ${skippedCount} 个，失败 ${failureCount} 个`)
+    let summaryMsg = `批量重命名完成，成功${successCount}个，跳过${skippedCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量重命名',
-      status: 'success',
-      message: `【批量】批量重命名完成，成功 ${successCount} 个，跳过 ${skippedCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
   } catch (error) {
@@ -1339,6 +1460,10 @@ const handleUseUniversalRed = async () => {
     isUsingUniversalRed.value = true
 
     message.info(`开始批量使用万能红（${rangeText}），目标英雄: ${selectedHeroName}，共${targetTokens.length}个Token...`)
+
+    let successCount = 0
+    let failCount = 0
+    const failedTokens = []
 
     // 逐个处理Token
     for (let i = 0; i < targetTokens.length; i++) {
@@ -1587,6 +1712,8 @@ const handleUseUniversalRed = async () => {
           status: 'error',
           message: `【序号${tokenIndex}】[${token.name || token.id}]使用万能红失败: ${error.message || '未知错误'}`
         })
+        failCount++
+        failedTokens.push(token.name || token.id)
       } finally {
         // 关闭WebSocket连接
         if (tokenStore.getWebSocketStatus(token.id) === 'connected') {
@@ -1601,13 +1728,17 @@ const handleUseUniversalRed = async () => {
       }
     }
 
-    message.success(`批量使用万能红完成，共处理${targetTokens.length}个Token`)
+    let summaryMsg = `批量使用万能红完成，目标英雄: ${selectedHeroName}，共处理${targetTokens.length}个Token`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '使用万能红',
-      status: 'success',
-      message: `【批量】批量使用万能红完成，目标英雄: ${selectedHeroName}，共处理${targetTokens.length}个Token`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
   } catch (error) {
@@ -1751,6 +1882,9 @@ const handleUpgradeLuBuStar = async () => {
     }
 
     // 逐个处理 Token
+    let successCount = 0
+    let failCount = 0
+    const failedTokens = []
     for (let i = 0; i < targetTokens.length; i++) {
       const token = targetTokens[i]
       const tokenIndex = getTokenIndex(token)
@@ -1802,6 +1936,8 @@ const handleUpgradeLuBuStar = async () => {
           status: 'error',
           message: `【序号${tokenIndex}】[${token.name || token.id}]升星失败：${error.message || '未知错误'}`
         })
+        failCount++
+        failedTokens.push(token.name || token.id)
       } finally {
         // 关闭 WebSocket 连接
         if (tokenStore.getWebSocketStatus(token.id) === 'connected') {
@@ -1816,24 +1952,27 @@ const handleUpgradeLuBuStar = async () => {
       }
     }
 
+    const failedTokensSummary = failedTokens.length > 0 ? `，失败token：${failedTokens.join('、')}` : ''
     if (isPassive) {
-      message.success(`批量升星被动紫将完成，共处理${targetTokens.length}个 Token`)
+      const summaryMsg = `批量升星被动紫将完成，成功${successCount}个，失败${failCount}个${failedTokensSummary}`
+      message.success(summaryMsg)
       logStore.addLog({
         page: 'fish-helper',
         cardType: '养号',
         operation: '批量升星',
-        status: 'success',
-        message: `【批量】批量升星被动紫将完成，共处理${targetTokens.length}个 Token`
+        status: failCount > 0 ? 'warning' : 'success',
+        message: `【批量】${summaryMsg}`
       })
     } else {
       const selectedHeroName = HERO_DICT[selectedUpgradeStarHero.value]?.name || '未知英雄'
-      message.success(`批量升星完成，共处理${targetTokens.length}个 Token`)
+      const summaryMsg = `批量升星${selectedHeroName}完成，成功${successCount}个，失败${failCount}个${failedTokensSummary}`
+      message.success(summaryMsg)
       logStore.addLog({
         page: 'fish-helper',
         cardType: '养号',
         operation: '批量升星',
-        status: 'success',
-        message: `【批量】批量升星${selectedHeroName}完成，共处理${targetTokens.length}个 Token`
+        status: failCount > 0 ? 'warning' : 'success',
+        message: `【批量】${summaryMsg}`
       })
     }
 
@@ -1903,7 +2042,7 @@ const handleBatchHeroSynthetic = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           
           // 根据选择确定 itemId
           let itemId
@@ -1981,8 +2120,9 @@ const handleBatchHeroSynthetic = async () => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 英雄合成失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 英雄合成失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 英雄合成失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 英雄合成失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -1990,7 +2130,7 @@ const handleBatchHeroSynthetic = async () => {
             tokenId: token.id,
             tokenName: token.name,
             status: 'error',
-            message: `${globalIndex + 1}、英雄合成失败：${error.message || error}`
+            message: `[序号${tokenIndex}] ${token.name || token.id} 英雄合成失败：${error.message || error}`
           })
           return { success: false, error: error.message || error }
         }
@@ -2018,14 +2158,21 @@ const handleBatchHeroSynthetic = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量英雄合成完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量英雄合成完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量英雄合成',
-      status: 'success',
-      message: `【批量】批量英雄合成完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量英雄合成出错:', error)
@@ -2084,7 +2231,7 @@ const handleBatchLuBuBattle = async (slotType) => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在上阵吕布（${slotText}）...`)
           
           // 步骤1: 获取当前上阵阵容
@@ -2216,8 +2363,9 @@ const handleBatchLuBuBattle = async (slotType) => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵吕布失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵吕布失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵吕布失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵吕布失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -2353,7 +2501,7 @@ const handleBatchHeroBattle = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在上阵${heroName}...`)
           
           if (heroId === 217) {
@@ -2576,8 +2724,9 @@ const handleBatchHeroBattle = async () => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵${heroName}失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵${heroName}失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵${heroName}失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵${heroName}失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -2613,14 +2762,21 @@ const handleBatchHeroBattle = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量上阵${heroName}完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量上阵${heroName}完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量上阵',
-      status: 'success',
-      message: `【批量】批量上阵${heroName}完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量上阵出错:', error)
@@ -2676,7 +2832,7 @@ const handleBatchTowerTeamInternal = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在上阵爬塔武将...`)
           
           const fightResult = await tokenStore.sendFightStartLevel(token.id, {})
@@ -2732,8 +2888,9 @@ const handleBatchTowerTeamInternal = async () => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵爬塔武将失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵爬塔武将失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵爬塔武将失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵爬塔武将失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -2741,7 +2898,7 @@ const handleBatchTowerTeamInternal = async () => {
             tokenId: token.id,
             tokenName: token.name,
             status: 'error',
-            message: `${globalIndex + 1}、上阵爬塔武将失败：${error.message || error}`
+            message: `[序号${tokenIndex}] ${token.name || token.id} 上阵爬塔武将失败：${error.message || error}`
           })
           return { success: false, error: error.message || error }
         }
@@ -2769,14 +2926,21 @@ const handleBatchTowerTeamInternal = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量上阵爬塔完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量上阵爬塔完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量上阵爬塔',
-      status: 'success',
-      message: `【批量】批量上阵爬塔完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量上阵爬塔出错:', error)
@@ -2832,7 +2996,7 @@ const handleBatchStoryTeamInternal = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在上阵推图武将...`)
           
           const fightResult = await tokenStore.sendFightStartLevel(token.id, {})
@@ -2888,8 +3052,9 @@ const handleBatchStoryTeamInternal = async () => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵推图武将失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 上阵推图武将失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵推图武将失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 上阵推图武将失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -2897,7 +3062,7 @@ const handleBatchStoryTeamInternal = async () => {
             tokenId: token.id,
             tokenName: token.name,
             status: 'error',
-            message: `${globalIndex + 1}、上阵推图武将失败：${error.message || error}`
+            message: `[序号${tokenIndex}] ${token.name || token.id} 上阵推图武将失败：${error.message || error}`
           })
           return { success: false, error: error.message || error }
         }
@@ -2925,14 +3090,21 @@ const handleBatchStoryTeamInternal = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量上阵推图完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量上阵推图完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量上阵推图',
-      status: 'success',
-      message: `【批量】批量上阵推图完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量上阵推图出错:', error)
@@ -3024,14 +3196,21 @@ const handleBatchClaimCDK = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量兑换码完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    let summaryMsg = `批量兑换码完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量兑换码',
-      status: 'success',
-      message: `【批量】批量兑换码完成，成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
 
   } catch (error) {
@@ -4138,6 +4317,7 @@ const handleClaimBoxReward = async () => {
   
   let successCount = 0
   let failCount = 0
+  const failedTokens = []
   
   try {
     for (let i = 0; i < targetTokens.length; i++) {
@@ -4149,6 +4329,7 @@ const handleClaimBoxReward = async () => {
         if (!connectionAcquired) {
           message.warning(`[${token.name || token.id}] 连接失败`)
           failCount++
+          failedTokens.push(token.name || token.id)
           continue
         }
         
@@ -4200,16 +4381,21 @@ const handleClaimBoxReward = async () => {
       } catch (error) {
         console.error(`[${token.name || token.id}] 领取宝箱奖励异常:`, error)
         failCount++
+        failedTokens.push(token.name || token.id)
       }
     }
     
-    message.success(`领取宝箱奖励完成：成功${successCount}个，失败${failCount}个`)
+    let summaryMsg = `领取宝箱奖励完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '领取宝箱奖励',
-      status: 'success',
-      message: `领取宝箱奖励完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('领取宝箱奖励失败:', error)
@@ -4349,6 +4535,8 @@ const handleBatchBoxWeek = async () => {
       return
     }
     
+    const failedTokens = []
+    
     // 逐个处理Token
     for (let i = 0; i < targetTokens.length; i++) {
       // 检查是否已取消
@@ -4360,7 +4548,11 @@ const handleBatchBoxWeek = async () => {
       const token = targetTokens[i]
       message.info(`处理第 ${i + 1}/${targetTokens.length} 个Token: ${token.name}`)
       
-      await executeBoxWeekForToken(token)
+      try {
+        await executeBoxWeekForToken(token)
+      } catch (error) {
+        failedTokens.push(token.name || token.id)
+      }
       
       // 处理完一个 Token 后，等待一段时间再处理下一个
       if (i < targetTokens.length - 1) {
@@ -4369,15 +4561,19 @@ const handleBatchBoxWeek = async () => {
       }
     }
     
-    message.success(`批量宝箱周完成，共处理${targetTokens.length}个Token`)
+    let summaryMsg = `批量宝箱周完成，共处理${targetTokens.length}个Token`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     // 添加批量宝箱周完成日志
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量宝箱周',
-      status: 'success',
-      message: `【批量】批量宝箱周完成，共处理${targetTokens.length}个Token`
+      status: failedTokens.length > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
   } catch (error) {
@@ -4541,14 +4737,21 @@ const handleBatchUnloadHeroes = async () => {
     
     const successCount = results.filter(r => r.status === 'fulfilled').length
     const failCount = results.filter(r => r.status === 'rejected').length
-    
-    message.success(`批量下阵完成！成功：${successCount}，失败：${failCount}`)
+    const failedTokens = results
+      .filter(r => r.status === 'rejected')
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量下阵完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量下阵',
-      status: 'success',
-      message: `【批量】批量下阵完成，成功：${successCount}，失败：${failCount}`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
   } catch (error) {
@@ -4910,15 +5113,15 @@ const handleBatchUpgrade900 = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -4931,14 +5134,21 @@ const handleBatchUpgrade900 = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量升级',
-      status: 'success',
-      message: `【批量】批量升级完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
     results.forEach(r => {
@@ -5215,15 +5425,15 @@ const handleBatchUpgradeTower = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -5236,14 +5446,21 @@ const handleBatchUpgradeTower = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级爬塔完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级爬塔完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量升级',
-      status: 'success',
-      message: `【批量】批量升级爬塔完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
     results.forEach(r => {
@@ -5578,15 +5795,15 @@ const handleBatchUpgradeSingleHero = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -5599,14 +5816,21 @@ const handleBatchUpgradeSingleHero = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级${heroName}完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级${heroName}完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量升级',
-      status: 'success',
-      message: `【批量】批量升级${heroName}完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
     results.forEach(r => {
@@ -5947,15 +6171,15 @@ const handleBatchUpgradeQunxiong = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -5968,14 +6192,21 @@ const handleBatchUpgradeQunxiong = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级群雄完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级群雄完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量升级',
-      status: 'success',
-      message: `【批量】批量升级群雄完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
     results.forEach(r => {
@@ -6168,7 +6399,7 @@ const handleExportTeam = async () => {
             })
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
             logStore.addLog({
               page: 'fish-helper',
@@ -6181,7 +6412,7 @@ const handleExportTeam = async () => {
             })
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
             logStore.addLog({
               page: 'fish-helper',
@@ -6194,7 +6425,7 @@ const handleExportTeam = async () => {
             })
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
               logStore.addLog({
@@ -6284,13 +6515,21 @@ const handleExportTeam = async () => {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
     
-    message.success(`阵容导出完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `阵容导出完成：成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '导出阵容',
-      status: 'success',
-      message: `阵容导出完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('导出阵容失败:', error)
@@ -6346,7 +6585,7 @@ const handleBatchClaimEmails = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在领取邮件...`)
           
           await tokenStore.sendMessageWithPromise(token.id, 'mail_claimallattachment', { category: 0 })
@@ -6364,8 +6603,9 @@ const handleBatchClaimEmails = async () => {
           
           return { success: true }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 领取邮件失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 领取邮件失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 领取邮件失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 领取邮件失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -6373,7 +6613,7 @@ const handleBatchClaimEmails = async () => {
             tokenId: token.id,
             tokenName: token.name,
             status: 'error',
-            message: `${globalIndex + 1}、领取邮件失败：${error.message || error}`
+            message: `[序号${tokenIndex}] ${token.name || token.id} 领取邮件失败：${error.message || error}`
           })
           return { success: false, error: error.message || error }
         }
@@ -6401,14 +6641,21 @@ const handleBatchClaimEmails = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量领取邮件完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量领取邮件完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量领取邮件',
-      status: 'success',
-      message: `【批量】批量领取邮件完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量领取邮件出错:', error)
@@ -6464,7 +6711,7 @@ const handleBatchPetUpgrade = async () => {
       targetTokens,
       async (token, globalIndex) => {
         try {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           message.info(`[${tokenIndex}/${targetTokens.length}] ${token.name || token.id} 正在获取宠物信息...`)
 
           // 获取角色信息，提取 petUId
@@ -6523,8 +6770,9 @@ const handleBatchPetUpgrade = async () => {
 
           return { success: true, successCount, failCount }
         } catch (error) {
-          console.error(`[${globalIndex + 1}] ${token.name || token.id} 宠物升级失败:`, error)
-          message.error(`[${globalIndex + 1}] ${token.name || token.id} 宠物升级失败：${error.message || error}`)
+          const tokenIndex = getTokenIndex(token)
+          console.error(`[序号${tokenIndex}] ${token.name || token.id} 宠物升级失败:`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 宠物升级失败：${error.message || error}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '养号',
@@ -6532,7 +6780,7 @@ const handleBatchPetUpgrade = async () => {
             tokenId: token.id,
             tokenName: token.name,
             status: 'error',
-            message: `${globalIndex + 1}、宠物升级失败：${error.message || error}`
+            message: `[序号${tokenIndex}] ${token.name || token.id} 宠物升级失败：${error.message || error}`
           })
           return { success: false, error: error.message || error }
         }
@@ -6560,14 +6808,21 @@ const handleBatchPetUpgrade = async () => {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
 
-    message.success(`批量宠物升级完成，成功${successCount}个，失败${failCount}个`)
+    let summaryMsg = `批量宠物升级完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量宠物升级',
-      status: 'success',
-      message: `【批量】批量宠物升级完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量宠物升级出错:', error)
@@ -6972,14 +7227,21 @@ const handleBatchUpgradeToys = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级玩具-${modeName}完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级玩具-${modeName}完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量升级玩具',
-      status: 'success',
-      message: `【批量】批量升级玩具-${modeName}完成，成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量升级玩具出错:', error)
@@ -7177,15 +7439,15 @@ const handleBatchActivateToyTeam = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -7199,14 +7461,21 @@ const handleBatchActivateToyTeam = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量激活玩具阵容完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量激活玩具阵容完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量激活玩具阵容',
-      status: 'success',
-      message: `【批量】批量激活玩具阵容完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
     // 清空过程日志，只保留结果日志
@@ -7852,15 +8121,15 @@ const handleBatchUpgradeLord = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -7874,14 +8143,21 @@ const handleBatchUpgradeLord = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级主公武将完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级主公武将完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '养号',
       operation: '批量升级主公武将',
-      status: 'success',
-      message: `【批量】批量升级主公武将完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
     
     // 清空过程日志，只保留结果日志

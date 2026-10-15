@@ -62,7 +62,7 @@
 <script setup>
 // @unocss-include
 // uno-css-ignore-file
-import { defineProps, ref } from 'vue'
+import { defineProps, ref, watch } from 'vue'
 import { useTokenStore } from '@/stores/tokenStore'
 import { useMessage } from 'naive-ui'
 import MyCard from '@/components/Common/MyCard.vue'
@@ -90,12 +90,17 @@ const isRefreshingItems = ref(false)
 const useGoldCoinBag = ref(false)
 
 // 执行范围
-const resourceTokens = ref('')
+const resourceTokens = ref(localStorage.getItem('commonTasks_resource_tokens') || '')
 
 // 处理执行范围输入
 const handleResourceTokensInput = (value) => {
   resourceTokens.value = value
 }
+
+// 自动保存执行范围
+watch(resourceTokens, (newValue) => {
+  localStorage.setItem('commonTasks_resource_tokens', newValue)
+})
 
 // 解析执行范围（如果为空则执行全部）
 const parseTokenRange = (rangeStr) => {
@@ -406,6 +411,7 @@ const batchUseResources = async () => {
     
     let successCount = 0
     let failCount = 0
+    const failedTokens = []
     
     for (let i = 0; i < targetTokens.length; i++) {
       const token = targetTokens[i]
@@ -449,6 +455,7 @@ const batchUseResources = async () => {
             message: `【序号${tokenIndex}】[${token.name || token.id}] 连接失败，跳过`
           })
           failCount++
+          failedTokens.push(token.name || token.id)
           continue
         }
         
@@ -472,6 +479,7 @@ const batchUseResources = async () => {
             message: `【序号${tokenIndex}】[${token.name || token.id}] Token不存在，跳过`
           })
           failCount++
+          failedTokens.push(token.name || token.id)
           continue
         }
         
@@ -567,17 +575,21 @@ const batchUseResources = async () => {
           message: `【序号${tokenIndex}】[${token.name || token.id}] 批量使用资源失败: ${error.message || '未知错误'}`
         })
         failCount++
+        failedTokens.push(token.name || token.id)
       }
     }
     
-    message.success(`批量使用资源完成（成功: ${successCount}, 失败: ${failCount}）`)
-    const failedTokensStr = failCount > 0 ? `，失败${failCount}个` : ''
+    let summaryMsg = `批量使用资源完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logOperation('fish-helper', '批量使用资源', {
       cardType: '资源管理',
       tokenId: null,
       tokenName: null,
-      status: 'success',
-      message: `【批量】批量使用资源完成：成功${successCount}个${failedTokensStr}`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量使用资源失败:', error)

@@ -78,7 +78,7 @@
       <OperationLogCard 
         page="fish-helper" 
         card-type="盐场"
-        :filter-operations="['盐场报名', '盐场布阵', '批量切换阵1', '批量切换阵2']"
+        :filter-operations="['盐场报名', '盐场布阵', '批量切换阵1', '批量切换阵2', '切换红多洗练', '切换红少洗练', '导出阵容']"
       />
     </template>
   </MyCard>
@@ -117,7 +117,7 @@ const connectionPool = new ConnectionPoolManager(tokenStore, {
 // 操作状态
 const isRunning = ref(false)
 const legionLeader = ref('')
-const executionRange = ref('')
+const executionRange = ref(localStorage.getItem(STORAGE_KEYS.executionRange) || '')
 
 // 组件挂载时从本地存储读取
 onMounted(() => {
@@ -268,6 +268,7 @@ const handleSaltFieldSignup = async () => {
     let successCount = 0
     let failCount = 0
     const successTokenIndices = []
+    const failedTokens = []
     
     // 使用连接池逐个执行
     for (let i = 0; i < leaderTokens.length; i++) {
@@ -338,6 +339,7 @@ const handleSaltFieldSignup = async () => {
         const tokenIndex = getTokenIndex(token)
         message.error(`${tokenIndex}、${token.name} 盐场报名失败：${error.message}`)
         failCount++
+        failedTokens.push(token.name || token.id || '未知')
         
         logStore.addLog({
           page: 'fish-helper',
@@ -361,14 +363,18 @@ const handleSaltFieldSignup = async () => {
       }
     }
     
-    message.success(`盐场报名完成！成功: ${successCount}，失败: ${failCount}`)
+    let summaryMsg = `盐场报名完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
     const successIndicesText = successTokenIndices.length > 0 ? `，成功Token序号: ${successTokenIndices.join(',')}` : ''
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '盐场',
       operation: '盐场报名',
       status: 'success',
-      message: `盐场报名完成（团长：${rangeText}），成功: ${successCount}，失败: ${failCount}${successIndicesText}`
+      message: `盐场报名完成（团长：${rangeText}），${summaryMsg}${successIndicesText}`
     })
   } catch (error) {
     console.error('盐场报名失败:', error)
@@ -426,6 +432,7 @@ const handleSaltFieldFormation = async () => {
     
     let successCount = 0
     let failCount = 0
+    const failedTokens = []
     
     // 使用连接池逐个执行
     for (let i = 0; i < targetTokens.length; i++) {
@@ -588,7 +595,8 @@ const handleSaltFieldFormation = async () => {
         const tokenIndex = getTokenIndex(token)
         message.error(`${tokenIndex}、${token.name || token.id} 盐场布阵失败：${error.message}`)
         failCount++
-        
+        failedTokens.push(token.name || token.id || '未知')
+
         logStore.addLog({
           page: 'fish-helper',
           cardType: '盐场',
@@ -604,19 +612,23 @@ const handleSaltFieldFormation = async () => {
           console.error('释放连接失败:', releaseError)
         }
       }
-      
+
       if (i < targetTokens.length - 1) {
         await waitCommandDelay()
       }
     }
-    
-    message.success(`盐场布阵完成！成功: ${successCount}，失败: ${failCount}`)
+
+    let summaryMsg = `盐场布阵完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '盐场',
       operation: '盐场布阵',
       status: 'success',
-      message: `盐场布阵完成（${rangeText}），成功: ${successCount}，失败: ${failCount}`
+      message: `盐场布阵完成（${rangeText}），${summaryMsg}`
     })
   } catch (error) {
     console.error('盐场布阵失败:', error)
@@ -673,18 +685,20 @@ const batchSwitchTeam1 = async () => {
     
     let successCount = 0
     let failCount = 0
-    
+    const failedTokens = []
+
     for (let i = 0; i < targetTokens.length; i++) {
       const token = targetTokens[i]
       if (!token || !token.id) continue
-      
+
       try {
         const connectionAcquired = await connectionPool.acquire(token.id)
-        
+
         if (!connectionAcquired) {
           const tokenIndex = getTokenIndex(token)
           message.warning(`${tokenIndex}、${token.name} 连接失败`)
           failCount++
+          failedTokens.push(token.name || token.id || '未知')
           logStore.addLog({
             page: 'fish-helper',
             cardType: '盐场',
@@ -696,14 +710,15 @@ const batchSwitchTeam1 = async () => {
           })
           continue
         }
-        
+
         await waitCommandDelay()
-        
+
         if (tokenStore.getWebSocketStatus(token.id) !== 'connected') {
           const tokenIndex = getTokenIndex(token)
           message.warning(`${tokenIndex}、${token.name} WebSocket未连接`)
           await connectionPool.release(token.id, false)
           failCount++
+          failedTokens.push(token.name || token.id || '未知')
           logStore.addLog({
             page: 'fish-helper',
             cardType: '盐场',
@@ -715,14 +730,14 @@ const batchSwitchTeam1 = async () => {
           })
           continue
         }
-        
+
         const tokenIndex = getTokenIndex(token)
         message.info(`正在切换 ${tokenIndex}、${token.name} 到阵1...`)
-        
-        await tokenStore.sendPresetteamSaveTeam(token.id, { 
-          teamId: 1 
+
+        await tokenStore.sendPresetteamSaveTeam(token.id, {
+          teamId: 1
         })
-        
+
         message.success(`${tokenIndex}、${token.name} 已切换到阵1`)
         successCount++
         logStore.addLog({
@@ -734,14 +749,15 @@ const batchSwitchTeam1 = async () => {
           status: 'success',
           message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name} 已切换到阵1`
         })
-        
+
         await connectionPool.release(token.id, false)
-        
+
       } catch (error) {
         console.error(`${token.name} 切换阵1失败:`, error)
         const tokenIndex = getTokenIndex(token)
         message.error(`${tokenIndex}、${token.name} 切换阵1失败：${error.message}`)
         failCount++
+        failedTokens.push(token.name || token.id || '未知')
         logStore.addLog({
           page: 'fish-helper',
           cardType: '盐场',
@@ -763,13 +779,17 @@ const batchSwitchTeam1 = async () => {
       }
     }
     
-    message.success(`批量切换阵1完成！成功: ${successCount}，失败: ${failCount}`)
+    let summaryMsg = `批量切换阵1完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '盐场',
       operation: '批量切换阵1',
       status: 'success',
-      message: `【批量】批量切换阵1完成（${rangeText}），成功: ${successCount}，失败: ${failCount}`
+      message: `【批量】${summaryMsg}（${rangeText}）`
     })
   } catch (error) {
     console.error('批量切换阵1失败:', error)
@@ -827,6 +847,7 @@ const batchSwitchTeam2 = async () => {
     
     let successCount = 0
     let failCount = 0
+    const failedTokens = []
     
     for (let i = 0; i < targetTokens.length; i++) {
       const token = targetTokens[i]
@@ -839,6 +860,7 @@ const batchSwitchTeam2 = async () => {
           const tokenIndex = getTokenIndex(token)
           message.warning(`${tokenIndex}、${token.name} 连接失败`)
           failCount++
+          failedTokens.push(token.name || token.id || '未知')
           logStore.addLog({
             page: 'fish-helper',
             cardType: '盐场',
@@ -858,6 +880,7 @@ const batchSwitchTeam2 = async () => {
           message.warning(`${tokenIndex}、${token.name} WebSocket未连接`)
           await connectionPool.release(token.id, false)
           failCount++
+          failedTokens.push(token.name || token.id || '未知')
           logStore.addLog({
             page: 'fish-helper',
             cardType: '盐场',
@@ -896,6 +919,7 @@ const batchSwitchTeam2 = async () => {
         const tokenIndex = getTokenIndex(token)
         message.error(`${tokenIndex}、${token.name} 切换阵2失败：${error.message}`)
         failCount++
+        failedTokens.push(token.name || token.id || '未知')
         logStore.addLog({
           page: 'fish-helper',
           cardType: '盐场',
@@ -917,13 +941,17 @@ const batchSwitchTeam2 = async () => {
       }
     }
     
-    message.success(`批量切换阵2完成！成功: ${successCount}，失败: ${failCount}`)
+    let summaryMsg = `批量切换阵2完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '盐场',
       operation: '批量切换阵2',
       status: 'success',
-      message: `【批量】批量切换阵2完成（${rangeText}），成功: ${successCount}，失败: ${failCount}`
+      message: `【批量】${summaryMsg}（${rangeText}）`
     })
   } catch (error) {
     console.error('批量切换阵2失败:', error)
@@ -1155,13 +1183,18 @@ const exportTeamFormation = async () => {
       link.click()
       URL.revokeObjectURL(url)
       
-      message.success(`阵容导出完成！成功: ${successCount}，失败: ${failCount}，已下载CSV文件`)
+      const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+      let summaryMsg = `阵容导出完成，成功${successCount}个，失败${failCount}个，已下载CSV文件`
+      if (failedTokens.length > 0) {
+        summaryMsg += `，失败token：${failedTokens.join('、')}`
+      }
+      message.success(summaryMsg)
       logStore.addLog({
         page: 'fish-helper',
         cardType: '盐场',
         operation: '导出阵容',
         status: 'success',
-        message: `阵容导出完成（${rangeText}），成功: ${successCount}，失败: ${failCount}，已下载CSV文件`
+        message: summaryMsg
       })
     } else {
       message.warning('没有可导出的阵容数据')

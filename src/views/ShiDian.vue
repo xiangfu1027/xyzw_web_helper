@@ -52,7 +52,7 @@
           @update-max-level="handleUpdateMaxLevel"
           @clear-pillow-count="handleClearPillowCount"
           @join-token="handleJoinTokenFromTeamIdCard"
-          @auto-join-shidian="autoJoinShiDian($event)"
+          @auto-join-shidian="(range, count) => autoJoinShiDian(range, count)"
           @clear-nightmare-labels="handleClearNightmareLabels"
         />
 
@@ -955,8 +955,9 @@ const clearAllNightmareLabels = async () => {
 }
 
 // 自动加入十殿
-const autoJoinShiDian = async (executionRange = '') => {
-  console.log('autoJoinShiDian 被调用，执行范围:', executionRange)
+const autoJoinShiDian = async (executionRange = '', memberCount = 3) => {
+  console.log('autoJoinShiDian 被调用，执行范围:', executionRange, '成员数量:', memberCount)
+  memberCount = Number(memberCount) || 3
 
   // 实时从 localStorage 读取 TeamID，确保获取最新值
   try {
@@ -987,7 +988,7 @@ const autoJoinShiDian = async (executionRange = '') => {
     const userChoice = await new Promise((resolve) => {
       dialog.warning({
         title: '确认自动加入',
-        content: '确定要自动分配 Token 加入十殿吗？这将根据枕头数量和现有标签自动分配。',
+        content: `确定要自动分配 Token 加入十殿吗？每个队伍补足到 ${memberCount} 个，这将根据枕头数量和现有标签自动分配。`,
         positiveText: '确定',
         negativeText: '取消',
         onPositiveClick: () => {
@@ -1048,12 +1049,27 @@ const autoJoinShiDian = async (executionRange = '') => {
         tokens = [...sortedTokens.value].filter(token => !token.name?.includes('十殿'))
       }
       
-      // 计算需要多少个枕头=5的token（每个TeamID需要3个）
+      // 计算每殿当前已有标签数量（从持久化的 tokenNightmareTeam 统计）
+      const teamCurrentCount = {}
+      for (let teamIdx = 1; teamIdx <= 10; teamIdx++) {
+        if (!teamIds.value[teamIdx - 1]) continue
+        teamCurrentCount[teamIdx] = Object.values(tokenNightmareTeam.value).filter(v => v === teamIdx).length
+      }
+
+      // 计算还需要多少个枕头=5的token（每个TeamID补足到 memberCount 个）
       const validTeamIdsCount = teamIds.value.filter(id => id).length
-      const requiredTokensCount = validTeamIdsCount * 3
-      console.log(`需要 ${requiredTokensCount} 个枕头=5的token（${validTeamIdsCount}个TeamID × 3）`)
+      const requiredTokensCount = Object.values(teamCurrentCount).reduce((sum, count) => sum + Math.max(0, memberCount - count), 0)
+      console.log(`需要补足 ${requiredTokensCount} 个枕头=5的token（${validTeamIdsCount}个TeamID，已有标签 ${JSON.stringify(teamCurrentCount)}，每殿${memberCount}个）`)
+
+      // 所有殿已满，无需补充
+      if (requiredTokensCount <= 0) {
+        message.info(`所有十殿已分配满 ${memberCount} 个 Token，无需补充`)
+        isAutoJoinRunning.value = false
+        await connectionPool.destroy()
+        return
+      }
       
-      // 先检查所有 token 的枕头数量，只保留枕头=5 的 token
+      // 先检查所有 token 的枕头数量，只保留枕头=5 的 token（使用 tokenPillowCount 中已存储的值）
       const tokensWithPillow5 = []
       for (const token of tokens) {
         if (!token || !token.id) continue
@@ -1066,113 +1082,19 @@ const autoJoinShiDian = async (executionRange = '') => {
         const currentTeam = tokenNightmareTeam.value[token.id]
         if (currentTeam !== null && currentTeam !== undefined) continue
         
-        try {
-          const connected = await connectionPool.acquire(token.id)
-          if (!connected) {
-            continue
+        // 使用 tokenPillowCount 中已存储的枕头数量，不再通过函数获取
+        const currentPillowCount = tokenPillowCount.value[token.id] ?? 0
+        
+        console.log(`Token ${token.name} 枕头数量: ${currentPillowCount}（来自 tokenPillowCount）`)
+        
+        if (currentPillowCount === 5) {
+          tokensWithPillow5.push(token)
+          
+          // 找到足够数量后提前停止
+          if (tokensWithPillow5.length >= requiredTokensCount) {
+            console.log(`已找到 ${requiredTokensCount} 个枕头=5的token，停止检查`)
+            break
           }
-          
-          const status = tokenStore.getWebSocketStatus(token.id)
-          if (status !== 'connected') {
-            await connectionPool.release(token.id, true)
-            continue
-          }
-          
-          // 等待初始化
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // 执行 nightmare_getroleinfo 获取十殿信息
-          try {
-            await tokenStore.sendMessageWithPromise(token.id, 'nightmare_getroleinfo', {}, 5000)
-            await new Promise(resolve => setTimeout(resolve, 800))
-          } catch (error) {
-            console.warn(`Token ${token.name} 获取十殿信息失败:`, error)
-          }
-          
-          // 检查本周是否已打过十殿
-          const tokenData = tokenStore.gameTokens.find(t => t.id === token.id)
-          const nightmareData = tokenData?.gameData?.nightmareData
-          const nightMareData = nightmareData?.nightMareData || nightmareData?.nightmareData
-          const weekAward = nightMareData?.weekAward || nightmareData?.weekAward
-          
-          if (weekAward && typeof weekAward === 'object') {
-            // 获取当前周的周一日期
-            const currentDate = new Date()
-            const currentWeekStart = new Date(currentDate)
-            const day = currentWeekStart.getDay()
-            const diff = day === 0 ? -6 : 1 - day
-            currentWeekStart.setDate(currentWeekStart.getDate() + diff)
-            currentWeekStart.setHours(0, 0, 0, 0)
-            
-            // 获取当前周的周日日期
-            const currentWeekEnd = new Date(currentWeekStart)
-            currentWeekEnd.setDate(currentWeekEnd.getDate() + 6)
-            currentWeekEnd.setHours(23, 59, 59, 999)
-            
-            // 检查weekAward中是否有本周的日期，并取本周最高层数
-            const dateKeys = Object.keys(weekAward)
-            let hasPlayedThisWeek = false
-            let weekMaxLevel = 0
-            
-            for (const dateKey of dateKeys) {
-              const dateData = weekAward[dateKey]
-              if (!dateData || dateData.maxLevel === undefined || dateData.maxLevel === null) {
-                continue
-              }
-              
-              // 解析日期 (YYYYMMDD格式)
-              if (dateKey.length === 8) {
-                const year = parseInt(dateKey.substring(0, 4))
-                const month = parseInt(dateKey.substring(4, 6)) - 1
-                const dayNum = parseInt(dateKey.substring(6, 8))
-                const date = new Date(year, month, dayNum)
-                
-                // 检查是否在本周范围内
-                if (date >= currentWeekStart && date <= currentWeekEnd) {
-                  hasPlayedThisWeek = true
-                  weekMaxLevel = dateData.maxLevel
-                  break
-                }
-              }
-            }
-            
-            // 本周已打过，或本周最高层数为 8 的 token 跳过
-            if (hasPlayedThisWeek || weekMaxLevel === 8) {
-              const reason = weekMaxLevel === 8 ? '本周最高层数为 8' : '本周已打过十殿'
-              console.log(`Token ${token.name} ${reason}，跳过`)
-              await connectionPool.release(token.id, true)
-              continue
-            }
-          }
-          
-          // 获取枕头数量
-          const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
-          const pillowItem = roleInfo?.role?.items?.['5054']
-          const currentPillowCount = pillowItem?.quantity ?? 0
-          
-          console.log(`Token ${token.name} 枕头数量: ${currentPillowCount}`)
-          
-          // 更新枕头数量到响应式状态，使UI自动刷新
-          tokenPillowCount.value[token.id] = currentPillowCount
-          await saveDropdownSettings()
-          
-          if (currentPillowCount === 5) {
-            tokensWithPillow5.push(token)
-            
-            // 找到足够数量后提前停止
-            if (tokensWithPillow5.length >= requiredTokensCount) {
-              console.log(`已找到 ${requiredTokensCount} 个枕头=5的token，停止检查`)
-              await connectionPool.release(token.id, true)
-              break
-            }
-          }
-          
-          await connectionPool.release(token.id, true)
-        } catch (error) {
-          console.error(`检查 Token ${token.name} 枕头数量失败:`, error)
-          try {
-            await connectionPool.release(token.id, true)
-          } catch (e) {}
         }
       }
       
@@ -1189,18 +1111,21 @@ const autoJoinShiDian = async (executionRange = '') => {
       // 检查数量是否足够
       if (tokensWithPillow5.length < requiredTokensCount) {
         console.warn(`枕头=5的token数量不足！需要${requiredTokensCount}个，只找到${tokensWithPillow5.length}个`)
-        message.warning(`枕头=5的token数量不足！需要${requiredTokensCount}个，只找到${tokensWithPillow5.length}个，部分殿可能无法分配满3个`)
+        message.warning(`枕头=5的token数量不足！需要${requiredTokensCount}个，只找到${tokensWithPillow5.length}个，部分殿可能无法分配满${memberCount}个`)
       }
       
       // 将枕头=5 的 token 分配到各殿（按殿一到殿十的顺序，token序号从前向后）
+      // 每殿补足到 memberCount 个，已满的殿跳过，避免同一殿内混入前后批次账号
       const allTokensToProcess = []
       let tokenIndex = 0
       
       for (let teamIdx = 1; teamIdx <= 10; teamIdx++) {
         if (!teamIds.value[teamIdx - 1]) continue
+        const needed = Math.max(0, memberCount - (teamCurrentCount[teamIdx] || 0))
+        if (needed <= 0) continue
         
-        // 每殿分配 3 个 token
-        for (let i = 0; i < 3 && tokenIndex < tokensWithPillow5.length; i++) {
+        // 每殿补足 needed 个 token
+        for (let i = 0; i < needed && tokenIndex < tokensWithPillow5.length; i++) {
           allTokensToProcess.push({ token: tokensWithPillow5[tokenIndex], teamIndex: teamIdx })
           tokenIndex++
         }
@@ -1214,38 +1139,91 @@ const autoJoinShiDian = async (executionRange = '') => {
       }
       
       // 使用连接池执行批量操作
-      await connectionPool.batchOperate(
+      logOperation('shidian', '自动加入十殿', {
+        cardType: '十殿 TeamID',
+        status: 'info',
+        message: `开始自动加入十殿，每殿${memberCount}个，共${allTokensToProcess.length}个Token`
+      })
+      
+      const results = await connectionPool.batchOperate(
         allTokensToProcess.map(item => item.token),
         async (token, globalIndex) => {
           try {
             const item = allTokensToProcess[globalIndex]
-            const teamIdx = item.teamIndex
-            const teamId = teamIds.value[teamIdx - 1]
+            let teamIdx = item.teamIndex
+            let teamId = teamIds.value[teamIdx - 1]
             
             if (!teamId) {
               return { success: false, message: 'TeamID 为空' }
             }
             
-            // 发送加入十殿消息
-            await tokenStore.sendGameMessage(token.id, 'matchteam_join', { 
-              teamId: parseInt(teamId) 
-            })
+            // 尝试加入十殿，如果队伍已满则顺移到下一个队伍
+            let joinSuccess = false
+            let attempts = 0
+            const maxAttempts = 10 // 最多尝试10个队伍
             
-            await new Promise(resolve => setTimeout(resolve, 500))
+            while (!joinSuccess && attempts < maxAttempts) {
+              attempts++
+              
+              if (!teamId) {
+                break
+              }
+              
+              try {
+                // 发送加入十殿消息（使用 sendMessageWithPromise 等待响应）
+                const joinResult = await tokenStore.sendMessageWithPromise(token.id, 'matchteam_join', { 
+                  teamId: parseInt(teamId) 
+                }, 5000)
+                
+                // 检查响应是否包含"队伍人数已满"
+                const joinResultStr = JSON.stringify(joinResult || {})
+                if (joinResultStr.includes('队伍人数已满') || joinResult?.error?.includes('队伍人数已满')) {
+                  throw new Error('队伍人数已满')
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 500))
+                
+                // 发送准备消息
+                await tokenStore.sendMessageWithPromise(token.id, 'matchteam_memberprepare', { 
+                  teamId: parseInt(teamId),
+                  isPrepare: 1
+                }, 5000)
+                
+                // 设置信息显示状态
+                tokenInfoDisplay.value[token.id] = true
+                
+                // 更新 tokenNightmareTeam
+                tokenNightmareTeam.value[token.id] = teamIdx
+                
+                joinSuccess = true
+                return { success: true, message: `已加入十殿${DIAN_LABELS[teamIdx - 1]}` }
+              } catch (joinError) {
+                // 如果提示"队伍人数已满"，顺移到下一个队伍
+                if (joinError.message && joinError.message.includes('队伍人数已满')) {
+                  console.log(`Token ${token.name} 加入十殿${DIAN_LABELS[teamIdx - 1]}失败：队伍已满，尝试下一个队伍`)
+                  
+                  // 查找下一个有效的 teamId
+                  let nextTeamIdx = teamIdx + 1
+                  while (nextTeamIdx <= 10 && !teamIds.value[nextTeamIdx - 1]) {
+                    nextTeamIdx++
+                  }
+                  
+                  if (nextTeamIdx > 10) {
+                    return { success: false, message: '所有队伍都已满' }
+                  }
+                  
+                  teamIdx = nextTeamIdx
+                  teamId = teamIds.value[teamIdx - 1]
+                } else {
+                  // 其他错误直接抛出
+                  throw joinError
+                }
+              }
+            }
             
-            // 发送准备消息
-            await tokenStore.sendGameMessage(token.id, 'matchteam_memberprepare', { 
-              teamId: parseInt(teamId),
-              isPrepare: 1
-            })
-            
-            // 设置信息显示状态
-            tokenInfoDisplay.value[token.id] = true
-            
-            // 更新 tokenNightmareTeam
-            tokenNightmareTeam.value[token.id] = teamIdx
-            
-            return { success: true, message: `已加入十殿${DIAN_LABELS[teamIdx - 1]}` }
+            if (!joinSuccess) {
+              return { success: false, message: '尝试多个队伍后仍失败' }
+            }
           } catch (error) {
             return { success: false, error: error.message }
           }
@@ -1272,10 +1250,56 @@ const autoJoinShiDian = async (executionRange = '') => {
         }
       )
       
+      // 统计结果
+      const successCount = results.filter(r => r.success).length
+      const failCount = results.filter(r => !r.success).length
+      const failTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '?')
+      
+      // 记录每个 token 的结果
+      for (const result of results) {
+        const token = result.token
+        if (!token) continue
+        const item = allTokensToProcess[results.indexOf(result)]
+        const teamIdx = item?.teamIndex || '?'
+        const dianLabel = teamIdx !== '?' ? DIAN_LABELS[teamIdx - 1] : '?'
+        
+        if (result.success) {
+          logOperation('shidian', '自动加入十殿', {
+            cardType: '十殿 TeamID',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${getTokenIndex(token)}】[${token.name || token.id}]已加入十殿${dianLabel}`
+          })
+        } else {
+          logOperation('shidian', '自动加入十殿', {
+            cardType: '十殿 TeamID',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `【序号${getTokenIndex(token)}】[${token.name || token.id}]加入十殿${dianLabel}失败：${result.error || result.message || '未知错误'}`
+          })
+        }
+      }
+      
       // 保存设置
       await saveDropdownSettings()
       
-      message.success('自动分配 Token 完成')
+      if (failCount > 0) {
+        message.warning(`自动分配完成：成功${successCount}个，失败${failCount}个，失败token：${failTokens.join('、')}`)
+        logOperation('shidian', '自动加入十殿', {
+          cardType: '十殿 TeamID',
+          status: 'warning',
+          message: `自动加入十殿完成：成功${successCount}个，失败${failCount}个，失败token：${failTokens.join('、')}`
+        })
+      } else {
+        message.success(`自动分配 Token 完成，成功${successCount}个`)
+        logOperation('shidian', '自动加入十殿', {
+          cardType: '十殿 TeamID',
+          status: 'success',
+          message: `自动加入十殿完成：成功${successCount}个`
+        })
+      }
       
       // 销毁连接池
       await connectionPool.destroy()
@@ -1970,6 +1994,13 @@ const handleUpdatePillowCount = async (tokenId, pillowCount) => {
   tokenPillowCount.value[tokenId] = pillowCount
   await saveDropdownSettings()
   console.log(`Token ${tokenId} 十殿枕头数量已更新为: ${pillowCount}`)
+}
+
+// 处理清空枕头数量事件
+const handleClearPillowCount = async () => {
+  tokenPillowCount.value = {}
+  await saveDropdownSettings()
+  console.log('已清空所有 Token 的十殿枕头数量')
 }
 
 // 处理本周最高层数更新事件

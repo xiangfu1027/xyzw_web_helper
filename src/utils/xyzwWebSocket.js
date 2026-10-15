@@ -565,6 +565,9 @@ export function registerDefaultCommands(reg) {
     .register("club_upgradelevel")
     .register("club_claimlevelreward")
     .register("club_draw")
+    .register("nmext_getinfo")
+    .register("nmext_drawturntable", { itemId: 0 })
+    .register("saltroad_outcheer")
   registry.commands.set(
     "fight_startareaarena",
     (ack = 0, seq = 0, params = {}) => {
@@ -1422,6 +1425,9 @@ export class XyzwWebSocketClient {
       club_upgradelevelresp: "club_upgradelevel",
       club_claimlevelrewardresp: "club_claimlevelreward",
       club_drawresp: "club_draw",
+      nmext_getinforesp: "nmext_getinfo",
+      nmext_drawturntableresp: "nmext_drawturntable",
+      saltroad_outcheerresp: "saltroad_outcheer",
 
       // 同步响应映射（优先级低）
 

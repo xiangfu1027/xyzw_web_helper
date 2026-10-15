@@ -221,7 +221,12 @@ const activityId = ref(localStorage.getItem("summerActivity_activityId") || "");
 const itemId = ref(localStorage.getItem("summerActivity_itemId") || "5264");
 const totalChargeItemId = ref(localStorage.getItem("summerActivity_totalChargeItemId") || "");
 const cdkCode = ref(localStorage.getItem("summerActivity_cdkCode") || "");
-const executionRange = ref("");
+const executionRange = ref(localStorage.getItem("summerActivity_executionRange") || "");
+
+// 监听执行范围变化并保存到本地存储
+watch(executionRange, (newValue) => {
+  localStorage.setItem("summerActivity_executionRange", newValue);
+});
 const bossSelect = ref(1);
 const battleCount = ref(8);
 const battleCountOptions = [
@@ -1847,15 +1852,15 @@ const batchUseItem = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -1995,15 +2000,15 @@ const batchActivity = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个 Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -3053,15 +3058,15 @@ const batchBattle = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -3663,15 +3668,15 @@ const batchUseFuCoin = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -3801,15 +3806,15 @@ const batchUseSingleFuCoin = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -3941,15 +3946,15 @@ const batchUseCdk = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -4081,15 +4086,15 @@ const batchClaimFreeGoods = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {
@@ -4226,15 +4231,15 @@ const batchClaimTotalCharge = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId);
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1;
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex;
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`);
             } else {

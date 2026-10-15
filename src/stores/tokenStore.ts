@@ -467,6 +467,20 @@ export const useTokenStore = defineStore("tokens", () => {
             }
           }
         }
+        
+        // Reject 待处理的 Promise，避免等待超时
+        if (client && client.promises) {
+          const pendingPromises = Object.keys(client.promises);
+          if (pendingPromises.length > 0) {
+            // reject 最早的 Promise
+            const oldestSeq = Math.min(...pendingPromises.map(Number));
+            const promiseData = client.promises[oldestSeq];
+            delete client.promises[oldestSeq];
+            promiseData.reject(new Error(String(message.error)));
+            gameLogger.warn(`已 reject 待处理 Promise [${tokenId}]: ${message.error}`);
+          }
+        }
+        
         return;
       }
 
@@ -1070,12 +1084,14 @@ export const useTokenStore = defineStore("tokens", () => {
         wsLogger.error(`🗼 [咸将塔] 爬塔请求失败 [${tokenId}]:`, error.message);
       }
 
-      // 检查是否为"操作过快"错误 (400340 或包含"操作太快"/"请稍后再试")
+      // 检查是否为"操作过快"错误
       const errorMsg = error.message || error.hint || error.detail || "";
       const isRateLimitError = 
         errorMsg.includes("400340") || 
         errorMsg.includes("操作太快") || 
+        errorMsg.includes("操作过快") ||
         errorMsg.includes("请稍后再试") ||
+        errorMsg.includes("请稍后重试") ||
         errorMsg.includes("200400");
 
       if (isRateLimitError) {
@@ -1228,6 +1244,21 @@ export const useTokenStore = defineStore("tokens", () => {
   // 俱乐部抽奖
   const sendClubDraw = (tokenId: string, params = {}) => {
     return sendMessageWithPromise(tokenId, "club_draw", params);
+  };
+
+  // 获取 nmext 信息
+  const sendNmextGetInfo = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "nmext_getinfo", params);
+  };
+
+  // nmext 抽奖转盘
+  const sendNmextDrawTurntable = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "nmext_drawturntable", params);
+  };
+
+  // 盐罐之路助威
+  const sendSaltroadOutcheer = (tokenId: string, params = {}) => {
+    return sendMessageWithPromise(tokenId, "saltroad_outcheer", params);
   };
 
   // 批量同意好友申请
@@ -2628,6 +2659,9 @@ export const useTokenStore = defineStore("tokens", () => {
     sendClubUpgradeLevel,
     sendClubClaimLevelReward,
     sendClubDraw,
+    sendNmextGetInfo,
+    sendNmextDrawTurntable,
+    sendSaltroadOutcheer,
     sendFriendBatchAgree,
 
     // 工具方法

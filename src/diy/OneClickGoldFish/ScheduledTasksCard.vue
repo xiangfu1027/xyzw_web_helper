@@ -1028,9 +1028,9 @@ const handleExecuteScheduledTasks = async () => {
           
           return { success: true, tokenId: token.id }
         } catch (error) {
-          console.error(`执行定时任务失败: ${error.message}`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 定时任务执行失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`执行定时任务失败: ${error.message}`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 定时任务执行失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '定时任务',
@@ -1052,15 +1052,22 @@ const handleExecuteScheduledTasks = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
-    
-    message.success(`定时任务执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `定时任务执行完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '定时任务',
       operation: '执行定时任务',
-      status: 'success',
-      message: `定时任务执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量执行定时任务失败:', error)
@@ -1369,9 +1376,9 @@ const handleBatchBlackMarket = async () => {
           message.success(`[序号${tokenIndex}] ${token.name || token.id} 批量黑市周执行完成`)
           return { success: true, tokenId: token.id }
         } catch (error) {
-          console.error(`批量黑市周失败: ${error.message}`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 批量黑市周执行失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`批量黑市周失败: ${error.message}`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 批量黑市周执行失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '定时任务',
@@ -1392,15 +1399,22 @@ const handleBatchBlackMarket = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
-    
-    message.success(`批量黑市周执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量黑市周执行完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '定时任务',
       operation: '批量黑市周',
-      status: 'success',
-      message: `【批量】批量黑市周执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量黑市周失败:', error)
@@ -1507,9 +1521,9 @@ const handleBatchBuyRecruit = async () => {
           message.success(`[序号${tokenIndex}] ${token.name || token.id} 批量购买招募执行完成`)
           return { success: true, tokenId: token.id }
         } catch (error) {
-          console.error(`批量购买招募失败: ${error.message}`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 批量购买招募执行失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`批量购买招募失败: ${error.message}`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 批量购买招募执行失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '定时任务',
@@ -1535,20 +1549,22 @@ const handleBatchBuyRecruit = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    const failedTokens = results.filter(r => !r.success).map(r => r.tokenId)
-    
-    message.success(`批量购买招募完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量购买招募完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '定时任务',
       operation: '批量购买招募',
-      status: 'success',
-      message: `【批量】批量购买招募完成：成功${successCount}个，失败${failCount}个`
+      status: failCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
-    
-    if (failedTokens.length > 0) {
-      message.warning(`失败的Token: ${failedTokens.join(', ')}`)
-    }
   } catch (error) {
     console.error('批量购买招募失败:', error)
     message.error(`批量购买招募失败: ${error.message || '未知错误'}`)
@@ -1649,9 +1665,9 @@ const handleBatchBlackMarketReward = async () => {
           message.success(`[序号${tokenIndex}] ${token.name || token.id} 批量黑市奖励执行完成`)
           return { success: true, tokenId: token.id }
         } catch (error) {
-          console.error(`批量黑市奖励失败: ${error.message}`, error)
-          message.error(`[序号${globalIndex + 1}] ${token.name || token.id} 批量黑市奖励执行失败: ${error.message}`)
           const tokenIndex = getTokenIndex(token)
+          console.error(`批量黑市奖励失败: ${error.message}`, error)
+          message.error(`[序号${tokenIndex}] ${token.name || token.id} 批量黑市奖励执行失败: ${error.message}`)
           logStore.addLog({
             page: 'fish-helper',
             cardType: '定时任务',
@@ -1672,15 +1688,22 @@ const handleBatchBlackMarketReward = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
-    
-    message.success(`批量黑市奖励执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量黑市奖励执行完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '定时任务',
       operation: '批量黑市奖励',
-      status: 'success',
-      message: `【批量】批量黑市奖励执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量黑市奖励失败:', error)
@@ -1798,15 +1821,22 @@ const handleExchangeBox = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failureCount = results.filter(r => !r.success).length
-    
-    message.success(`换购宝箱执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `换购宝箱执行完成，成功${successCount}个，失败${failureCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '定时任务',
       operation: '换购宝箱',
-      status: 'success',
-      message: `【批量】换购宝箱执行完成：成功 ${successCount} 个，失败 ${failureCount} 个`
+      status: failureCount > 0 ? 'warning' : 'success',
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('换购宝箱失败:', error)

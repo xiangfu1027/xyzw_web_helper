@@ -140,7 +140,7 @@
       <OperationLogCard
         page="fish-helper"
         card-type="梦境助手"
-        :filter-operations="['武将升级', '批量升级阵容1', '批量升级阵容2', '梦境选择', '梦境出战', '批量报名', '批量上阵球星', '批量开卡', '批量竞猜', '批量领奖', '批量周球星', '对战助威', '对战竞猜', '批量切换爬塔', '批量切换推图']"
+        :filter-operations="['武将升级', '批量升级阵容1', '批量升级阵容2', '梦境选择', '梦境出战', '批量扭蛋', '批量报名', '批量上阵球星', '批量开卡', '批量竞猜', '批量领奖', '批量周球星', '对战助威', '对战竞猜', '批量切换爬塔', '批量切换推图']"
       />
     </template>
   </MyCard>
@@ -180,7 +180,7 @@ const connectionPool = new ConnectionPoolManager(tokenStore, {
 
 // 梦境操作状态
 const isRunning = ref(false)
-const executionRange = ref('')
+const executionRange = ref(localStorage.getItem(STORAGE_KEYS.executionRange) || '')
 const selectedHeroForSelect = ref('107')
 const selectedHeroForFight = ref('107')
 const isBatchGachaRunning = ref(false)
@@ -244,7 +244,7 @@ const getHeroAvatar = (heroId) => {
 }
 
 // 武将信息相关状态
-const upgradeTokens = ref('')
+const upgradeTokens = ref(localStorage.getItem(STORAGE_KEYS.upgradeTokens) || '')
 const isSwitchTowerRunning = ref(false)
 const isSwitchStoryRunning = ref(false)
 const isBatchSwitchTowerRunning = ref(false)
@@ -910,14 +910,8 @@ const switchToTeam1Internal = async (tokenId) => {
     await waitCommandDelay()
     await refreshTeamInfoInternal(token.id)
   } catch (error) {
-    const errorMessage = error.message || error.toString()
-    if (errorMessage.includes('200020')) {
-      console.warn('切换阵容1遇到服务器错误200020，但继续执行:', error)
-      await refreshTeamInfoInternal(token.id)
-    } else {
-      console.error('切换阵容1失败:', error)
-      throw error
-    }
+    console.warn('切换阵容1失败，继续执行:', error)
+    try { await refreshTeamInfoInternal(token.id) } catch (e) {}
   }
 }
 
@@ -935,14 +929,8 @@ const switchToTeam2Internal = async (tokenId) => {
     await waitCommandDelay()
     await refreshTeamInfoInternal(token.id)
   } catch (error) {
-    const errorMessage = error.message || error.toString()
-    if (errorMessage.includes('200020')) {
-      console.warn('切换阵容2遇到服务器错误200020，但继续执行:', error)
-      await refreshTeamInfoInternal(token.id)
-    } else {
-      console.error('切换阵容2失败:', error)
-      throw error
-    }
+    console.warn('切换阵容2失败，继续执行:', error)
+    try { await refreshTeamInfoInternal(token.id) } catch (e) {}
   }
 }
 
@@ -1280,15 +1268,15 @@ const batchSwitchTower = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1301,12 +1289,18 @@ const batchSwitchTower = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量切换爬塔完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量切换爬塔完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('fish-helper', '批量切换爬塔', {
       cardType: '梦境助手',
       status: 'success',
-      message: `【批量】批量切换爬塔完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量切换爬塔失败:', error)
@@ -1395,15 +1389,15 @@ const batchSwitchStory = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1416,12 +1410,18 @@ const batchSwitchStory = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量切换推图完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量切换推图完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('fish-helper', '批量切换推图', {
       cardType: '梦境助手',
       status: 'success',
-      message: `【批量】批量切换推图完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量切换推图失败:', error)
@@ -1527,15 +1527,15 @@ const batchUpgradeOne = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1548,12 +1548,18 @@ const batchUpgradeOne = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级阵容1完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级阵容1完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('fish-helper', '批量升级阵容1', {
       cardType: '梦境助手',
       status: 'success',
-      message: `【批量】批量升级阵容1完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量升级阵容1失败:', error)
@@ -1657,15 +1663,15 @@ const batchUpgradeTwo = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndexForBatch(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1678,12 +1684,18 @@ const batchUpgradeTwo = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级阵容2完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级阵容2完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('fish-helper', '批量升级阵容2', {
       cardType: '梦境助手',
       status: 'success',
-      message: `【批量】批量升级阵容2完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量升级阵容2失败:', error)
@@ -1807,14 +1819,20 @@ const handleDreamSelect = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`梦境选择-${heroName}完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `梦境选择-${heroName}完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '梦境助手',
       operation: '梦境选择',
       status: 'success',
-      message: `梦境选择-${heroName}完成，成功${successCount}个，失败${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('梦境选择出错:', error)
@@ -2027,14 +2045,20 @@ const handleDreamFight = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`梦境出战完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `梦境出战完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '梦境助手',
       operation: '梦境出战',
       status: 'success',
-      message: `梦境出战完成，成功${successCount}个，失败${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('梦境出战出错:', error)
@@ -2211,14 +2235,20 @@ const handleBatchGacha = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量扭蛋完成，成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量扭蛋完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '梦境助手',
       operation: '批量扭蛋',
       status: 'success',
-      message: `【批量】批量扭蛋完成，成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量扭蛋出错:', error)

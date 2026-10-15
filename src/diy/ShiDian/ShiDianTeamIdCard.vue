@@ -26,9 +26,12 @@
           @button-click="() => clearSingleTeamId(i-1)"
         />
         <CustomizedCard 
-          mode="button-placeholder"
+          mode="button-with-select"
           button-text="自动加入十殿"
           :disabled="!teamIds?.some(id => id) || isAutoJoinRunning"
+          :select-value="memberCount"
+          :select-options="memberCountOptions"
+          @update:select-value="(value) => memberCount = Number(value) || 3"
           @button-click="autoJoinShiDian"
         />
         <CustomizedCard 
@@ -94,7 +97,7 @@
       <OperationLogCard 
         page="shidian" 
         card-type="十殿 TeamID"
-        :filter-operations="['导出资源', '批量领取', '清空十殿标签', '加入成员', '十殿 8', '刷新枕头', '清空枕头']"
+        :filter-operations="['导出资源', '批量领取', '清空十殿标签', '加入成员', '自动加入十殿', '十殿 8', '刷新枕头', '清空枕头']"
       />
     </template>
   </MyCard>
@@ -209,6 +212,13 @@ const isAutoJoinRunning = ref(false)
 const stopAutoJoinFlag = ref(false)
 const isAddingMembers = ref(false)
 
+// 自动加入十殿每殿队员数量（2 或 3）
+const memberCount = ref(3)
+const memberCountOptions = [
+  { label: '2 个队员', value: 2 },
+  { label: '3 个队员', value: 3 }
+]
+
 // 十殿 8 相关变量
 const teamIdForDian8 = ref('')
 const isExecutingNightmare8 = ref(false)
@@ -254,7 +264,8 @@ const handleTeamIdChange = async (index, value) => {
 const saveDropdownSettings = async () => {
   try {
     const settings = {
-      teamIds: [...teamIds.value]
+      teamIds: [...teamIds.value],
+      memberCount: memberCount.value
     }
     localStorage.setItem('shidian_teamIds', JSON.stringify(settings))
     console.log('设置已保存到 localStorage:', settings)
@@ -271,6 +282,9 @@ const loadDropdownSettings = async () => {
       const settings = JSON.parse(saved)
       if (settings.teamIds && Array.isArray(settings.teamIds)) {
         teamIds.value = settings.teamIds
+      }
+      if (settings.memberCount !== undefined) {
+        memberCount.value = Number(settings.memberCount) || 3
       }
     }
   } catch (error) {
@@ -356,7 +370,7 @@ const clearAllNightmareLabels = async () => {
   }
 }
 
-// 加入成员到各个队伍
+// 加入成员到各个队伍（查找昵称包含"殿5"且未选择队伍的 token，依次分配到空位殿补足到 3 个）
 const addMembersToTeams = async () => {
   if (!teamIds.value?.some(id => id)) {
     message.warning('请先输入至少一个 TeamID')
@@ -371,80 +385,78 @@ const addMembersToTeams = async () => {
     const gameTokens = toRaw(tokenStore.gameTokens)
     const dianLabels = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十']
     
-    // 记录已分配的 token ID，避免重复分配
+    // 读取当前十殿标签数据（tokenNightmareTeam）
+    let tokenNightmareTeam = {}
+    try {
+      const savedData = localStorage.getItem('pageTokenData_shidian')
+      const pageData = savedData ? JSON.parse(savedData) : {}
+      tokenNightmareTeam = pageData.dropdownSettings?.tokenNightmareTeam || {}
+    } catch (error) {
+      console.warn('读取十殿标签失败:', error)
+    }
+    
+    // 查找昵称包含"殿5" 且 卡片未选择队伍（tokenNightmareTeam 无值）的 token
+    const memberTokens = gameTokens.filter(t => {
+      const name = t.name || ''
+      if (!name.includes('殿5')) return false
+      const team = tokenNightmareTeam[t.id]
+      if (team !== null && team !== undefined) return false
+      return true
+    })
+    
+    if (memberTokens.length === 0) {
+      message.warning('未找到昵称包含"殿5"且未选择队伍的 Token')
+      return
+    }
+    
+    // 依次将"殿5"token 分配到各殿（每殿加入 1 个），从前向后分配
+    const tasks = []
+    let memberIndex = 0
+    for (let teamIdx = 1; teamIdx <= 10; teamIdx++) {
+      if (!teamIds.value[teamIdx - 1]) continue
+      if (memberIndex >= memberTokens.length) break
+      tasks.push({ token: memberTokens[memberIndex], teamIndex: teamIdx })
+      memberIndex++
+    }
+    
     const assignedTokenIds = new Set()
     
-    // 为每个十殿队伍添加成员
-    for (let teamIdx = 0; teamIdx < 10; teamIdx++) {
+    for (const { token, teamIndex } of tasks) {
+      const teamIdx = teamIndex - 1
       const currentTeamId = teamIds.value[teamIdx]
-      if (!currentTeamId) continue
-      
-      message.info(`正在处理十殿${dianLabels[teamIdx]}...`)
-      
-      // 查找名称前缀为 02 和 05 的 token（排除已加入任何殿的）
-      const prefix2Token = gameTokens.find(t => {
-        const name = t.name || ''
-        // 排除已分配的 token，以及 remark 中包含任何殿标签的 token
-        if (assignedTokenIds.has(t.id)) return false
-        if (t.remark && /殿[一二三四五六七八九十]/.test(t.remark)) return false
-        return name.startsWith('02')
-      })
-      
-      const prefix5Token = gameTokens.find(t => {
-        const name = t.name || ''
-        // 排除已分配的 token，以及 remark 中包含任何殿标签的 token
-        if (assignedTokenIds.has(t.id)) return false
-        if (t.remark && /殿[一二三四五六七八九十]/.test(t.remark)) return false
-        return name.startsWith('05')
-      })
-      
-      const tokensToAdd = [prefix2Token, prefix5Token].filter(Boolean)
-      
-      if (tokensToAdd.length === 0) {
-        message.warning(`十殿${dianLabels[teamIdx]}：未找到合适的 token（前缀 02 和 05）`)
-        continue
-      }
-      
-      for (const token of tokensToAdd) {
-        try {
-          connectingTokens.value.add(token.id)
-          assignedTokenIds.add(token.id)
-          message.info(`${token.name} 正在加入十殿${dianLabels[teamIdx]}...`)
-          
-          // 触发事件，让父组件调用 joinShiDian
-          emit('join-token', token, teamIdx + 1)
-          
-          message.success(`${token.name} 已成功加入十殿${dianLabels[teamIdx]}`)
-          
-          logOperation('shidian', '加入成员', {
-            cardType: '十殿 TeamID',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'success',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]已加入十殿${dianLabels[teamIdx]}，队伍号：${currentTeamId}`
-          })
-          
-          connectingTokens.value.delete(token.id)
-          
-          if (tokensToAdd.indexOf(token) < tokensToAdd.length - 1) {
-            await waitCommandDelay()
-          }
-        } catch (error) {
-          console.error(`${token.name} 加入失败:`, error)
-          message.error(`${token.name} 加入失败：${error.message}`)
-          connectingTokens.value.delete(token.id)
-          logOperation('shidian', '加入成员', {
-            cardType: '十殿 TeamID',
-            tokenId: token.id,
-            tokenName: token.name,
-            status: 'error',
-            message: `【序号${tokenIndex}】[${token.name || token.id}]加入失败：${error.message}`
-          })
-        }
-      }
-      
-      if (teamIdx < 9) {
+      try {
+        if (assignedTokenIds.has(token.id)) continue
+        assignedTokenIds.add(token.id)
+        connectingTokens.value.add(token.id)
+        message.info(`${token.name} 正在加入十殿${dianLabels[teamIdx]}...`)
+        
+        // 触发事件，让父组件调用 joinShiDian
+        emit('join-token', token, teamIndex)
+        
+        message.success(`${token.name} 已成功加入十殿${dianLabels[teamIdx]}`)
+        
+        logOperation('shidian', '加入成员', {
+          cardType: '十殿 TeamID',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'success',
+          message: `【序号${getTokenIndex(token)}】[${token.name || token.id}]已加入十殿${dianLabels[teamIdx]}，队伍号：${currentTeamId}`
+        })
+        
+        connectingTokens.value.delete(token.id)
+        
         await waitCommandDelay()
+      } catch (error) {
+        console.error(`${token.name} 加入失败:`, error)
+        message.error(`${token.name} 加入失败：${error.message}`)
+        connectingTokens.value.delete(token.id)
+        logOperation('shidian', '加入成员', {
+          cardType: '十殿 TeamID',
+          tokenId: token.id,
+          tokenName: token.name,
+          status: 'error',
+          message: `【序号${getTokenIndex(token)}】[${token.name || token.id}]加入失败：${error.message}`
+        })
       }
     }
     
@@ -465,8 +477,8 @@ const autoJoinShiDian = async () => {
     return
   }
 
-  // 触发事件，让父组件执行自动加入十殿，传递执行范围
-  emit('auto-join-shidian', resourceExportRange.value)
+  // 触发事件，让父组件执行自动加入十殿，传递执行范围和每殿队员数量
+  emit('auto-join-shidian', resourceExportRange.value, memberCount.value)
 }
 
 // 停止自动加入十殿
@@ -766,6 +778,29 @@ const claimNightmareRewardsForCard = async (token) => {
       }
     }
     
+    // nmext 抽奖转盘逻辑
+    try {
+      await waitCommandDelay()
+      const nmextInfo = await tokenStore.sendNmextGetInfo(token.id, {})
+      const hasKeyCntMap = nmextInfo?.roleNMExt?.hasKeyCntMap || nmextInfo?.hasKeyCntMap
+      
+      if (hasKeyCntMap && typeof hasKeyCntMap === 'object') {
+        for (const [key, count] of Object.entries(hasKeyCntMap)) {
+          const itemId = parseInt(key)
+          for (let i = 0; i < count; i++) {
+            try {
+              await waitCommandDelay()
+              await tokenStore.sendNmextDrawTurntable(token.id, { itemId })
+            } catch (error) {
+              console.warn(`nmext_drawturntable 执行失败 (itemId: ${itemId}, 第${i + 1}次):`, error)
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('nmext_getinfo 执行失败:', error)
+    }
+    
     const tokenIndex = getTokenIndex(token)
     logOperation('shidian', '批量领取', {
       cardType: '十殿 TeamID',
@@ -826,7 +861,8 @@ const batchClaimNightmareRewards = async () => {
       tokens,
       async (token, globalIndex) => {
         try {
-          message.info(`处理Token ${globalIndex + 1}/${tokens.length}: ${token.name || token.id}`)
+          const tokenIndex = getTokenIndex(token)
+          message.info(`处理Token ${tokenIndex}/${tokens.length}: ${token.name || token.id}`)
           await claimNightmareRewardsForCard(token)
           return { success: true, message: '领取成功' }
         } catch (error) {
@@ -837,12 +873,24 @@ const batchClaimNightmareRewards = async () => {
         batchSize: 5,
         delayBetween: 1000,
         onProgress: (progress) => {
+          const token = tokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`正在处理: ${progress.tokenName} (${progress.globalIndex}/${progress.totalTokens})`)
+            message.info(`正在处理: ${progress.tokenName} (${tokenIndex}/${progress.totalTokens})`)
           } else if (progress.type === 'token-success') {
             message.success(`${progress.tokenName} 处理成功`)
+            logOperation('shidian', '批量领取', {
+              cardType: '十殿 TeamID',
+              status: 'success',
+              message: `【批量】[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 领取成功`
+            })
           } else if (progress.type === 'token-error') {
             message.error(`${progress.tokenName} 处理失败: ${progress.message}`)
+            logOperation('shidian', '批量领取', {
+              cardType: '十殿 TeamID',
+              status: 'error',
+              message: `【批量】[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 领取失败: ${progress.message}`
+            })
           }
         }
       }
@@ -850,12 +898,20 @@ const batchClaimNightmareRewards = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
     
-    message.success(`批量领取完成！成功: ${successCount}个，失败: ${failCount}个`)
+    let summaryMsg = `批量领取完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logOperation('shidian', '批量领取', {
       cardType: '十殿 TeamID',
       status: 'success',
-      message: `【批量】批量领取完成！成功: ${successCount}个，失败: ${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量领取过程中发生错误:', error)
@@ -895,7 +951,8 @@ const batchRefreshPillowCount = async () => {
       tokens,
       async (token, globalIndex) => {
         try {
-          message.info(`处理Token ${globalIndex + 1}/${tokens.length}: ${token.name || token.id}`)
+          const tokenIndex = getTokenIndex(token)
+          message.info(`处理Token ${tokenIndex}/${tokens.length}: ${token.name || token.id}`)
 
           // 获取角色信息
           const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
@@ -986,8 +1043,10 @@ const batchRefreshPillowCount = async () => {
         batchSize: 5,
         delayBetween: 1000,
         onProgress: (progress) => {
+          const token = tokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`正在处理: ${progress.tokenName} (${progress.globalIndex}/${progress.totalTokens})`)
+            message.info(`正在处理: ${progress.tokenName} (${tokenIndex}/${progress.totalTokens})`)
           } else if (progress.type === 'token-success') {
             message.success(`${progress.tokenName} 处理成功`)
           } else if (progress.type === 'token-error') {
@@ -999,12 +1058,20 @@ const batchRefreshPillowCount = async () => {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-
-    message.success(`刷新枕头数量和最高层数完成！成功: ${successCount}个，失败: ${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `刷新枕头数量和最高层数完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logOperation('shidian', '刷新枕头', {
       cardType: '十殿 TeamID',
       status: 'success',
-      message: `【批量】刷新枕头数量和最高层数完成！成功: ${successCount}个，失败: ${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('刷新枕头数量过程中发生错误:', error)
@@ -1199,29 +1266,43 @@ const exportResources = async () => {
 
     lines.push("")
     lines.push("=".repeat(80))
+
+    // 生成并下载 CSV 文件
+    try {
+      const csvContent = lines.join('\n')
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      const now = new Date()
+      const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`
+      link.download = `十殿资源导出_${dateStr}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      console.log('资源导出 CSV 文件已生成并下载')
+    } catch (csvError) {
+      console.error('生成CSV文件失败:', csvError)
+      message.warning(`生成CSV文件失败: ${csvError.message || csvError}`)
+    }
+
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    lines.push(`总计: 成功 ${successCount} 个，失败 ${failCount} 个`)
-    lines.push("=".repeat(80))
-
-    const content = lines.join('\n')
-    const blob = new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    const url = URL.createObjectURL(blob)
-    link.setAttribute('href', url)
-    const fileName = `资源导出_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${Date.now()}.csv`
-    link.setAttribute('download', fileName)
-    link.style.visibility = 'hidden'
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    message.success(`资源导出完成！成功: ${successCount}个，失败: ${failCount}个`)
+    const failedTokens = results
+      .filter(r => !r.success)
+      .map(r => r.tokenName || r.tokenId || '未知')
+    
+    let summaryMsg = `资源导出完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logOperation('shidian', '导出资源', {
       cardType: '十殿 TeamID',
       status: 'success',
-      message: `资源导出完成！成功: ${successCount}个，失败: ${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('导出资源失败:', error)

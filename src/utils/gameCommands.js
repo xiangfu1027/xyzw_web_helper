@@ -1531,6 +1531,36 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
     }
   }
 
+  /**
+   * 十殿星级详情
+   */
+  nmext_getinfo(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        ...params
+      }),
+      cmd: "nmext_getinfo",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
+   * 十殿星级转盘
+   */
+  nmext_drawturntable(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+        itemId: params.itemId,
+        ...params
+      }),
+      cmd: "nmext_drawturntable",
+      seq,
+      time: Date.now()
+    }
+  }
 
   /**
    * 盐场报名
@@ -2428,6 +2458,22 @@ legacy_claimchargereward(ack = 0, seq = 0, params = {}) {
       	            ...params
       }),
       cmd: "apex_guess",
+      seq,
+      time: Date.now()
+    }
+  }
+
+  /**
+   * 伟大航路助威
+   */
+  saltroad_outcheer(ack = 0, seq = 0, params = {}) {
+    return {
+      ack,
+      body: this.g_utils.bon.encode({
+      	  legionId:params.legionId,
+          ...params
+      }),
+      cmd: "saltroad_outcheer",
       seq,
       time: Date.now()
     }

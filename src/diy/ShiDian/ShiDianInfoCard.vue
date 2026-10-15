@@ -247,7 +247,12 @@ const isBatchClaiming = ref(false)
 const connectingTokens = ref(new Set())
 const isExportingNightmare = ref(false)
 const isBatchNightmareRunning = ref(false)
-const resourceExportRange = ref('')
+const resourceExportRange = ref(localStorage.getItem('shidian_resourceExportRange') || '')
+
+// 监听执行范围变化并保存到本地存储
+watch(resourceExportRange, (newValue) => {
+  localStorage.setItem('shidian_resourceExportRange', newValue);
+});
 const isExportingResources = ref(false)
 const isOneClickNightmareRunning = ref(false)
 const pillowCount = ref(0)
@@ -1101,19 +1106,19 @@ const batchClaimNightmareRewards = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
     
-    message.success(`批量领取完成！成功: ${successCount}个，失败: ${failCount}个`)
+    let summaryMsg = `批量领取完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    
+    message.success(summaryMsg)
     logOperation('shidian', '批量领取', {
       cardType: '十殿信息',
       status: 'success',
-      message: `【批量】批量领取完成！成功: ${successCount}个，失败: ${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
-    
-    if (failCount > 0) {
-      const failedTokens = results.filter(r => !r.success)
-      console.warn('批量领取失败详情:', failedTokens)
-      message.warning(`有 ${failCount} 个Token领取失败，请查看控制台获取详细信息`)
-    }
   } catch (error) {
     console.error('批量领取过程中发生错误:', error)
     message.error(`批量领取失败: ${error.message}`)

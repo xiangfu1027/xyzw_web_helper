@@ -256,7 +256,12 @@ const helpedRoleId = ref("");
 const helpedRoleName = ref("");
 
 // 执行范围
-const executionRange = ref("");
+const executionRange = ref(localStorage.getItem('bossTower_executionRange') || '');
+
+// 监听执行范围变化并保存到本地存储
+watch(executionRange, (newValue) => {
+  localStorage.setItem('bossTower_executionRange', newValue);
+});
 
 // 跳过标签开关
 const skipLabelEnabled = ref(false);
@@ -2363,7 +2368,13 @@ const batch5 = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
-    const summary = `批量5完成：成功${successCount}个，失败${failCount}个`;
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知');
+
+    let summary = `批量5完成，成功${successCount}个，失败${failCount}个`;
+    if (failedTokens.length > 0) {
+      summary += `，失败token：${failedTokens.join('、')}`;
+    }
+
     message.success(summary);
     addLog("批量5", "系统", summary, successCount > 0);
   } catch (error) {
@@ -2469,17 +2480,19 @@ const batch14 = async () => {
         batchSize: 20,
         delayBetween: 300,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'batch-start') {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`);
           } else if (progress.type === 'token-start') {
-            message.info(`[${progress.globalIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`);
+            message.info(`[${tokenIndex}/${progress.totalTokens}] ${progress.tokenName} 正在获取连接...`);
           } else if (progress.type === 'token-success') {
-            message.success(`[${progress.globalIndex}] ${progress.tokenName} 连接成功`);
+            message.success(`[${tokenIndex}] ${progress.tokenName} 连接成功`);
           } else if (progress.type === 'token-error') {
             if (progress.status === 'warning') {
-              message.warning(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`);
+              message.warning(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`);
             } else {
-              message.error(`[${progress.globalIndex}] ${progress.tokenName} ${progress.message}`);
+              message.error(`[${tokenIndex}] ${progress.tokenName} ${progress.message}`);
             }
           }
         }
@@ -2491,7 +2504,18 @@ const batch14 = async () => {
       tokenStore.updateToken(helperToken.id, { remark: (helperToken.remark || "").replace("宝库", "").trim() });
     });
 
-    const summary = `批量14完成：成功${successCount}个，失败${failCount}个`;
+    const failedTokens = [];
+    for (let i = 0; i < results.length; i++) {
+      if (!results[i].success) {
+        failedTokens.push(results[i].token?.name || results[i].token?.id || '未知');
+      }
+    }
+
+    let summary = `批量14完成，成功${successCount}个，失败${failCount}个`;
+    if (failedTokens.length > 0) {
+      summary += `，失败token：${failedTokens.join('、')}`;
+    }
+
     message.success(summary);
     addLog("批量14", "系统", summary, successCount > 0);
   } catch (error) {

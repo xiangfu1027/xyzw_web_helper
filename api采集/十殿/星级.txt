@@ -1,0 +1,1150 @@
+======================================================================
+咸鱼之王API调用记录
+======================================================================
+导出时间: 2026/10/14 21:32:44
+游戏版本: 未知
+页面URL: aiking://app/D:/Program%20Files/ai/ai-king-manager/resources/app-renderer.asar/dist/index.html?fileName=group-1791287687667.00-%E7%A9%BA%E5%B1%B1-%E2%98%81%EF%B8%8F%E7%9B%B8%E7%AC%A6%E6%9C%BA%20(2).bin&fromManager=true&viewId=game-window-1791984691229-gi6wszydu
+记录数量: 7
+用户代理: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ai-king-manager/2.0.2 Chrome/150.0.7871.129 Electron/43.2.0 Safari/537.36
+注：_raw.body字段的二进制数据已被过滤
+
+API调用记录详情:
+======================================================================
+
+记录 #1:
+----------------------------------------
+时间: 2026/10/14 21:32:27
+服务: BottleHelperService
+方法: getInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 71,
+    "ack": 70,
+    "time": 1791984747733,
+    "resp": 71,
+    "cmd": "bottlehelper_getinforesp",
+    "body": {
+      "role": {
+        "statistics": {
+          "bottle:occupy": 19,
+          "bottle:helper": 2
+        },
+        "statisticsTime": {
+          "bottle:helper": 1791995547,
+          "bottle:occupy": 1791984747
+        },
+        "bottleHelpers": {
+          "helperStopTime": 1791993674,
+          "bottleHelper": {
+            "0": {
+              "bottleType": 0,
+              "helperState": 1,
+              "startTime": 1791981127,
+              "stopTime": 1791993674,
+              "endTime": 1791999127,
+              "obtainCnt": 3
+            },
+            "1": {
+              "bottleType": 1,
+              "helperState": 1,
+              "startTime": 1791975956,
+              "stopTime": 1791993674,
+              "endTime": 1791988556,
+              "obtainCnt": 3
+            },
+            "2": {
+              "bottleType": 2,
+              "helperState": 1,
+              "startTime": 1791984747,
+              "stopTime": 1791993674,
+              "endTime": 1791995547,
+              "obtainCnt": 5
+            }
+          }
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 45
+}
+异步: 是
+调用ID: call_1791984747127_19eugizw2
+
+记录 #2:
+----------------------------------------
+时间: 2026/10/14 21:32:25
+服务: MatchTeamService
+方法: getTeamInfo
+参数: [{"teamId":"N11607414"}]
+结果:
+{
+  "_raw": {
+    "seq": 70,
+    "ack": 69,
+    "time": 1791984745913,
+    "resp": 70,
+    "cmd": "matchteam_getteaminforesp",
+    "body": {
+      "teamInfo": {
+        "teamId": "N11607414",
+        "teamCfgId": 7,
+        "serverId": 8976,
+        "leaderId": 111571254,
+        "createAt": 1787139695,
+        "fightRoleBase": [
+          {
+            "roleId": 111571254,
+            "name": "你林哥",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q0j4TwGTfTL8T6X5gicCP0QJj7RoY3S6XBSxcWOHxWzSOtFOrZhvOZEIfFwK0rq945yNhBhxrGTGtxiarJCdCFLg/132",
+            "serverId": 8949,
+            "prepared": 0,
+            "power": 12535083661,
+            "legionName": "空山新雨后✨",
+            "legionId": 6482066,
+            "battleData": null,
+            "charmData": {},
+            "charmResetTime": 1787139695,
+            "extParam": {
+              "nmExtStarCnt_261005": 20,
+              "nmExtStarCnt_261012": 19
+            },
+            "avatarFrame": {
+              "id": 111403,
+              "expire": -1
+            },
+            "customCard": null,
+            "lockedTime": 1791643495
+          },
+          {
+            "roleId": 115082791,
+            "name": "机✨赵云",
+            "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/115082791/1759452435.jpg",
+            "serverId": 8949,
+            "prepared": 1791807211,
+            "power": 8636343777,
+            "legionName": "空山新雨后✨",
+            "legionId": 6482066,
+            "battleData": null,
+            "charmData": {},
+            "charmResetTime": 1787139696,
+            "extParam": {
+              "nmExtStarCnt_261005": 17,
+              "nmExtStarCnt_261012": 20
+            },
+            "avatarFrame": null,
+            "customCard": null,
+            "lockedTime": 1791643495
+          },
+          {
+            "roleId": 115782542,
+            "name": "相符7",
+            "headImg": "https://mars-face.hortorgames.com/xxz-xyzw-head-img/release/115782542/1759452320.jpg",
+            "serverId": 8949,
+            "prepared": 1791202362,
+            "power": 9591235860,
+            "legionName": "空山新雨后✨",
+            "legionId": 6482066,
+            "battleData": null,
+            "charmData": {},
+            "charmResetTime": 1787140104,
+            "extParam": {
+              "nmExtStarCnt_261012": 18,
+              "nmExtStarCnt_261005": 18
+            },
+            "avatarFrame": null,
+            "customCard": null,
+            "lockedTime": 1791643495
+          },
+          {
+            "roleId": 112013806,
+            "name": "神州丶麦芒",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/PiajxSqBRaEJCzIGqMu02icRwpicV888F5WQj15fkibzEeS8JNXkZJjdIyPGPQVFia81B3zaPkmyGlmgIZTNczAkIdQ/132",
+            "serverId": 8977,
+            "prepared": 1791808081,
+            "power": 12286716107,
+            "legionName": "空山新雨后✨",
+            "legionId": 6482066,
+            "battleData": null,
+            "charmData": {},
+            "charmResetTime": 1790505931,
+            "extParam": {
+              "nmExtStarCnt_261005": 18,
+              "nmExtStarCnt_261012": 18
+            },
+            "avatarFrame": {
+              "id": 110503,
+              "expire": -1
+            },
+            "customCard": null,
+            "lockedTime": 1791643495
+          },
+          {
+            "roleId": 199148453,
+            "name": "关小涩",
+            "headImg": "https://thirdwx.qlogo.cn/mmopen/vi_32/Q3auHgzwzM70r0D6iaKiaHdRu4DGQhamMBKFeFJOK99f7ZXgDuMDjwB0hSQzhXg9CY8JiaNDo6BuSVU8FFuIvydTw/132",
+            "serverId": 8949,
+            "prepared": 1791807977,
+            "power": 10081467088,
+            "legionName": "锦衣、夜行",
+            "legionId": 2781636,
+            "battleData": null,
+            "charmData": {},
+            "charmResetTime": 1791642957,
+            "extParam": {
+              "nmExtStarCnt_261005": 19,
+              "nmExtStarCnt_261012": 16
+            },
+            "avatarFrame": null,
+            "customCard": null,
+            "lockedTime": 1791643496
+          }
+        ],
+        "setting": {
+          "name": "你林哥的队伍",
+          "secret": 1
+        },
+        "lockedTime": 1791643496,
+        "endTime": 1792339199
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 24
+}
+异步: 是
+调用ID: call_1791984745328_laim62z4c
+
+记录 #3:
+----------------------------------------
+时间: 2026/10/14 21:32:25
+服务: MatchTeamService
+方法: getRoleTeamInfo
+参数: [{"roleID":115082791}]
+结果:
+{
+  "_raw": {
+    "seq": 69,
+    "ack": 68,
+    "time": 1791984745888,
+    "resp": 69,
+    "cmd": "matchteam_getroleteaminforesp",
+    "body": {
+      "roleID": 115082791,
+      "roleMTData": {
+        "roleId": 115082791,
+        "gDMTData": {
+          "N11607414": {
+            "teamId": "N11607414",
+            "teamCfgId": 7,
+            "endTime": 1792339199
+          }
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 33
+}
+异步: 是
+调用ID: call_1791984745293_dix2w1pd8
+
+记录 #4:
+----------------------------------------
+时间: 2026/10/14 21:32:25
+服务: NMExtService
+方法: getInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 68,
+    "ack": 67,
+    "time": 1791984745854,
+    "resp": 68,
+    "cmd": "nmext_getinforesp",
+    "body": {
+      "roleNMExt": {
+        "roleId": 115082791,
+        "starResetTime": 1791734400,
+        "starFightCntMap": {
+          "1": 2,
+          "2": 2,
+          "3": 1,
+          "4": 1,
+          "5": 2,
+          "6": 1,
+          "7": 5,
+          "8": 3
+        },
+        "privilegeStarFightCntMap": {
+          "1": 4,
+          "5": 2,
+          "6": 1,
+          "7": 4,
+          "8": 1
+        },
+        "starBossCompleteMap": {
+          "1": {
+            "0": true,
+            "1": true,
+            "2": true
+          },
+          "2": {
+            "0": true,
+            "1": true
+          },
+          "3": {
+            "0": true,
+            "1": true,
+            "2": true
+          },
+          "4": {
+            "0": true,
+            "1": true,
+            "2": true
+          },
+          "5": {
+            "0": true,
+            "1": true
+          },
+          "6": {
+            "0": true,
+            "1": true,
+            "2": true
+          },
+          "7": {
+            "0": true,
+            "1": true
+          },
+          "8": {
+            "0": true,
+            "1": true
+          }
+        },
+        "starRewardsClaimedMap": {
+          "1": true,
+          "2": true,
+          "3": true,
+          "4": true,
+          "5": true,
+          "6": true,
+          "7": true,
+          "8": true
+        },
+        "hasKeyCntMap": {
+          "36997": 5,
+          "36998": 4,
+          "36999": 1
+        },
+        "weekAward": {},
+        "raceUnlockRaceId": 4,
+        "raceFightCnt": 0,
+        "raceTaskRewardsClaimedMap": {},
+        "topArriveRecord": {},
+        "topJoinTimes": {},
+        "taskProgress": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0
+        },
+        "param": 0
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 38
+}
+异步: 是
+调用ID: call_1791984745255_bt7gqeqvv
+
+记录 #5:
+----------------------------------------
+时间: 2026/10/14 21:32:25
+服务: NightMareService
+方法: getRoleInfo
+参数: [{"roleId":115082791}]
+结果:
+{
+  "_raw": {
+    "seq": 67,
+    "ack": 0,
+    "time": 1791984745815,
+    "resp": 67,
+    "cmd": "nightmare_getroleinforesp",
+    "body": {
+      "nightMareData": {
+        "roleId": 115082791,
+        "serverId": 8976,
+        "love": 1609,
+        "roomId": "",
+        "fightCoinResetTime": 1791736184,
+        "todayFightCnt": 4,
+        "tFResetTime": 1791909383,
+        "todayFightCnt2": 0,
+        "tFResetTime2": 1791909383,
+        "fightInfo": {
+          "1791983160": "32708497",
+          "1791983549": "32708576",
+          "1791983998": "32708671"
+        },
+        "killAward": {
+          "1": true,
+          "2": true,
+          "3": true,
+          "4": true,
+          "5": true,
+          "6": true,
+          "7": true,
+          "8": true
+        },
+        "weekAward": {
+          "20260914": {
+            "maxLevel": 8,
+            "levelReward": {
+              "1": 1789392659,
+              "2": 1789392659,
+              "3": 1789392659,
+              "4": 1789392659,
+              "5": 1789392659,
+              "6": 1789392659,
+              "7": 1789392659,
+              "8": 1789392659
+            },
+            "turntableReward": {
+              "1": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 2000,
+                  "ext": 0
+                }
+              ],
+              "2": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 5000,
+                  "ext": 0
+                }
+              ],
+              "3": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "4": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "5": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "6": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "7": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "8": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "9": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 5000,
+                  "ext": 0
+                }
+              ],
+              "10": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ]
+            },
+            "turntableCnt": 0,
+            "turntableLeftCnt": 0
+          },
+          "20260921": {
+            "maxLevel": 8,
+            "levelReward": {
+              "1": 1790047505,
+              "2": 1790047505,
+              "3": 1790047505,
+              "4": 1790047505,
+              "5": 1790047505,
+              "6": 1790047505,
+              "7": 1790047505,
+              "8": 1790047505
+            },
+            "turntableReward": {
+              "1": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "2": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "3": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "4": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 20,
+                  "ext": 0
+                }
+              ],
+              "5": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "6": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 2000,
+                  "ext": 0
+                }
+              ],
+              "7": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "8": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 20,
+                  "ext": 0
+                }
+              ],
+              "9": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "10": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 5000,
+                  "ext": 0
+                }
+              ]
+            },
+            "turntableCnt": 0,
+            "turntableLeftCnt": 0
+          },
+          "20260928": {
+            "maxLevel": 8,
+            "levelReward": {
+              "1": 1791105720,
+              "2": 1791105720,
+              "3": 1791105720,
+              "4": 1791105720,
+              "5": 1791105720,
+              "6": 1791105720,
+              "7": 1791105720,
+              "8": 1791105720
+            },
+            "turntableReward": {
+              "1": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 2000,
+                  "ext": 0
+                }
+              ],
+              "2": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "3": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "4": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "5": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "6": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "7": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 20,
+                  "ext": 0
+                }
+              ],
+              "8": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 10,
+                  "ext": 0
+                }
+              ]
+            },
+            "turntableCnt": 0,
+            "turntableLeftCnt": 0
+          },
+          "20261005": {
+            "maxLevel": 8,
+            "levelReward": {
+              "1": 1791734515,
+              "2": 1791734515,
+              "3": 1791734515,
+              "4": 1791734515,
+              "5": 1791734515,
+              "6": 1791734515,
+              "7": 1791734515,
+              "8": 1791734515
+            },
+            "turntableReward": {
+              "1": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 10000,
+                  "ext": 0
+                }
+              ],
+              "2": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "3": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "4": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 20,
+                  "ext": 0
+                }
+              ],
+              "5": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "6": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "7": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ],
+              "8": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 1000,
+                  "ext": 0
+                }
+              ]
+            },
+            "turntableCnt": 0,
+            "turntableLeftCnt": 0
+          },
+          "20261012": {
+            "maxLevel": 8,
+            "levelReward": {
+              "1": 1791813540,
+              "2": 1791813540,
+              "3": 1791813540,
+              "4": 1791813540,
+              "5": 1791813540,
+              "6": 1791813540,
+              "7": 1791813540,
+              "8": 1791813540
+            },
+            "turntableReward": {
+              "1": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "2": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 5000,
+                  "ext": 0
+                }
+              ],
+              "3": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "4": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "5": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ],
+              "6": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 2000,
+                  "ext": 0
+                }
+              ],
+              "7": [
+                {
+                  "type": 3,
+                  "itemId": 1020,
+                  "value": 5,
+                  "ext": 0
+                }
+              ],
+              "8": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 20,
+                  "ext": 0
+                }
+              ],
+              "9": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 50,
+                  "ext": 0
+                }
+              ],
+              "10": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 20,
+                  "ext": 0
+                }
+              ],
+              "11": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 2000,
+                  "ext": 0
+                }
+              ],
+              "12": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 2000,
+                  "ext": 0
+                }
+              ],
+              "13": [
+                {
+                  "type": 3,
+                  "itemId": 1022,
+                  "value": 10000,
+                  "ext": 0
+                }
+              ],
+              "14": [
+                {
+                  "type": 3,
+                  "itemId": 1023,
+                  "value": 10,
+                  "ext": 0
+                }
+              ]
+            },
+            "turntableCnt": 0,
+            "turntableLeftCnt": 0
+          }
+        },
+        "bookScore": 69,
+        "bookRewardConfId": 5,
+        "bookFlushTime": 1788105600,
+        "turnRewardTime": 65,
+        "charmData": {},
+        "charmGift": {},
+        "fixLoveRank": 4,
+        "charmResetTime": 1791736184,
+        "taskClaimMap": {},
+        "warOrderTime": 0,
+        "onceReward": {}
+      },
+      "weekAward": {
+        "maxLevel": 8,
+        "levelReward": {
+          "1": 1791813540,
+          "2": 1791813540,
+          "3": 1791813540,
+          "4": 1791813540,
+          "5": 1791813540,
+          "6": 1791813540,
+          "7": 1791813540,
+          "8": 1791813540
+        },
+        "turntableReward": {
+          "1": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 10,
+              "ext": 0
+            }
+          ],
+          "2": [
+            {
+              "type": 3,
+              "itemId": 1022,
+              "value": 5000,
+              "ext": 0
+            }
+          ],
+          "3": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 5,
+              "ext": 0
+            }
+          ],
+          "4": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 5,
+              "ext": 0
+            }
+          ],
+          "5": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 10,
+              "ext": 0
+            }
+          ],
+          "6": [
+            {
+              "type": 3,
+              "itemId": 1022,
+              "value": 2000,
+              "ext": 0
+            }
+          ],
+          "7": [
+            {
+              "type": 3,
+              "itemId": 1020,
+              "value": 5,
+              "ext": 0
+            }
+          ],
+          "8": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 20,
+              "ext": 0
+            }
+          ],
+          "9": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 50,
+              "ext": 0
+            }
+          ],
+          "10": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 20,
+              "ext": 0
+            }
+          ],
+          "11": [
+            {
+              "type": 3,
+              "itemId": 1022,
+              "value": 2000,
+              "ext": 0
+            }
+          ],
+          "12": [
+            {
+              "type": 3,
+              "itemId": 1022,
+              "value": 2000,
+              "ext": 0
+            }
+          ],
+          "13": [
+            {
+              "type": 3,
+              "itemId": 1022,
+              "value": 10000,
+              "ext": 0
+            }
+          ],
+          "14": [
+            {
+              "type": 3,
+              "itemId": 1023,
+              "value": 10,
+              "ext": 0
+            }
+          ]
+        },
+        "turntableCnt": 0,
+        "turntableLeftCnt": 0
+      },
+      "charmLeftNumMap": {
+        "1": 47,
+        "2": 0,
+        "3": 46,
+        "4": 35,
+        "5": 0,
+        "6": 14
+      },
+      "nextBookFlushTime": 1795363200
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 28
+}
+异步: 是
+调用ID: call_1791984745226_vn1gspzxy
+
+记录 #6:
+----------------------------------------
+时间: 2026/10/14 21:32:21
+服务: HallService
+方法: getInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 66,
+    "ack": 65,
+    "time": 1791984741686,
+    "resp": 66,
+    "cmd": "hall_getinforesp",
+    "body": {
+      "bottle": {
+        "roleId": 115082791,
+        "bottleType": 1,
+        "occupyId": -1,
+        "occupyLordWeaponId": 3,
+        "occupyPower": 10539121216,
+        "occupyTotalTime": 18000,
+        "occupyEndTime": 1790588450,
+        "nextRefreshTime": -1,
+        "isFirst": false,
+        "battleTeam": {},
+        "occupyPetUId": "409-REt"
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 35
+}
+异步: 是
+调用ID: call_1791984741090_detv6n0kx
+
+记录 #7:
+----------------------------------------
+时间: 2026/10/14 21:32:20
+服务: BottleHelperService
+方法: getInfo
+参数: [{}]
+结果:
+{
+  "_raw": {
+    "seq": 65,
+    "ack": 0,
+    "time": 1791984741165,
+    "resp": 65,
+    "cmd": "bottlehelper_getinforesp",
+    "body": {
+      "role": {
+        "bottleHelpers": {
+          "helperStopTime": 1791993674,
+          "bottleHelper": {
+            "0": {
+              "bottleType": 0,
+              "helperState": 1,
+              "startTime": 1791981127,
+              "stopTime": 1791993674,
+              "endTime": 1791999127,
+              "obtainCnt": 3
+            },
+            "1": {
+              "bottleType": 1,
+              "helperState": 1,
+              "startTime": 1791975956,
+              "stopTime": 1791993674,
+              "endTime": 1791988556,
+              "obtainCnt": 3
+            },
+            "2": {
+              "bottleType": 2,
+              "helperState": 1,
+              "startTime": 1791973947,
+              "stopTime": 1791993674,
+              "endTime": 1791984747,
+              "obtainCnt": 4
+            }
+          }
+        }
+      }
+    },
+    "_note": "body已使用rawData解码"
+  },
+  "_rawData": "[循环引用]",
+  "rtt": 37
+}
+异步: 是
+调用ID: call_1791984740567_anbtdt3k0
+
+
+======================================================================
+导出完成 - 由API调用记录工具 v2.4 生成
+注：_raw.body字段的二进制数据已被过滤
+======================================================================

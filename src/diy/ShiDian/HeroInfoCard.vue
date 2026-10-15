@@ -111,7 +111,11 @@ const props = defineProps({
 
 const tokenStore = useTokenStore()
 const message = useMessage()
-const upgradeTokens = ref('')
+const upgradeTokens = ref(localStorage.getItem('heroInfo_executionTokens') || '')
+// 监听执行范围变化，持久化保存
+watch(upgradeTokens, (newValue) => {
+  localStorage.setItem('heroInfo_executionTokens', newValue)
+})
 const isSwitchTowerRunning = ref(false)
 const isSwitchStoryRunning = ref(false)
 const isBatchSwitchTowerRunning = ref(false)
@@ -940,15 +944,15 @@ const batchSwitchTower = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -962,12 +966,18 @@ const batchSwitchTower = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量切换爬塔完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量切换爬塔完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('shidian', '批量切换爬塔', {
       cardType: '武将信息',
       status: 'success',
-      message: `【批量】批量切换爬塔完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量切换爬塔失败:', error)
@@ -1069,15 +1079,15 @@ const batchSwitchStory = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1091,12 +1101,18 @@ const batchSwitchStory = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量切换推图完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量切换推图完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('shidian', '批量切换推图', {
       cardType: '武将信息',
       status: 'success',
-      message: `【批量】批量切换推图完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量切换推图失败:', error)
@@ -1258,15 +1274,15 @@ const batchUpgradeOne = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1280,12 +1296,18 @@ const batchUpgradeOne = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级阵容1完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级阵容1完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('shidian', '批量升级阵容1', {
       cardType: '武将信息',
       status: 'success',
-      message: `【批量】批量升级阵容1完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量升级阵容1失败:', error)
@@ -1415,15 +1437,15 @@ const batchUpgradeTwo = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`序号 ${tokenIndex} ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`序号 ${tokenIndex} ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`序号 ${tokenIndex} ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1437,12 +1459,18 @@ const batchUpgradeTwo = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量升级阵容2完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量升级阵容2完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
     logOperation('shidian', '批量升级阵容2', {
       cardType: '武将信息',
       status: 'success',
-      message: `【批量】批量升级阵容2完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量升级阵容2失败:', error)

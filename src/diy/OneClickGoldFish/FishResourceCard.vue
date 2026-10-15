@@ -146,7 +146,7 @@
         <!-- 操作日志 -->
         <OperationLogCard 
           page="fish-helper" 
-          :filter-operations="['一键金鱼', '批量宝箱', '批量金竿', '批量招募', '批量助威', '批量盐罐', '批量金砖', '批量购买金竿', '批量使用道具', '批量导出', '批量一键宝箱', '38+1600', '42+1600', '46+1600', '批量换金鱼', '批量购买招募', '批量领取奖励', '领取免费']"
+          :filter-operations="['一键金鱼', '批量宝箱', '批量金竿', '批量招募', '批量助威', '批量盐罐', '批量金砖', '批量购买金竿', '批量使用道具', '批量导出', '批量导出道具数量', '批量一键宝箱', '38+1600', '42+1600', '46+1600', '批量换金鱼', '批量购买招募', '批量领取奖励', '领取免费']"
         />
     </template>
   </MyCard>
@@ -209,7 +209,12 @@ const taskItemId = ref('5279')
 const fishItemId = ref('5280')
 const cheerItemId = ref('5278')
 const taskName = ref('') // 活动ID，默认由动态节日基准日计算（actId）兜底
-const executionRange = ref('') // 执行范围
+const executionRange = ref(localStorage.getItem('fishResource_executionRange') || '') // 执行范围
+
+// 监听执行范围变化并保存到本地存储
+watch(executionRange, (newValue) => {
+  localStorage.setItem('fishResource_executionRange', newValue);
+});
 const goldFishChangeCount = ref('') // 批量换金鱼数量
 const useItemMode = ref('12') // 使用道具模式：'12' 每次12个直到出错, 'openAll' 开完
 const fishingTarget = ref('1600') // 批量金竿目标已用数，默认1600
@@ -985,15 +990,15 @@ const batchOpenAllBoxes = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1007,8 +1012,13 @@ const batchOpenAllBoxes = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
     
-    message.success(`批量一键宝箱完成：成功${successCount}个，失败${failCount}个`)
+    let summaryMsg = `批量一键宝箱完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
   } catch (error) {
     console.error('批量一键宝箱失败:', error)
     message.error(`批量一键宝箱失败: ${error.message || '未知错误'}`)
@@ -1310,15 +1320,15 @@ const batchStartFishing = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -1332,8 +1342,13 @@ const batchStartFishing = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
     
-    message.success(`批量金竿完成：成功${successCount}个，失败${failCount}个`)
+    let summaryMsg = `批量金竿完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
   } catch (error) {
     console.error('批量金竿失败:', error)
     message.error(`批量金竿失败: ${error.message || '未知错误'}`)
@@ -2185,14 +2200,20 @@ const batchBoxWeek = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`批量宝箱周完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `批量宝箱周完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '批量宝箱',
       status: successCount > 0 ? 'success' : 'error',
-      message: `【批量】批量宝箱完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量宝箱周失败:', error)
@@ -2493,14 +2514,20 @@ const batchRecruitWeek = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`批量招募周完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `批量招募周完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '批量招募',
       status: successCount > 0 ? 'success' : 'error',
-      message: `【批量】批量招募完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量招募周失败:', error)
@@ -2839,7 +2866,13 @@ const batchSaltJar = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`批量盐罐完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `批量盐罐完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
   } catch (error) {
     console.error('批量盐罐失败:', error)
     message.error(`批量盐罐失败: ${error.message || '未知错误'}`)
@@ -2986,15 +3019,15 @@ const batchClaimRewards = async () => {
             message.info(`正在处理第 ${progress.batchIndex} 组（${progress.batchSize}个Token）...`)
           } else if (progress.type === 'token-start') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在获取连接...`)
           } else if (progress.type === 'token-success') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error') {
             const token = sortedTokensList.find(t => t.id === progress.tokenId)
-            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex + 1
+            const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
             if (progress.status === 'warning') {
               message.warning(`[序号${tokenIndex}] ${progress.tokenName} ${progress.message}`)
             } else {
@@ -3007,14 +3040,19 @@ const batchClaimRewards = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
     
-    message.success(`批量领取奖励完成：成功${successCount}个，失败${failCount}个`)
+    let summaryMsg = `批量领取奖励完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '批量领取奖励',
       status: 'success',
-      message: `【批量】批量领取奖励完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('批量领取奖励失败:', error)
@@ -3378,14 +3416,20 @@ const batch38Plus1600 = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`38+1600完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `38+1600完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '38+1600',
       status: 'info',
-      message: `38+1600完成：成功${successCount}个，失败${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('38+1600失败:', error)
@@ -3692,14 +3736,20 @@ const batch42Plus1600 = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`42+1600完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `42+1600完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '42+1600',
       status: 'info',
-      message: `42+1600完成：成功${successCount}个，失败${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('42+1600失败:', error)
@@ -4006,14 +4056,20 @@ const batch46Plus1600 = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`46+1600完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `46+1600完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '46+1600',
       status: 'info',
-      message: `46+1600完成：成功${successCount}个，失败${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('46+1600失败:', error)
@@ -4109,14 +4165,20 @@ const batchChangeGoldFish = async () => {
     
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`批量换金鱼完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+    
+    let summaryMsg = `批量换金鱼完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
     
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '批量换金鱼',
       status: 'info',
-      message: `【批量】批量换金鱼完成：成功${successCount}个，失败${failCount}个`
+      message: summaryMsg
     })
   } catch (error) {
     console.error('批量换金鱼失败:', error)
@@ -4203,14 +4265,20 @@ const batchClaimFree = async () => {
 
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    message.success(`领取免费完成：成功${successCount}个，失败${failCount}个`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `领取免费完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+    message.success(summaryMsg)
 
     logStore.addLog({
       page: 'fish-helper',
       cardType: '金鱼资源',
       operation: '领取免费',
       status: 'info',
-      message: `【批量】领取免费完成：成功${successCount}个，失败${failCount}个`
+      message: `【批量】${summaryMsg}`
     })
   } catch (error) {
     console.error('领取免费失败:', error)

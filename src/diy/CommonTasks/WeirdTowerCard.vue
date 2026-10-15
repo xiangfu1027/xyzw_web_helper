@@ -102,10 +102,15 @@
               @button-click="batchWeirdTower" 
             />
             <CustomizedCard 
-              mode="button" 
-              :name="isBatchRunning ? '批量爬塔中...' : '批量爬塔'" 
-              :disabled="tokenStore.gameTokens.length === 0 || isBatchRunning" 
-              @button-click="handleBatchClimb" 
+              mode="button-with-select"
+              :buttonText="isBatchRunning ? '批量爬塔中...' : '批量爬塔'"
+              :disabled="tokenStore.gameTokens.length === 0 || isBatchRunning"
+              @button-click="handleBatchClimb"
+              v-model:selectValue="batchClimbTeam"
+              :selectOptions="[
+                { label: '阵容1', value: '1' },
+                { label: '阵容2', value: '2' }
+              ]"
             />
             <CustomizedCard 
               mode="button" 
@@ -139,7 +144,7 @@
       <OperationLogCard 
         page="fish-helper" 
         card-type="怪异塔"
-        :filter-operations="['开始爬塔', '停止爬塔', '刷新信息', '一键使用道具', '一键合成', '批量特权领取', '批量怪异塔', '批量爬塔', '批量开启爬塔', '批量导出爬塔信息', '批量领取免费钥匙', '导出未激活成员']"
+        :filter-operations="['开始爬塔', '停止爬塔', '刷新信息', '一键使用道具', '一键合成', '批量特权领取', '批量怪异塔', '批量爬塔', '批量开启爬塔', '批量导出爬塔信息', '导出详情', '批量领取免费钥匙', '导出未激活成员']"
       />
     </template>
   </MyCard>
@@ -203,7 +208,7 @@ const isRunning = ref(false)
 const isBatchRunning = ref(false)
 const isUsingItems = ref(false)
 const isMerging = ref(false)
-const batchTokens = ref('')
+const batchTokens = ref(localStorage.getItem('weirdTowerBatchTokens') || '')
 const commandDelay = ref(localStorage.getItem('weirdTowerCommandDelay') || '1200')
 const stopFlag = ref(false)
 const stopItemFlag = ref(false)
@@ -217,6 +222,7 @@ const isExportingTowerInfo = ref(false)
 const isExportingTowerDetail = ref(false)
 const isBatchClaimingFreeKey = ref(false)
 const isExportingInactiveMembers = ref(false)
+const batchClimbTeam = ref('1')
 
 // 计算属性：怪异塔信息
 const evoTowerInfo = computed(() => {
@@ -288,6 +294,7 @@ const isWeirdTowerActivityOpen = computed(() => {
 // 处理执行范围输入
 const handleBatchTokensInput = (value) => {
   batchTokens.value = value
+  localStorage.setItem('weirdTowerBatchTokens', value)
 }
 
 const handleCommandDelayInput = (value) => {
@@ -676,7 +683,7 @@ const batchClaimLegionPrivilege = async () => {
     
     // 定义特权领取操作函数
     const privilegeOperation = async (token, globalIndex) => {
-      const tokenIndex = globalIndex + 1
+      const tokenIndex = getTokenIndex(token)
       let successCount = 0
       
       try {
@@ -735,12 +742,14 @@ const batchClaimLegionPrivilege = async () => {
         delayBetween: 100,
         keepConnections: true,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+            message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在连接...`)
           } else if (progress.type === 'token-success' && progress.message === '连接成功') {
-            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
-            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+            message.warning(`[序号${tokenIndex}] ${progress.tokenName} 连接失败，跳过`)
           }
         }
       }
@@ -749,8 +758,14 @@ const batchClaimLegionPrivilege = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量特权领取完成（成功: ${successCount}, 失败: ${failCount}）`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量特权领取完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
   } catch (error) {
     console.error('批量特权领取失败:', error)
     message.error('批量特权领取失败: ' + (error.message || '未知错误'))
@@ -1324,7 +1339,7 @@ const batchWeirdTower = async () => {
       const results = await connectionPool.batchOperate(
         activeTokens,
         async (token, globalIndex) => {
-          const tokenIndex = globalIndex + 1
+          const tokenIndex = getTokenIndex(token)
           const tokenId = token.id
           const state = tokenStates.get(tokenId)
           
@@ -1439,7 +1454,9 @@ const batchWeirdTower = async () => {
           onProgress: (progress) => {
             if (progress.type === 'token-complete') {
               const completed = progress.success ? '成功' : '失败'
-              message.info(`序号 ${progress.globalIndex + 1} ${progress.tokenName || progress.tokenId} 第${roundCount}轮${completed}`)
+              const token = targetTokens.find(t => t.id === progress.tokenId)
+              const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
+              message.info(`序号 ${tokenIndex} ${progress.tokenName || progress.tokenId} 第${roundCount}轮${completed}`)
             }
           }
         }
@@ -1791,13 +1808,72 @@ const handleBatchClimb = async () => {
   try {
     isBatchRunning.value = true
     const rangeText = tokenIndices === null || tokenIndices.length === 0 ? '全部' : `范围${tokenIndices.join(',')}`
-    message.info(`开始批量爬塔（${rangeText}），共${targetTokens.length}个Token，按序号顺序执行...`)
+    const teamId = parseInt(batchClimbTeam.value)
+    message.info(`开始批量爬塔（${rangeText}），共${targetTokens.length}个Token，使用阵容${teamId}，按序号顺序执行...`)
     
     // 定义爬塔操作函数
     const towerClimbOperation = async (token, globalIndex) => {
-      const tokenIndex = globalIndex + 1
-      
+      const tokenIndex = getTokenIndex(token)
+
       try {
+        // 切换阵容（带重连机制）
+        const teamId = parseInt(batchClimbTeam.value)
+        let reconnectSuccess = false
+        for (let reconnectAttempt = 0; reconnectAttempt < 3; reconnectAttempt++) {
+          try {
+            await tokenStore.sendPresetteamSaveTeam(token.id, { teamId })
+            await waitCommandDelay()
+            reconnectSuccess = true
+            break
+          } catch (error) {
+            const errMsg = error.message || String(error)
+            // 如果是连接问题，尝试重连
+            if (errMsg.includes('WebSocket 未连接') || errMsg.includes('请求超时')) {
+              logStore.addLog({
+                page: 'fish-helper',
+                cardType: '怪异塔',
+                operation: '批量爬塔',
+                tokenId: token.id,
+                tokenName: token.name,
+                status: 'warning',
+                message: `【序号${tokenIndex}】[${token.name || token.id}]连接异常，尝试重连 (${reconnectAttempt + 1}/3)`
+              })
+
+              // 释放当前连接并重新获取
+              try {
+                await connectionPool.release(token.id, true)
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                const reconnected = await connectionPool.acquire(token.id)
+                if (!reconnected) {
+                  throw new Error('重连失败')
+                }
+              } catch (reconnectError) {
+                if (reconnectAttempt === 2) {
+                  logStore.addLog({
+                    page: 'fish-helper',
+                    cardType: '怪异塔',
+                    operation: '批量爬塔',
+                    tokenId: token.id,
+                    tokenName: token.name,
+                    status: 'error',
+                    message: `【序号${tokenIndex}】[${token.name || token.id}]重连失败，跳过该Token`
+                  })
+                  return { climbCount: 0, currentFloor: 'N/A', remainingEnergy: 0, skipped: true }
+                }
+              }
+            } else {
+              // 其他错误只警告，继续执行
+              console.warn(`序号 ${tokenIndex} ${token.name || token.id} 切换阵容${teamId}失败，继续执行:`, error)
+              reconnectSuccess = true
+              break
+            }
+          }
+        }
+
+        if (!reconnectSuccess) {
+          return { climbCount: 0, currentFloor: 'N/A', remainingEnergy: 0, skipped: true }
+        }
+
         // 添加开始日志
         logStore.addLog({
           page: 'fish-helper',
@@ -1806,7 +1882,7 @@ const handleBatchClimb = async () => {
           tokenId: token.id,
           tokenName: token.name,
           status: 'info',
-          message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id}、开始爬塔`
+          message: `【序号${tokenIndex}】[${token.name || token.id}]${token.name || token.id}、开始爬塔（阵容${teamId}）`
         })
         
         // 获取怪异塔信息（直接从响应获取）
@@ -1867,17 +1943,59 @@ const handleBatchClimb = async () => {
           // 检查当前能量
           if (currentEnergy <= 0) break
 
-          // 准备战斗
-          try {
-            await tokenStore.sendMessageWithPromise(
-              token.id,
-              'evotower_readyfight',
-              {},
-              5000
-            )
-          } catch (error) {
-            if (await handleTooFastError(error)) { j--; continue }
-            throw error
+          // 准备战斗（带重连机制）
+          let readyFightSuccess = false
+          for (let reconnectAttempt = 0; reconnectAttempt < 3; reconnectAttempt++) {
+            try {
+              await tokenStore.sendMessageWithPromise(
+                token.id,
+                'evotower_readyfight',
+                {},
+                5000
+              )
+              readyFightSuccess = true
+              break
+            } catch (error) {
+              const errMsg = error.message || String(error)
+              // 处理"操作过快"错误
+              if (await handleTooFastError(error)) {
+                readyFightSuccess = true
+                break
+              }
+              // 如果是连接问题，尝试重连
+              if (errMsg.includes('WebSocket 未连接') || errMsg.includes('请求超时')) {
+                logStore.addLog({
+                  page: 'fish-helper',
+                  cardType: '怪异塔',
+                  operation: '批量爬塔',
+                  tokenId: token.id,
+                  tokenName: token.name,
+                  status: 'warning',
+                  message: `【序号${tokenIndex}】[${token.name || token.id}]evotower_readyfight连接异常，尝试重连 (${reconnectAttempt + 1}/3)`
+                })
+
+                // 释放当前连接并重新获取
+                try {
+                  await connectionPool.release(token.id, true)
+                  await new Promise(resolve => setTimeout(resolve, 1000))
+                  const reconnected = await connectionPool.acquire(token.id)
+                  if (!reconnected) {
+                    throw new Error('重连失败')
+                  }
+                } catch (reconnectError) {
+                  if (reconnectAttempt === 2) {
+                    throw new Error(`evotower_readyfight重连失败: ${reconnectError.message || reconnectError}`)
+                  }
+                }
+              } else {
+                // 其他错误直接抛出
+                throw error
+              }
+            }
+          }
+
+          if (!readyFightSuccess) {
+            throw new Error('evotower_readyfight多次重试后仍失败')
           }
 
           // 执行战斗
@@ -2004,12 +2122,14 @@ const handleBatchClimb = async () => {
         delayBetween: 100,
         keepConnections: true,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+            message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在连接...`)
           } else if (progress.type === 'token-success' && progress.message === '连接成功') {
-            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
-            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+            message.warning(`[序号${tokenIndex}] ${progress.tokenName} 连接失败，跳过`)
           }
         }
       }
@@ -2018,8 +2138,14 @@ const handleBatchClimb = async () => {
     // 统计结果
     const successCount = results.filter(r => r.success).length
     const failCount = results.filter(r => !r.success).length
-    
-    message.success(`批量爬塔完成（成功: ${successCount}, 失败: ${failCount}）`)
+    const failedTokens = results.filter(r => !r.success).map(r => r.token?.name || r.token?.id || '未知')
+
+    let summaryMsg = `批量爬塔完成，成功${successCount}个，失败${failCount}个`
+    if (failedTokens.length > 0) {
+      summaryMsg += `，失败token：${failedTokens.join('、')}`
+    }
+
+    message.success(summaryMsg)
   } catch (error) {
     console.error('批量爬塔失败:', error)
     message.error('批量爬塔失败: ' + (error.message || '未知错误'))
@@ -2068,7 +2194,7 @@ const handleBatchQuickClimb = async () => {
     message.info(`开始批量开启爬塔（${rangeText}），共${targetTokens.length}个Token，按序号顺序执行...`)
     
     const towerClimbOperation = async (token, globalIndex) => {
-      const tokenIndex = globalIndex + 1
+      const tokenIndex = getTokenIndex(token)
       
       try {
         logStore.addLog({
@@ -2259,12 +2385,14 @@ const handleBatchQuickClimb = async () => {
         delayBetween: 100,
         keepConnections: true,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+            message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在连接...`)
           } else if (progress.type === 'token-success' && progress.message === '连接成功') {
-            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
-            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+            message.warning(`[序号${tokenIndex}] ${progress.tokenName} 连接失败，跳过`)
           }
         }
       }
@@ -2323,7 +2451,7 @@ const handleExportTowerInfo = async () => {
     const towerInfoList = []
     
     const exportOperation = async (token, globalIndex) => {
-      const tokenIndex = globalIndex + 1
+      const tokenIndex = getTokenIndex(token)
       
       try {
         const towerInfoRes = await tokenStore.sendMessageWithPromise(
@@ -2371,12 +2499,14 @@ const handleExportTowerInfo = async () => {
         delayBetween: 100,
         keepConnections: true,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+            message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在连接...`)
           } else if (progress.type === 'token-success' && progress.message === '连接成功') {
-            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
-            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+            message.warning(`[序号${tokenIndex}] ${progress.tokenName} 连接失败，跳过`)
           }
         }
       }
@@ -2468,7 +2598,7 @@ const handleExportTowerDetail = async () => {
     const towerDetailList = []
     
     const exportOperation = async (token, globalIndex) => {
-      const tokenIndex = globalIndex + 1
+      const tokenIndex = getTokenIndex(token)
       
       try {
         // 获取爬塔信息
@@ -2548,12 +2678,14 @@ const handleExportTowerDetail = async () => {
         delayBetween: 100,
         keepConnections: true,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+            message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在连接...`)
           } else if (progress.type === 'token-success' && progress.message === '连接成功') {
-            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
-            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+            message.warning(`[序号${tokenIndex}] ${progress.tokenName} 连接失败，跳过`)
           }
         }
       }
@@ -2725,7 +2857,7 @@ const handleBatchClaimFreeKey = async () => {
     let failCount = 0
     
     const claimOperation = async (token, globalIndex) => {
-      const tokenIndex = globalIndex + 1
+      const tokenIndex = getTokenIndex(token)
       
       try {
         await tokenStore.sendMergeboxClaimFreeEnergy(token.id, { actType: 1 })
@@ -2777,12 +2909,14 @@ const handleBatchClaimFreeKey = async () => {
         delayBetween: 100,
         keepConnections: true,
         onProgress: (progress) => {
+          const token = targetTokens.find(t => t.id === progress.tokenId)
+          const tokenIndex = token ? getTokenIndex(token) : progress.globalIndex
           if (progress.type === 'token-start') {
-            message.info(`[序号${progress.globalIndex}] ${progress.tokenName} 正在连接...`)
+            message.info(`[序号${tokenIndex}] ${progress.tokenName} 正在连接...`)
           } else if (progress.type === 'token-success' && progress.message === '连接成功') {
-            message.success(`[序号${progress.globalIndex}] ${progress.tokenName} 连接成功`)
+            message.success(`[序号${tokenIndex}] ${progress.tokenName} 连接成功`)
           } else if (progress.type === 'token-error' && progress.message === '连接失败，跳过') {
-            message.warning(`[序号${progress.globalIndex}] ${progress.tokenName} 连接失败，跳过`)
+            message.warning(`[序号${tokenIndex}] ${progress.tokenName} 连接失败，跳过`)
           }
         }
       }

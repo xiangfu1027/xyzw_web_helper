@@ -665,9 +665,10 @@ export class ConnectionPoolManager {
                             status: 'error'
                         });
                     }
+                    // 执行失败时，不释放槽位，不断开连接（便于重试）
                 } finally {
-                    // 每个token完成后立即断开连接并释放槽位（参照批量日常页面）
-                    if (acquired) {
+                    // 只在正常返回时（非异常）释放槽位并断开连接
+                    if (acquired && !results.find(r => r.token.id === token.id && !r.success)) {
                         try {
                             await this.release(token.id, true);
                         } catch (releaseError) {

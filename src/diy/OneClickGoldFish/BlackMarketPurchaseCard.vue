@@ -98,6 +98,13 @@
             :disabled="isExportingResourceInfo"
             :loading="isExportingResourceInfo"
           />
+          <CustomizedCard 
+            mode="button"
+            name="补充金竿"
+            @button-click="handleSupplementRod"
+            :disabled="isSupplementingRod"
+            :loading="isSupplementingRod"
+          />
         </CustomizedCard>
       </div>
       
@@ -113,7 +120,7 @@
 <script setup>
 // @unocss-include
 // uno-css-ignore-file
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useTokenStore, selectedTokenId } from '@/stores/tokenStore'
 import { useOperationLogStore } from '@/stores/operationLogStore'
 import { useMessage } from 'naive-ui'
@@ -147,14 +154,20 @@ const isSetting = ref(false)
 const isBatchSetting = ref(false)
 const isExportingBlackMarket = ref(false)
 const isExportingResourceInfo = ref(false)
+const isSupplementingRod = ref(false)
 
 // 执行范围
-const blackMarketTokens = ref('')
+const blackMarketTokens = ref(localStorage.getItem('blackMarketPurchase_tokens') || '')
 
 // 处理执行范围输入
 const handleBlackMarketTokensInput = (value) => {
   blackMarketTokens.value = value
 }
+
+// 自动保存执行范围
+watch(blackMarketTokens, (newValue) => {
+  localStorage.setItem('blackMarketPurchase_tokens', newValue)
+})
 
 // 解析执行范围（如果为空则执行全部）
 const parseTokenRange = (rangeStr) => {
@@ -898,6 +911,200 @@ const exportResourceInfo = async () => {
     message.error(`导出资源信息失败: ${error.message || '未知错误'}`)
   } finally {
     isExportingResourceInfo.value = false
+  }
+}
+
+// 补充金竿：对金竿<600且金砖>20万的token设置购买次数3，青铜5折金竿8折
+const handleSupplementRod = async () => {
+  // 按token昵称排序的token列表
+  const sortedTokensList = [...tokenStore.gameTokens].sort((a, b) => {
+    const nameA = (a.name || '未命名').toLowerCase()
+    const nameB = (b.name || '未命名').toLowerCase()
+    return nameA.localeCompare(nameB)
+  })
+
+  if (sortedTokensList.length === 0) {
+    message.warning('没有可用的Token')
+    return
+  }
+
+  // 解析执行范围
+  const tokenIndices = parseTokenRange(blackMarketTokens.value)
+  let targetTokens = []
+
+  if (tokenIndices === null || tokenIndices.length === 0) {
+    targetTokens = sortedTokensList
+  } else {
+    targetTokens = tokenIndices
+      .map(index => {
+        const arrayIndex = index - 1
+        const token = sortedTokensList[arrayIndex]
+        return token ? { token, index } : null
+      })
+      .filter(item => item !== null)
+      .sort((a, b) => a.index - b.index)
+      .map(item => item.token)
+  }
+
+  if (targetTokens.length === 0) {
+    message.warning('执行范围内没有有效的Token')
+    return
+  }
+
+  if (isSupplementingRod.value) {
+    isSupplementingRod.value = false
+    message.info('补充金竿已停止')
+    return
+  }
+
+  try {
+    isSupplementingRod.value = true
+
+    const getTokenIndex = (token) => {
+      const index = sortedTokensList.findIndex(t => t.id === token.id)
+      return index + 1
+    }
+
+    const rangeText = tokenIndices === null || tokenIndices.length === 0 ? '全部' : `范围${tokenIndices.join(',')}`
+    message.info(`开始补充金竿（${rangeText}），共${targetTokens.length}个Token...`)
+
+    let successCount = 0
+    let failCount = 0
+    let skipCount = 0
+    const failedTokens = []
+
+    for (let i = 0; i < targetTokens.length; i++) {
+      const token = targetTokens[i]
+      const tokenIndex = getTokenIndex(token)
+
+      if (!isSupplementingRod.value) break
+
+      try {
+        // 连接Token
+        message.info(`[序号${tokenIndex}] ${token.name || token.id} 正在连接...`)
+        tokenStore.selectToken(token.id, true)
+
+        // 等待连接
+        let retryCount = 0
+        const maxRetries = 5
+        let status = tokenStore.getWebSocketStatus(token.id)
+
+        while (status !== 'connected' && retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          status = tokenStore.getWebSocketStatus(token.id)
+          retryCount++
+
+          if (status !== 'connected' && retryCount < maxRetries) {
+            tokenStore.selectToken(token.id, true)
+          }
+        }
+
+        if (status !== 'connected') {
+          message.warning(`[序号${tokenIndex}] ${token.name || token.id} 连接失败，跳过`)
+          failCount++
+          failedTokens.push(token.name || token.id)
+          continue
+        }
+
+        // 获取角色信息
+        const roleInfo = await tokenStore.sendGetRoleInfo(token.id)
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        if (!roleInfo || !roleInfo.role) {
+          message.warning(`[序号${tokenIndex}] ${token.name || token.id} 获取角色信息失败，跳过`)
+          failCount++
+          failedTokens.push(token.name || token.id)
+          continue
+        }
+
+        // 获取金竿数量 (itemId: 1012)
+        const items = roleInfo.role.items || {}
+        const goldRodItem = items['1012']
+        const goldRodCount = goldRodItem ? (typeof goldRodItem === 'object' ? goldRodItem.quantity : goldRodItem) : 0
+
+        // 获取金砖数量
+        const diamond = roleInfo.role.diamond || 0
+
+        // 判断是否需要补充：金竿<600 且 金砖>200000
+        if (goldRodCount >= 600 || diamond <= 200000) {
+          message.info(`[序号${tokenIndex}] ${token.name || token.id} 金竿${goldRodCount}个，金砖${diamond}，不符合条件，跳过`)
+          skipCount++
+          continue
+        }
+
+        // 设置购买：购买次数3，青铜5折，金竿8折
+        const purchaseItemList = [
+          { discount: 5, itemId: 2002 },  // 青铜宝箱5折
+          { discount: 8, itemId: 1012 }   // 金竿8折
+        ]
+
+        const result = await tokenStore.sendStoreSetPurchase(
+          token.id,
+          {
+            purchaseCnt: 3,
+            purchaseItemList: purchaseItemList
+          }
+        )
+
+        if (result && (result.code === 0 || result.code === undefined || result.success === true)) {
+          message.success(`[序号${tokenIndex}] ${token.name || token.id} 补充金竿设置成功（金竿${goldRodCount}个，金砖${diamond}）`)
+          successCount++
+
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '黑市购买设置',
+            operation: '补充金竿',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'success',
+            message: `【序号${tokenIndex}】[${token.name || token.id}] 补充金竿设置成功（金竿${goldRodCount}个，金砖${diamond}）`
+          })
+        } else {
+          failCount++
+          failedTokens.push(token.name || token.id)
+          const errorMsg = result?.hint || result?.message || `未知错误 (Code: ${result?.code || 'N/A'})`
+          message.warning(`[序号${tokenIndex}] ${token.name || token.id} 设置失败: ${errorMsg}`)
+
+          logStore.addLog({
+            page: 'fish-helper',
+            cardType: '黑市购买设置',
+            operation: '补充金竿',
+            tokenId: token.id,
+            tokenName: token.name,
+            status: 'error',
+            message: `【序号${tokenIndex}】[${token.name || token.id}] 补充金竿设置失败: ${errorMsg}`
+          })
+        }
+
+        if (i < targetTokens.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      } catch (error) {
+        console.error(`[序号${tokenIndex}] 补充金竿Token ${token.name || token.id} 失败:`, error)
+        message.error(`[序号${tokenIndex}] ${token.name || token.id}: 设置失败`)
+        failCount++
+        failedTokens.push(token.name || token.id)
+      }
+    }
+
+    // 汇总日志
+    if (failedTokens.length > 0) {
+      logStore.addLog({
+        page: 'fish-helper',
+        cardType: '黑市购买设置',
+        operation: '补充金竿',
+        status: 'error',
+        message: `【批量】补充金竿完成，失败的Token: ${failedTokens.join(', ')}`
+      })
+    }
+
+    const summaryMsg = `补充金竿完成: 成功 ${successCount} 个, 跳过 ${skipCount} 个, 失败 ${failCount} 个${failedTokens.length > 0 ? '，失败Token: ' + failedTokens.join(', ') : ''}`
+    message.success(summaryMsg)
+  } catch (error) {
+    console.error('补充金竿失败:', error)
+    message.error(`补充金竿失败: ${error.message || '未知错误'}`)
+  } finally {
+    isSupplementingRod.value = false
   }
 }
 </script>
